@@ -1,0 +1,30 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor directories
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.sw?
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Build artifacts
+*.class
+*.jar
+*.war
+*.ear
+
+# Additional Tools
+.claude/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
