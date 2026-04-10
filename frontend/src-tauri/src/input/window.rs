@@ -23,7 +23,7 @@ pub fn activate_window(hwnd: isize) -> Result<bool, String> {
 
     // Guard against null HWND
     if hwnd.0.is_null() {
-        return Err("Invalid window handle (null)".to_string());
+        return Err("Invalid window handle (null HWND)".to_string());
     }
 
     unsafe {

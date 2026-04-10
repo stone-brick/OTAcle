@@ -1,20 +1,28 @@
-//! Input simulation using enigo
+//! Input simulation using enigo - global singleton implementation
 
 use enigo::{
     Direction::{Click, Press, Release},
     Enigo, Key, Keyboard, Settings,
 };
+use once_cell::sync::Lazy;
+use std::sync::Mutex;
 
-/// Sends a string of text, character by character
+/// Global Enigo instance - created once and reused
+static ENIGO: Lazy<Mutex<Enigo>> = Lazy::new(|| {
+    Mutex::new(
+        Enigo::new(&Settings::default())
+            .expect("Failed to create Enigo instance")
+    )
+});
+
+/// Sends a string of text using enigo's text() API
 pub fn send_text(text: &str) -> Result<(), String> {
-    let mut enigo = Enigo::new(&Settings::default())
-        .map_err(|e| format!("Failed to create Enigo: {:?}", e))?;
+    let mut enigo = ENIGO.lock()
+        .map_err(|_| "Failed to lock Enigo".to_string())?;
 
-    for c in text.chars() {
-        enigo
-            .key(Key::Unicode(c), Click)
-            .map_err(|e| format!("Failed to send key {}: {:?}", c, e))?;
-    }
+    enigo
+        .text(text)
+        .map_err(|e| format!("Failed to send text: {:?}", e))?;
 
     Ok(())
 }
@@ -23,8 +31,8 @@ pub fn send_text(text: &str) -> Result<(), String> {
 ///
 /// direction: "press", "release", or "click"
 pub fn send_key(key_str: &str, direction: &str) -> Result<(), String> {
-    let mut enigo = Enigo::new(&Settings::default())
-        .map_err(|e| format!("Failed to create Enigo: {:?}", e))?;
+    let mut enigo = ENIGO.lock()
+        .map_err(|_| "Failed to lock Enigo".to_string())?;
 
     let key = parse_key(key_str)?;
     let dir = parse_direction(direction)?;

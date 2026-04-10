@@ -1,0 +1,11 @@
+{
+  "0": {"type": "key", "key": "space"},
+  "1": {"type": "key", "key": "enter", "hold_time_ms": 100},
+  "2": {"type": "key", "key": "ctrl+c"},
+  "3": {"type": "key", "key": "ctrl+shift+a"},
+  "4": {"type": "key_sequence", "keys": ["ctrl", "c"], "interval_ms": 10},
+  "5": {"type": "mouse_click", "button": "left", "count": 1},
+  "6": {"type": "mouse_click", "button": "right", "count": 2, "interval_ms": 100},
+  "7": {"type": "mouse_move", "x": 500, "y": 300},
+  "8": {"type": "text", "content": "Hello OTAcle!"}
+}
