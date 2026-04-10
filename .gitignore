@@ -15,16 +15,13 @@ desktop.ini
 *.log
 logs/
 
-# Build artifacts
-*.class
-*.jar
-*.war
-*.ear
-
-# Additional Tools
-.claude/
-
 # Temporary files
 *.tmp
 *.temp
 .cache/
+
+# Additional Tools
+.claude/
+
+# Temporary test
+temp_test/
