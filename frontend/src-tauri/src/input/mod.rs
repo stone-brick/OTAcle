@@ -13,4 +13,4 @@ pub use find_window::{
     find_window_by_hwnd,
 };
 pub use window::activate_window;
-pub use win32_input::{send_key as send_key_to_window, send_text as send_text_to_window, send_mouse_click, send_mouse_move};
+pub use win32_input::{send_key as send_key_to_window, send_text as send_text_to_window, send_mouse_click, send_mouse_move, send_key_sequence};

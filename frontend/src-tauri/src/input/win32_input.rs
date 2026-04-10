@@ -10,6 +10,9 @@ use windows::Win32::UI::WindowsAndMessaging::{
     WM_RBUTTONDOWN, WM_RBUTTONUP,
 };
 use windows::Win32::UI::WindowsAndMessaging::SetCursorPos;
+use windows::Win32::UI::Input::KeyboardAndMouse::{
+    SendInput, INPUT, KEYBDINPUT, INPUT_TYPE, KEYBD_EVENT_FLAGS, VIRTUAL_KEY,
+};
 
 /// Virtual key code mapping for special keys
 pub fn vk_for_key(key: &str) -> Option<u32> {
@@ -210,4 +213,49 @@ pub fn send_mouse_move(x: i32, y: i32) -> Result<(), String> {
     unsafe {
         SetCursorPos(x, y)
     }.map_err(|e| format!("Failed to move mouse: {}", e))
+}
+
+/// Send a sequence of keys using SendInput (hardware-level simulation)
+///
+/// # Arguments
+/// * `keys` - Array of (key_name, is_press) tuples. is_press=true for key down, false for key up
+///
+/// This function uses SendInput to send multiple key events atomically,
+/// which is more reliable for combination keys like ctrl+c.
+pub fn send_key_sequence(keys: &[(&str, bool)]) -> Result<(), String> {
+    let mut inputs: Vec<INPUT> = Vec::with_capacity(keys.len());
+
+    for &(key, is_press) in keys {
+        if let Some(vk) = vk_for_key(key) {
+            let flags = if is_press {
+                KEYBD_EVENT_FLAGS(0) // Key down
+            } else {
+                KEYBD_EVENT_FLAGS(2) // KEYEVENTF_KEYUP
+            };
+            let ki = KEYBDINPUT {
+                wVk: VIRTUAL_KEY(vk as u16),
+                wScan: 0,
+                dwFlags: flags,
+                time: 0,
+                dwExtraInfo: 0,
+            };
+            inputs.push(INPUT {
+                r#type: INPUT_TYPE(1), // INPUT_KEYBOARD
+                Anonymous: windows::Win32::UI::Input::KeyboardAndMouse::INPUT_0 { ki },
+            });
+        }
+    }
+
+    if inputs.is_empty() {
+        return Ok(());
+    }
+
+    unsafe {
+        let result = SendInput(&inputs, std::mem::size_of::<INPUT>() as i32);
+        if result as usize != inputs.len() {
+            return Err(format!("SendInput failed, sent {} of {} events", result, inputs.len()));
+        }
+    }
+
+    Ok(())
 }

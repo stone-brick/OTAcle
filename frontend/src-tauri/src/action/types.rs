@@ -38,6 +38,9 @@ pub struct KeyAction {
     /// Optional hold time in milliseconds (press and hold)
     #[serde(default)]
     pub hold_time_ms: Option<u64>,
+    /// Override the default input backend for this action
+    #[serde(default)]
+    pub backend: Option<InputBackend>,
 }
 
 /// Key sequence action - multiple keys pressed in sequence
@@ -49,6 +52,9 @@ pub struct KeySequenceAction {
     /// Interval between keys in milliseconds
     #[serde(default)]
     pub interval_ms: Option<u64>,
+    /// Override the default input backend for this action
+    #[serde(default)]
+    pub backend: Option<InputBackend>,
 }
 
 /// Mouse click action
@@ -63,6 +69,9 @@ pub struct MouseClickAction {
     /// Interval between clicks in milliseconds (default: 0)
     #[serde(default)]
     pub interval_ms: Option<u64>,
+    /// Override the default input backend for this action
+    #[serde(default)]
+    pub backend: Option<InputBackend>,
 }
 
 fn default_click_count() -> u32 {
@@ -80,6 +89,9 @@ pub struct MouseMoveAction {
     /// Optional duration to move (in milliseconds)
     #[serde(default)]
     pub duration_ms: Option<u64>,
+    /// Override the default input backend for this action
+    #[serde(default)]
+    pub backend: Option<InputBackend>,
 }
 
 /// Text input action
@@ -88,6 +100,9 @@ pub struct MouseMoveAction {
 pub struct TextAction {
     /// Text content to type
     pub content: String,
+    /// Override the default input backend for this action
+    #[serde(default)]
+    pub backend: Option<InputBackend>,
 }
 
 /// Action type enum - discriminated union for all action types
@@ -106,5 +121,30 @@ pub enum Action {
     Text(TextAction),
 }
 
-/// Action configuration mapping action ID (u32) to Action
+/// A single action item with index, optional name, and the action data
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActionItem {
+    /// Action index (used as identifier and fallback name)
+    pub index: u32,
+    /// Optional action name (uses index as name if not provided)
+    #[serde(default)]
+    pub name: Option<String>,
+    /// The action data
+    #[serde(flatten)]
+    pub data: Action,
+}
+
+impl ActionItem {
+    /// Get the effective name of this action
+    pub fn effective_name(&self) -> String {
+        self.name.clone().unwrap_or_else(|| self.index.to_string())
+    }
+}
+
+/// Action configuration as a list of action items
+pub type ActionConfigList = Vec<ActionItem>;
+
+/// Action configuration mapping action index (u32) to Action
+/// @deprecated Use ActionConfigList instead
 pub type ActionConfig = std::collections::HashMap<u32, Action>;

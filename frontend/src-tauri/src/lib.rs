@@ -107,7 +107,10 @@ fn load_action_config(path: String, backend: Option<String>) -> Result<(), Strin
 
 #[tauri::command]
 fn execute_action(action_id: u32, window: Option<String>, backend: Option<String>) -> Result<(), String> {
-    action::executor::execute_action(action_id, window, backend)
+    // Get default backend from config, fallback to Win32 if not loaded
+    let default_backend = action::config::get_default_backend()
+        .unwrap_or(action::types::InputBackend::Win32);
+    action::executor::execute_action(action_id, window, backend, default_backend)
 }
 
 #[tauri::command]

@@ -47,6 +47,37 @@ impl ExecContext {
     }
 }
 
+/// Get the effective backend for an action
+/// Priority: action.backend > default_backend > call_parameter
+fn resolve_backend(action: &Action, default_backend: InputBackend, call_backend: Option<&str>) -> InputBackend {
+    // First priority: action's own backend setting
+    if let Some(backend) = get_action_backend(action) {
+        return backend;
+    }
+
+    // Second priority: call parameter (if provided)
+    if let Some(param) = call_backend {
+        return match param {
+            "enigo" => InputBackend::Enigo,
+            _ => InputBackend::Win32,
+        };
+    }
+
+    // Third priority: config default_backend
+    default_backend
+}
+
+/// Get backend from action if specified
+fn get_action_backend(action: &Action) -> Option<InputBackend> {
+    match action {
+        Action::Key(a) => a.backend.clone(),
+        Action::KeySequence(a) => a.backend.clone(),
+        Action::MouseClick(a) => a.backend.clone(),
+        Action::MouseMove(a) => a.backend.clone(),
+        Action::Text(a) => a.backend.clone(),
+    }
+}
+
 /// Execute a sequence of key events with proper timing using specified backend
 fn execute_key_events(events: &[KeyEvent], ctx: &ExecContext) -> Result<(), String> {
     let mut first = true;
@@ -103,19 +134,22 @@ fn send_text_event(text: &str, ctx: &ExecContext) -> Result<(), String> {
 /// # Arguments
 /// * `action_id` - The numeric ID of the action to execute
 /// * `window` - Optional window spec to activate before executing
-/// * `backend` - Input backend to use: "win32" (default, direct to window) or "enigo" (hardware simulation)
-pub fn execute_action(action_id: u32, window: Option<String>, backend: Option<String>) -> Result<(), String> {
+/// * `backend` - Optional call parameter to override; if not provided, uses config default
+/// * `default_backend` - The default backend from loaded config (used when action has no backend)
+pub fn execute_action(
+    action_id: u32,
+    window: Option<String>,
+    backend: Option<String>,
+    default_backend: InputBackend,
+) -> Result<(), String> {
     // Get config
     let actions = config::get_config()?;
 
     let action = actions.get(&action_id)
         .ok_or_else(|| format!("Action {} not found in configuration", action_id))?;
 
-    // Parse backend from string, default to Win32
-    let backend = match backend.as_deref() {
-        Some("enigo") => InputBackend::Enigo,
-        _ => InputBackend::Win32, // Default to Win32 for Windows target
-    };
+    // Resolve the effective backend: action > default > call_param
+    let resolved_backend = resolve_backend(action, default_backend, backend.as_deref());
 
     // Resolve target hwnd if window spec provided
     let target_hwnd = if let Some(ref spec) = window {
@@ -125,14 +159,14 @@ pub fn execute_action(action_id: u32, window: Option<String>, backend: Option<St
     };
 
     // Activate window if using Enigo backend (Win32 doesn't need activation)
-    if backend == InputBackend::Enigo {
+    if resolved_backend == InputBackend::Enigo {
         if let Some(hwnd) = target_hwnd {
             input::activate_window(hwnd)?;
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
     }
 
-    let ctx = ExecContext::new(backend, target_hwnd);
+    let ctx = ExecContext::new(resolved_backend, target_hwnd);
 
     // Execute the action
     execute_action_impl(action, &ctx)
@@ -199,7 +233,8 @@ fn execute_key(action: &KeyAction, ctx: &ExecContext) -> Result<(), String> {
 
 /// Execute a combination key (e.g., "ctrl+c", "ctrl+shift+a")
 ///
-/// Builds an event queue with proper timing and executes through the appropriate backend
+/// For Win32 backend: uses SendInput to send all keys atomically
+/// For Enigo backend: builds an event queue with proper timing
 fn execute_combination_key(key: &str, hold_ms: Option<u64>, ctx: &ExecContext) -> Result<(), String> {
     let keys: Vec<&str> = key.split('+').map(|s| s.trim()).collect();
 
@@ -207,45 +242,82 @@ fn execute_combination_key(key: &str, hold_ms: Option<u64>, ctx: &ExecContext) -
         return Err("Invalid combination key".to_string());
     }
 
-    let mut events: Vec<KeyEvent> = Vec::new();
+    match ctx.backend {
+        InputBackend::Win32 => {
+            // Win32: use SendInput for atomic key sequence
+            let mut key_pairs: Vec<(&str, bool)> = Vec::new();
 
-    // Press all keys with delay before each
-    for k in &keys {
-        events.push(KeyEvent {
-            key: k,
-            direction: KeyDirection::Press,
-            delay_ms: DEFAULT_KEY_INTERVAL_MS,
-        });
-    }
+            // Press all keys
+            for k in &keys {
+                key_pairs.push((k, true));
+            }
 
-    // Hold if specified
-    if let Some(ms) = hold_ms {
-        // First release the main key after holding
-        events.push(KeyEvent {
-            key: keys.last().unwrap(), // main key
-            direction: KeyDirection::Release,
-            delay_ms: ms,
-        });
-        // Then release all modifier keys in reverse order (skip the main key)
-        for k in keys.iter().rev().skip(1) {
-            events.push(KeyEvent {
-                key: k,
-                direction: KeyDirection::Release,
-                delay_ms: DEFAULT_KEY_INTERVAL_MS,
-            });
+            // Hold if specified
+            if let Some(_ms) = hold_ms {
+                // Release main key first
+                key_pairs.push((keys.last().unwrap(), false));
+                // Then release modifier keys in reverse order (skip main key)
+                for k in keys.iter().rev().skip(1) {
+                    key_pairs.push((k, false));
+                }
+            } else {
+                // Release all keys in reverse order
+                for k in keys.iter().rev() {
+                    key_pairs.push((k, false));
+                }
+            }
+
+            // Activate window first
+            if let Some(hwnd) = ctx.target_hwnd {
+                input::activate_window(hwnd)?;
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+
+            input::send_key_sequence(&key_pairs)
         }
-    } else {
-        // Release all keys in reverse order
-        for k in keys.iter().rev() {
-            events.push(KeyEvent {
-                key: k,
-                direction: KeyDirection::Release,
-                delay_ms: DEFAULT_KEY_INTERVAL_MS,
-            });
+        InputBackend::Enigo => {
+            // Enigo: use existing event-based approach
+            let mut events: Vec<KeyEvent> = Vec::new();
+
+            // Press all keys with delay before each
+            for k in &keys {
+                events.push(KeyEvent {
+                    key: k,
+                    direction: KeyDirection::Press,
+                    delay_ms: DEFAULT_KEY_INTERVAL_MS,
+                });
+            }
+
+            // Hold if specified
+            if let Some(ms) = hold_ms {
+                // First release the main key after holding
+                events.push(KeyEvent {
+                    key: keys.last().unwrap(), // main key
+                    direction: KeyDirection::Release,
+                    delay_ms: ms,
+                });
+                // Then release all modifier keys in reverse order (skip the main key)
+                for k in keys.iter().rev().skip(1) {
+                    events.push(KeyEvent {
+                        key: k,
+                        direction: KeyDirection::Release,
+                        delay_ms: DEFAULT_KEY_INTERVAL_MS,
+                    });
+                }
+            } else {
+                // Release all keys in reverse order
+                for k in keys.iter().rev() {
+                    events.push(KeyEvent {
+                        key: k,
+                        direction: KeyDirection::Release,
+                        delay_ms: DEFAULT_KEY_INTERVAL_MS,
+                    });
+                }
+            }
+
+            execute_key_events(&events, ctx)
         }
     }
-
-    execute_key_events(&events, ctx)
 }
 
 /// Execute a key sequence action
