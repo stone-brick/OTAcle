@@ -84,6 +84,23 @@ function handleClear() {
   font-size: 12px;
 }
 
+.log-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.log-list::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+
+.log-list::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+.log-list::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
 .log-entry {
   display: flex;
   gap: 8px;

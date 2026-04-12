@@ -6,36 +6,123 @@
 
 ### 配置文件格式
 
-动作配置文件为 JSON 格式，定义数字动作 ID 到具体操作的映射。
+动作配置文件为 JSON 格式，支持通过 `index` 索引执行对应动作。
 
 ```json
 {
-  "0": {"type": "key", "key": "space"},
-  "1": {"type": "key", "key": "ctrl+c"},
-  "2": {"type": "key_sequence", "keys": ["ctrl", "v"], "interval_ms": 10},
-  "3": {"type": "mouse_click", "button": "left", "count": 2},
-  "4": {"type": "mouse_move", "x": 500, "y": 300},
-  "5": {"type": "text", "content": "Hello!"}
+  "default_backend": "win32",
+  "actions": [
+    {"index": 0, "name": "jump", "type": "key", "key": "space"},
+    {"index": 1, "name": "enter", "type": "key", "key": "enter"},
+    {"index": 2, "name": "copy", "type": "key", "key": "ctrl+c"},
+    {"index": 3, "name": "hello", "type": "text", "content": "Hello from ZMQ!"},
+    {
+      "index": 4,
+      "name": "scroll_down",
+      "type": "key_sequence",
+      "default_interval_ms": 5,
+      "keys": [
+        {"key": "end"},
+        {"key": "space", "interval_ms": 10}
+      ]
+    },
+    {"index": 5, "name": "scroll", "type": "mouse_scroll", "direction": "down", "amount": 3},
+    {"index": 6, "name": "wait", "type": "delay", "duration_ms": 1000}
+  ]
 }
 ```
 
-### 动作类型
+### 全局配置
 
-| type | 说明 | 字段 |
-|------|------|------|
-| `key` | 单键或组合键 | `key`, `hold_time_ms?` |
-| `key_sequence` | 顺序按键 | `keys[]`, `interval_ms?` |
-| `mouse_click` | 鼠标点击 | `button`, `count?`, `interval_ms?` |
-| `mouse_move` | 鼠标移动 | `x`, `y`, `duration_ms?` |
-| `text` | 文本输入 | `content` |
+| 字段                | 类型     | 默认值       | 说明                          |
+| ----------------- | ------ | --------- | --------------------------- |
+| `default_backend` | string | `"win32"` | 默认输入后端，可选 `win32` 或 `enigo` |
+| `actions`         | array  | (必填)      | 动作列表                        |
 
-### 组合键语法
+### 动作类型详解
 
-使用 `+` 分隔按键，例如 `"ctrl+c"`、`"ctrl+shift+a"`。
+#### 1. `key` - 单键或组合键
 
-**重要**：修饰键应写在前面。执行时按键释放顺序是反向的：
-1. 按下所有键（从左到右）
-2. 释放所有键（从右到左）
+| 字段             | 类型     | 必填  | 默认值 | 说明                        |
+| -------------- | ------ | --- | --- | ------------------------- |
+| `type`         | string | 是   | -   | 固定为 `"key"`               |
+| `key`          | string | 是   | -   | 按键名称，支持组合键如 `"ctrl+c"`    |
+| `hold_time_ms` | number | 否   | `5` | 按住时长（毫秒），防止事件被丢弃          |
+| `backend`      | string | 否   | 继承  | 输入后端，可选 `win32` 或 `enigo` |
+
+**组合键语法**：使用 `+` 分隔按键，例如 `"ctrl+c"`、`"ctrl+shift+a"`。
+执行时按键释放顺序是反向的：先按下所有键，再从右到左释放。
+
+#### 2. `key_sequence` - 顺序按键序列
+
+| 字段                    | 类型     | 必填  | 默认值 | 说明                    |
+| --------------------- | ------ | --- | --- | --------------------- |
+| `type`                | string | 是   | -   | 固定为 `"key_sequence"`  |
+| `keys`                | array  | 是   | -   | 按键序列列表                |
+| `default_interval_ms` | number | 否   | `5` | keys 中每个按键之间的默认间隔（毫秒） |
+| `backend`             | string | 否   | 继承  | 输入后端                  |
+
+**keys 数组中的每个元素**：
+
+| 字段             | 类型     | 必填  | 默认值                   | 说明                   |
+| -------------- | ------ | --- | --------------------- | -------------------- |
+| `key`          | string | 是   | -                     | 按键名称                 |
+| `interval_ms`  | number | 否   | `default_interval_ms` | 到下一个按键的间隔（毫秒）        |
+| `hold_time_ms` | number | 否   | `5`                   | 此按键的按住时长（毫秒），防止事件被丢弃 |
+
+#### 3. `mouse_click` - 鼠标点击
+
+| 字段             | 类型     | 必填  | 默认值 | 说明                           |
+| -------------- | ------ | --- | --- | ---------------------------- |
+| `type`         | string | 是   | -   | 固定为 `"mouse_click"`          |
+| `button`       | string | 是   | -   | 鼠标按钮：`left`、`right`、`middle` |
+| `count`        | number | 否   | `1` | 点击次数                         |
+| `interval_ms`  | number | 否   | `0` | 每次点击之间的间隔（毫秒）                |
+| `hold_time_ms` | number | 否   | `5` | 按住时长（毫秒），防止事件被丢弃             |
+| `backend`      | string | 否   | 继承  | 输入后端                         |
+
+#### 4. `mouse_move` - 鼠标移动
+
+| 字段            | 类型     | 必填  | 默认值 | 说明                    |
+| ------------- | ------ | --- | --- | --------------------- |
+| `type`        | string | 是   | -   | 固定为 `"mouse_move"`    |
+| `x`           | number | 是   | -   | 目标 X 坐标               |
+| `y`           | number | 是   | -   | 目标 Y 坐标               |
+| `duration_ms` | number | 否   | `0` | 平滑移动过渡时长（毫秒），0 表示瞬间移动 |
+| `backend`     | string | 否   | 继承  | 输入后端                  |
+
+#### 5. `mouse_scroll` - 鼠标滚轮
+
+| 字段          | 类型     | 必填  | 默认值 | 说明                              |
+| ----------- | ------ | --- | --- | ------------------------------- |
+| `type`      | string | 是   | -   | 固定为 `"mouse_scroll"`            |
+| `direction` | string | 是   | -   | 滚动方向：`up`、`down`、`left`、`right` |
+| `amount`    | number | 否   | `1` | 滚动量（Windows 系统中 120 = 1 格）      |
+| `backend`   | string | 否   | 继承  | 输入后端                            |
+
+#### 6. `delay` - 延迟等待
+
+| 字段            | 类型     | 必填  | 默认值 | 说明            |
+| ------------- | ------ | --- | --- | ------------- |
+| `type`        | string | 是   | -   | 固定为 `"delay"` |
+| `duration_ms` | number | 是   | -   | 等待时长（毫秒）      |
+
+#### 7. `text` - 文本输入
+
+| 字段        | 类型     | 必填  | 默认值 | 说明           |
+| --------- | ------ | --- | --- | ------------ |
+| `type`    | string | 是   | -   | 固定为 `"text"` |
+| `content` | string | 是   | -   | 要输入的文本内容     |
+| `backend` | string | 否   | 继承  | 输入后端         |
+
+### 输入后端 (InputBackend)
+
+| 后端      | 说明                                       | 适用场景              |
+| ------- | ---------------------------------------- | ----------------- |
+| `win32` | Windows API (`PostMessageW`)，直接发送消息到目标窗口 | 无需前台窗口，可定向发送到后台窗口 |
+| `enigo` | 跨平台库，依赖前台窗口                              | 需要硬件模拟的场景，如反作弊游戏  |
+
+**后端优先级**：动作自身 `backend` > `default_backend`
 
 ### 按键名称
 
@@ -57,10 +144,76 @@
 执行动作时可指定目标窗口，使用以下格式：
 
 - `"Notepad"` - 窗口标题（前缀匹配）
-- `"id:395542"` - 直接指定 HWND
+- `"id:395542"` 或 `"id:0x9999"` - 直接指定 HWND（十进制或十六进制）
 - `"class:Notepad"` - 窗口类名
 - `"exe:notepad.exe"` - 进程名
+- `"pid:1234"` - 进程 ID
 - `"A"` 或空 - 当前前台窗口
+
+### 执行时序参数汇总
+
+| 参数                    | 说明        | 适用动作类型                                      |
+| --------------------- | --------- | ------------------------------------------- |
+| `hold_time_ms`        | 按住时长（毫秒）  | `key`, `key_sequence` 中的单个按键, `mouse_click` |
+| `interval_ms`         | 间隔时长（毫秒）  | `key_sequence` 中的单个按键, `mouse_click`        |
+| `default_interval_ms` | 序列按键的默认间隔 | `key_sequence`                              |
+| `duration_ms`         | 平滑过渡时长    | `mouse_move`                                |
+| `count`               | 连续点击次数    | `mouse_click`                               |
+| `amount`              | 滚轮滚动量     | `mouse_scroll`（Windows 120 = 1 格）           |
+
+## ZMQ 命令格式
+
+Python 端通过 ZeroMQ PUB-SUB 向 Rust 端发送控制命令。
+
+### 消息格式
+
+```json
+{
+  "execute": [true, false, true, false, true],
+  "params": {
+    "target_x": 100,
+    "target_y": 200,
+    "click_count": 3
+  }
+}
+```
+
+| 字段        | 必填  | 类型          | 说明                                                      |
+| --------- | --- | ----------- | ------------------------------------------------------- |
+| `execute` | 是   | `Vec<bool>` | 执行列表，按 index 对应配置中的 action。<br>`true` = 执行，`false` = 跳过 |
+| `params`  | 否   | `object`    | 占位符参数映射。如果动作中没有占位符可省略。                                  |
+
+### execute 数组规则
+
+- 长度任意，按 index 顺序对应配置文件中的 action
+- `true` = 执行该动作，`false` = 跳过
+- 缺失 index 视为 `false`
+
+**示例**：`{"execute": [true, false, true]}` 表示执行 index=0 和 index=2 的动作。
+
+### 占位符参数
+
+使用 `{{variable_name}}` 在动作配置中声明占位符，运行时通过 `params` 替换：
+
+```json
+// 动作配置
+{"type": "mouse_move", "x": "{{target_x}}", "y": "{{target_y}}"}
+
+// ZMQ 消息
+{"execute": [true], "params": {"target_x": 100, "target_y": 200}}
+```
+
+**约束**：
+
+- 只有 `execute` 中为 `true` 的动作才会检查其占位符
+- 如果某动作有占位符但未被执行，不会报错
+- 占位符值支持整数、字符串
+
+### params 约束
+
+- **可以省略**：表示没有占位符替换
+- **不能为 `null`**：会报错
+- **不能为空对象 `{}`**：会报错
 
 ## 开发
 

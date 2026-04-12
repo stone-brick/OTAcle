@@ -7,7 +7,7 @@ use windows::Win32::Foundation::{HWND, LPARAM, POINT, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
     PostMessageW, WM_CHAR, WM_KEYDOWN, WM_KEYUP,
     WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP,
-    WM_RBUTTONDOWN, WM_RBUTTONUP,
+    WM_RBUTTONDOWN, WM_RBUTTONUP, WM_MOUSEWHEEL,
 };
 use windows::Win32::UI::WindowsAndMessaging::SetCursorPos;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
@@ -213,6 +213,36 @@ pub fn send_mouse_move(x: i32, y: i32) -> Result<(), String> {
     unsafe {
         SetCursorPos(x, y)
     }.map_err(|e| format!("Failed to move mouse: {}", e))
+}
+
+/// Send mouse scroll event to a window
+///
+/// # Arguments
+/// * `hwnd` - Target window handle
+/// * `delta` - Scroll amount (positive=up, negative=down). Windows default is 120 per "click"
+pub fn send_mouse_scroll(hwnd: isize, delta: i32) -> Result<(), String> {
+    let hwnd = HWND(hwnd as *mut std::ffi::c_void);
+
+    if hwnd.0.is_null() {
+        return Err("Invalid window handle (null HWND)".to_string());
+    }
+
+    // Get current mouse position for the lparam
+    let mut point = POINT { x: 0, y: 0 };
+    unsafe {
+        use windows::Win32::UI::WindowsAndMessaging::GetCursorPos;
+        GetCursorPos(&mut point)
+            .map_err(|e| format!("Failed to get cursor position: {}", e))?;
+    }
+
+    let lparam = LPARAM((((point.y as u32) << 16) | (point.x as u32)) as isize);
+    let wparam = WPARAM((delta as u32) as usize);
+
+    unsafe {
+        let _ = PostMessageW(hwnd, WM_MOUSEWHEEL, wparam, lparam);
+    }
+
+    Ok(())
 }
 
 /// Send a sequence of keys using SendInput (hardware-level simulation)

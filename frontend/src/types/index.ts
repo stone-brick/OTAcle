@@ -14,31 +14,51 @@ export type InputBackend = 'enigo' | 'win32';
 // Mouse button type
 export type MouseButton = 'left' | 'right' | 'middle';
 
+// Scroll direction type
+export type ScrollDirection = 'up' | 'down' | 'left' | 'right';
+
 // Action types from action config
 export interface KeyAction {
   type: 'key';
   key: string;
-  holdTimeMs?: number;
+  hold_time_ms?: number;
+}
+
+export interface KeySequenceItem {
+  key: string;
+  hold_time_ms?: number;
+  interval_ms?: number;
 }
 
 export interface KeySequenceAction {
   type: 'key_sequence';
-  keys: string[];
-  intervalMs?: number;
+  keys: KeySequenceItem[];
+  default_interval_ms: number;
 }
 
 export interface MouseClickAction {
   type: 'mouse_click';
   button: MouseButton;
-  count: number;
-  intervalMs?: number;
+  count: string;
+  interval_ms?: number;
 }
 
 export interface MouseMoveAction {
   type: 'mouse_move';
-  x: number;
-  y: number;
-  durationMs?: number;
+  x: string;
+  y: string;
+  duration_ms?: number;
+}
+
+export interface MouseScrollAction {
+  type: 'mouse_scroll';
+  direction: ScrollDirection;
+  amount: number;
+}
+
+export interface DelayAction {
+  type: 'delay';
+  duration_ms: number;
 }
 
 export interface TextAction {
@@ -46,10 +66,26 @@ export interface TextAction {
   content: string;
 }
 
-export type Action = KeyAction | KeySequenceAction | MouseClickAction | MouseMoveAction | TextAction;
+export type Action = KeyAction | KeySequenceAction | MouseClickAction | MouseMoveAction | MouseScrollAction | DelayAction | TextAction;
 
 // Action config map (JSON format)
 export type ActionConfig = Record<string, Action>;
+
+// Action item with index and name (matches backend ActionItem)
+export interface ActionItem {
+  index: number;
+  name: string | null;
+  data: Action;
+}
+
+// Action config data (full config structure)
+export interface ActionConfigData {
+  default_backend: InputBackend;
+  actions: ActionItem[];
+}
+
+// Action type for editor
+export type ActionType = 'key' | 'key_sequence' | 'mouse_click' | 'mouse_move' | 'mouse_scroll' | 'delay' | 'text';
 
 // Log entry
 export interface LogEntry {

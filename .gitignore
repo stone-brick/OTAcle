@@ -23,5 +23,6 @@ logs/
 # Additional Tools
 .claude/
 
-# Temporary test
-temp_test/
+# Example project
+example/.venv/
+example/.idea/

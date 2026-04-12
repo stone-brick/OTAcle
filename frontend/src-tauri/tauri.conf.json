@@ -12,9 +12,12 @@
   "app": {
     "windows": [
       {
-        "title": "frontend",
-        "width": 800,
-        "height": 600
+        "title": "OTAcle",
+        "width": 1200,
+        "height": 800,
+        "decorations": false,
+        "resizable": false,
+        "center": true
       }
     ],
     "security": {

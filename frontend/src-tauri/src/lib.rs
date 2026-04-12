@@ -1,8 +1,29 @@
 mod action;
 mod input;
+mod zmq_sub;
 
 use windows::Win32::Foundation::POINT;
 use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetCursorPos};
+
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
+use tauri::Emitter;
+use zmq_sub::{ZmqCommand, ZmqSubscriber};
+
+/// ZMQ 订阅者全局状态
+pub struct ZmqState {
+    running: Mutex<Option<Arc<AtomicBool>>>,
+    address: Mutex<String>,
+}
+
+impl Default for ZmqState {
+    fn default() -> Self {
+        Self {
+            running: Mutex::new(None),
+            address: Mutex::new("tcp://127.0.0.1:5555".to_string()),
+        }
+    }
+}
 
 /// Helper to get HWND from a window spec string
 fn get_hwnd_from_spec(spec: &str) -> Result<isize, String> {
@@ -23,6 +44,97 @@ fn get_hwnd_from_spec(spec: &str) -> Result<isize, String> {
     }
 
     input::find_window(&search).ok_or_else(|| "Window not found".to_string())
+}
+
+/// Start ZMQ subscriber to receive commands from Python
+#[tauri::command]
+fn zmq_start(
+    addr: String,
+    state: tauri::State<'_, ZmqState>,
+    app: tauri::AppHandle,
+) -> Result<(), String> {
+    // Stop existing subscriber if any
+    {
+        let mut running_guard = state.running.lock().map_err(|_| "Lock failed")?;
+        if let Some(running) = running_guard.take() {
+            running.store(false, Ordering::SeqCst);
+        }
+    }
+
+    // Store new address
+    {
+        let mut addr_guard = state.address.lock().map_err(|_| "Lock failed")?;
+        *addr_guard = addr.clone();
+    }
+
+    // Create new subscriber
+    let subscriber = ZmqSubscriber::new(&addr)?;
+
+    // Create running flag
+    let running = Arc::new(AtomicBool::new(true));
+
+    // Clone for storage
+    let running_for_state = running.clone();
+    let running_for_thread = running.clone();
+
+    // Store running flag
+    {
+        let mut running_guard = state.running.lock().map_err(|_| "Lock failed")?;
+        *running_guard = Some(running_for_state);
+    }
+
+    // Clone app handle for the callback
+    let app_for_callback = app.clone();
+
+    // Start listening in a separate thread
+    subscriber.start(running_for_thread, move |cmd: ZmqCommand| {
+        // Execute actions based on the execute vector
+        let default_backend = action::config::get_default_backend()
+            .unwrap_or(action::types::InputBackend::Win32);
+
+        let result = action::executor::execute_actions(
+            cmd.execute,
+            cmd.params,
+            default_backend,
+        );
+
+        match result {
+            Ok(()) => {
+                let msg = "[ZMQ] Actions executed successfully".to_string();
+                println!("{}", msg);
+                let _ = app_for_callback.emit("zmq:log", msg);
+            }
+            Err(e) => {
+                let msg = format!("[ZMQ] Error: {}", e);
+                eprintln!("{}", msg);
+                let _ = app_for_callback.emit("zmq:error", msg);
+            }
+        }
+    })?;
+
+    Ok(())
+}
+
+/// Stop ZMQ subscriber
+#[tauri::command]
+fn zmq_stop(state: tauri::State<'_, ZmqState>) -> Result<(), String> {
+    let mut running_guard = state.running.lock().map_err(|_| "Lock failed")?;
+    if let Some(running) = running_guard.take() {
+        running.store(false, Ordering::SeqCst);
+    }
+    Ok(())
+}
+
+/// Get ZMQ connection status
+#[tauri::command]
+fn zmq_status(state: tauri::State<'_, ZmqState>) -> Result<(bool, String), String> {
+    let running_guard = state.running.lock().map_err(|_| "Lock failed")?;
+    let addr_guard = state.address.lock().map_err(|_| "Lock failed")?;
+
+    let connected = running_guard.is_some();
+    let address = addr_guard.clone();
+
+    Ok((connected, address))
 }
 
 #[tauri::command]
@@ -179,6 +291,50 @@ fn get_window_info(hwnd: i64) -> Result<input::find_window::WindowInfo, String> 
 }
 
 #[tauri::command]
+fn get_config() -> Result<action::types::ActionConfig, String> {
+    action::config::get_config()
+}
+
+#[tauri::command]
+fn get_action_list() -> Result<action::types::ActionConfigList, String> {
+    action::config::get_action_list()
+}
+
+#[tauri::command]
+fn get_placeholder_map() -> Result<std::collections::HashMap<String, u32>, String> {
+    action::config::get_placeholder_map()
+}
+
+#[tauri::command]
+fn get_next_action_index() -> Result<u32, String> {
+    action::config::get_next_available_index()
+}
+
+#[tauri::command]
+fn create_action(action: action::types::Action, name: Option<String>) -> Result<u32, String> {
+    action::config::create_action(action, name)
+}
+
+#[tauri::command]
+fn update_action(index: u32, action: action::types::Action, name: Option<String>) -> Result<(), String> {
+    action::config::update_action(index, action, name)
+}
+
+#[tauri::command]
+fn delete_action(index: u32) -> Result<(), String> {
+    action::config::delete_action(index)
+}
+
+#[tauri::command]
+fn save_action_config(
+    path: String,
+    default_backend: action::types::InputBackend,
+    actions: action::types::ActionConfigList,
+) -> Result<(), String> {
+    action::config::save_config(&path, default_backend, &actions)
+}
+
+#[tauri::command]
 fn get_foreground_window() -> Result<i64, String> {
     let hwnd = unsafe { GetForegroundWindow() };
     if hwnd.0.is_null() {
@@ -330,6 +486,7 @@ fn send_combination_key(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .manage(ZmqState::default())
         .invoke_handler(tauri::generate_handler![
             activate_window,
             send_key,
@@ -337,6 +494,14 @@ pub fn run() {
             find_window_by_title,
             activate_window_by_title,
             load_action_config,
+            get_config,
+            get_action_list,
+            get_placeholder_map,
+            get_next_action_index,
+            create_action,
+            update_action,
+            delete_action,
+            save_action_config,
             execute_action,
             list_windows,
             get_window_info,
@@ -354,6 +519,10 @@ pub fn run() {
             find_windows_by_pid,
             find_windows_by_exe,
             find_window_by_hwnd,
+            // ZMQ commands
+            zmq_start,
+            zmq_stop,
+            zmq_status,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

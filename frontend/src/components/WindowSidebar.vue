@@ -227,6 +227,23 @@ function truncateTitle(title: string, maxLen: number = 30): string {
   padding: 8px;
 }
 
+.window-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.window-list::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+
+.window-list::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+.window-list::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
 .window-item {
   padding: 10px 12px;
   margin-bottom: 4px;

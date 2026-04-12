@@ -3,9 +3,11 @@
 //! Executes configured actions based on action IDs.
 
 use super::config;
-use super::types::{Action, InputBackend, KeyAction, KeySequenceAction, MouseClickAction, MouseMoveAction, MouseButton, TextAction};
+use super::resolver::ActionResolver;
+use super::types::{Action, DelayAction, InputBackend, KeyAction, KeySequenceAction, MouseButton, MouseClickAction, MouseMoveAction, MouseScrollAction, ParamValue, ScrollDirection, TextAction};
 use crate::input;
-use enigo::{Button, Coordinate, Direction, Enigo, Mouse, Settings};
+use enigo::{Axis, Button, Coordinate, Direction, Enigo, Mouse, Settings};
+use std::collections::HashMap;
 use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
 
 /// Default interval between key events (milliseconds)
@@ -74,6 +76,8 @@ fn get_action_backend(action: &Action) -> Option<InputBackend> {
         Action::KeySequence(a) => a.backend.clone(),
         Action::MouseClick(a) => a.backend.clone(),
         Action::MouseMove(a) => a.backend.clone(),
+        Action::MouseScroll(a) => a.backend.clone(),
+        Action::Delay(_) => None, // Delay doesn't use backend
         Action::Text(a) => a.backend.clone(),
     }
 }
@@ -172,6 +176,127 @@ pub fn execute_action(
     execute_action_impl(action, &ctx)
 }
 
+/// Execute an action by its ID with runtime parameters
+///
+/// This function allows dynamically resolving placeholders in action configurations
+/// using parameters provided at runtime via ZMQ or other interfaces.
+///
+/// # Arguments
+/// * `action_id` - The numeric ID of the action to execute
+/// * `window` - Optional window spec to activate before executing
+/// * `backend` - Optional call parameter to override; if not provided, uses config default
+/// * `default_backend` - The default backend from loaded config
+/// * `params` - Optional HashMap of parameter values for placeholder substitution
+pub fn execute_action_with_params(
+    action_id: u32,
+    window: Option<String>,
+    backend: Option<String>,
+    default_backend: InputBackend,
+    params: Option<HashMap<String, ParamValue>>,
+) -> Result<(), String> {
+    // Get config
+    let actions = config::get_config()?;
+
+    let action = actions.get(&action_id)
+        .ok_or_else(|| format!("Action {} not found in configuration", action_id))?;
+
+    // Resolve placeholders if params are provided
+    let resolved_action = if let Some(p) = params {
+        let resolver = ActionResolver::new(p);
+        resolver.resolve_action(action)?
+    } else {
+        action.clone()
+    };
+
+    // Resolve the effective backend: action > default > call_param
+    let resolved_backend = resolve_backend(&resolved_action, default_backend, backend.as_deref());
+
+    // Resolve target hwnd if window spec provided
+    let target_hwnd = if let Some(ref spec) = window {
+        Some(get_hwnd_from_spec(spec)?)
+    } else {
+        None
+    };
+
+    // Activate window if using Enigo backend (Win32 doesn't need activation)
+    if resolved_backend == InputBackend::Enigo {
+        if let Some(hwnd) = target_hwnd {
+            input::activate_window(hwnd)?;
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+    }
+
+    let ctx = ExecContext::new(resolved_backend, target_hwnd);
+
+    // Execute the action
+    execute_action_impl(&resolved_action, &ctx)
+}
+
+/// Execute multiple actions based on the execute vector
+///
+/// # Arguments
+/// * `execute` - Vector of booleans where index corresponds to action index
+/// * `params` - Optional HashMap of parameter values for placeholder substitution
+/// * `default_backend` - The default backend from loaded config
+///
+/// Returns Ok(()) if all executed actions succeed, Err on first failure
+pub fn execute_actions(
+    execute: Vec<bool>,
+    params: Option<HashMap<String, ParamValue>>,
+    default_backend: InputBackend,
+) -> Result<(), String> {
+    let actions = config::get_config()?;
+
+    // 先收集所有需要执行的 action
+    let actions_to_execute: Vec<(u32, &Action)> = execute
+        .iter()
+        .enumerate()
+        .filter(|(_, &should_exec)| should_exec)
+        .filter_map(|(idx, _)| {
+            let action_idx = idx as u32;
+            actions.get(&action_idx).map(|a| (action_idx, a))
+        })
+        .collect();
+
+    // 如果有 params，检查是否满足所有需要执行的 action 的占位符
+    if let Some(ref p) = params {
+        let mut missing = Vec::new();
+
+        for (_, action) in &actions_to_execute {
+            for placeholder in ActionResolver::extract_needed_placeholders(action) {
+                if !p.contains_key(&placeholder) && !missing.contains(&placeholder) {
+                    missing.push(placeholder);
+                }
+            }
+        }
+
+        if !missing.is_empty() {
+            return Err(format!("Missing parameters: {}", missing.join(", ")));
+        }
+    }
+
+    let resolver = params.map(ActionResolver::new);
+
+    for (_action_idx, action) in actions_to_execute {
+        // Resolve placeholders
+        let resolved_action = match &resolver {
+            Some(r) => r.resolve_action(action)?,
+            None => action.clone(),
+        };
+
+        // Resolve backend
+        let resolved_backend = resolve_backend(&resolved_action, default_backend.clone(), None);
+
+        // Create execution context (no window spec for ZMQ commands)
+        let ctx = ExecContext::new(resolved_backend, None);
+
+        // Execute
+        execute_action_impl(&resolved_action, &ctx)?;
+    }
+
+    Ok(())
+}
+
 /// Helper to get HWND from a window spec string
 fn get_hwnd_from_spec(spec: &str) -> Result<isize, String> {
     let search = input::parse_window_spec(spec);
@@ -200,6 +325,8 @@ fn execute_action_impl(action: &Action, ctx: &ExecContext) -> Result<(), String>
         Action::KeySequence(seq_action) => execute_key_sequence(seq_action, ctx),
         Action::MouseClick(click_action) => execute_mouse_click(click_action, ctx),
         Action::MouseMove(move_action) => execute_mouse_move(move_action, ctx),
+        Action::MouseScroll(scroll_action) => execute_mouse_scroll(scroll_action, ctx),
+        Action::Delay(delay_action) => execute_delay(delay_action),
         Action::Text(text_action) => execute_text(text_action, ctx),
     }
 }
@@ -218,10 +345,10 @@ fn execute_key(action: &KeyAction, ctx: &ExecContext) -> Result<(), String> {
     if key.contains('+') {
         execute_combination_key(key, action.hold_time_ms, ctx)?;
     } else {
-        if let Some(hold_ms) = action.hold_time_ms {
+        if action.hold_time_ms > 0 {
             // Press and hold
             send_key_event(key, "press", ctx)?;
-            std::thread::sleep(std::time::Duration::from_millis(hold_ms));
+            std::thread::sleep(std::time::Duration::from_millis(action.hold_time_ms));
             send_key_event(key, "release", ctx)?;
         } else {
             // Simple click
@@ -235,7 +362,7 @@ fn execute_key(action: &KeyAction, ctx: &ExecContext) -> Result<(), String> {
 ///
 /// For Win32 backend: uses SendInput to send all keys atomically
 /// For Enigo backend: builds an event queue with proper timing
-fn execute_combination_key(key: &str, hold_ms: Option<u64>, ctx: &ExecContext) -> Result<(), String> {
+fn execute_combination_key(key: &str, hold_ms: u64, ctx: &ExecContext) -> Result<(), String> {
     let keys: Vec<&str> = key.split('+').map(|s| s.trim()).collect();
 
     if keys.is_empty() {
@@ -253,7 +380,7 @@ fn execute_combination_key(key: &str, hold_ms: Option<u64>, ctx: &ExecContext) -
             }
 
             // Hold if specified
-            if let Some(_ms) = hold_ms {
+            if hold_ms > 0 {
                 // Release main key first
                 key_pairs.push((keys.last().unwrap(), false));
                 // Then release modifier keys in reverse order (skip main key)
@@ -289,12 +416,12 @@ fn execute_combination_key(key: &str, hold_ms: Option<u64>, ctx: &ExecContext) -
             }
 
             // Hold if specified
-            if let Some(ms) = hold_ms {
+            if hold_ms > 0 {
                 // First release the main key after holding
                 events.push(KeyEvent {
                     key: keys.last().unwrap(), // main key
                     direction: KeyDirection::Release,
-                    delay_ms: ms,
+                    delay_ms: hold_ms,
                 });
                 // Then release all modifier keys in reverse order (skip the main key)
                 for k in keys.iter().rev().skip(1) {
@@ -322,12 +449,26 @@ fn execute_combination_key(key: &str, hold_ms: Option<u64>, ctx: &ExecContext) -
 
 /// Execute a key sequence action
 fn execute_key_sequence(action: &KeySequenceAction, ctx: &ExecContext) -> Result<(), String> {
-    let interval = action.interval_ms.unwrap_or(0);
+    let default_interval = action.default_interval_ms;
 
-    for key in &action.keys {
-        send_key_event(key, "click", ctx)?;
-        if interval > 0 {
-            std::thread::sleep(std::time::Duration::from_millis(interval));
+    for (i, item) in action.keys.iter().enumerate() {
+        // Execute the key press
+        if item.hold_time_ms > 0 {
+            // Press and hold
+            send_key_event(&item.key, "press", ctx)?;
+            std::thread::sleep(std::time::Duration::from_millis(item.hold_time_ms));
+            send_key_event(&item.key, "release", ctx)?;
+        } else {
+            // Simple click
+            send_key_event(&item.key, "click", ctx)?;
+        }
+
+        // Sleep before next key (unless this is the last key)
+        if i < action.keys.len() - 1 {
+            let interval = item.interval_ms.unwrap_or(default_interval);
+            if interval > 0 {
+                std::thread::sleep(std::time::Duration::from_millis(interval));
+            }
         }
     }
 
@@ -336,6 +477,10 @@ fn execute_key_sequence(action: &KeySequenceAction, ctx: &ExecContext) -> Result
 
 /// Execute a mouse click action
 fn execute_mouse_click(action: &MouseClickAction, ctx: &ExecContext) -> Result<(), String> {
+    // Parse string count to u32
+    let count = action.count.parse::<u32>()
+        .map_err(|_| format!("Invalid click count: {}", action.count))?;
+
     // Note: For now, mouse clicks always use Enigo as it's more reliable for absolute positioning
     // This could be enhanced to support Win32 backend as well
     let mut enigo = Enigo::new(&Settings::default())
@@ -348,13 +493,22 @@ fn execute_mouse_click(action: &MouseClickAction, ctx: &ExecContext) -> Result<(
     };
 
     let interval = action.interval_ms.unwrap_or(0);
+    let hold_time = action.hold_time_ms;
 
-    for i in 0..action.count {
-        enigo.button(button, Direction::Click)
-            .map_err(|e| format!("Failed to click: {:?}", e))?;
+    for i in 0..count {
+        // Press, hold, then release
+        enigo.button(button, Direction::Press)
+            .map_err(|e| format!("Failed to press mouse button: {:?}", e))?;
+
+        if hold_time > 0 {
+            std::thread::sleep(std::time::Duration::from_millis(hold_time));
+        }
+
+        enigo.button(button, Direction::Release)
+            .map_err(|e| format!("Failed to release mouse button: {:?}", e))?;
 
         // Don't sleep after the last click
-        if i < action.count - 1 && interval > 0 {
+        if i < count - 1 && interval > 0 {
             std::thread::sleep(std::time::Duration::from_millis(interval));
         }
     }
@@ -364,21 +518,72 @@ fn execute_mouse_click(action: &MouseClickAction, ctx: &ExecContext) -> Result<(
 
 /// Execute a mouse move action
 fn execute_mouse_move(action: &MouseMoveAction, ctx: &ExecContext) -> Result<(), String> {
-    // Note: Mouse move uses Enigo as it handles absolute positioning well
-    let mut enigo = Enigo::new(&Settings::default())
-        .map_err(|e| format!("Failed to create Enigo: {:?}", e))?;
+    // Parse string coordinates to i32
+    let x = action.x.parse::<i32>()
+        .map_err(|_| format!("Invalid x coordinate: {}", action.x))?;
+    let y = action.y.parse::<i32>()
+        .map_err(|_| format!("Invalid y coordinate: {}", action.y))?;
 
-    // enigo's move_mouse moves to the absolute position
-    enigo.move_mouse(action.x, action.y, Coordinate::Abs)
-        .map_err(|e| format!("Failed to move mouse: {:?}", e))?;
+    let duration = action.duration_ms.unwrap_or(0);
 
-    // If duration is specified, we could implement smooth move here
-    // For now, just a simple instant move
-    if let Some(_duration_ms) = action.duration_ms {
-        // Smooth move implementation could be added here
-        // Would require interpolation over time
+    match ctx.backend {
+        InputBackend::Win32 => {
+            // Win32: use SetCursorPos
+            let start = input::get_mouse_position()?;
+            input::smooth_move(start.0, start.1, x, y, duration)?;
+        }
+        InputBackend::Enigo => {
+            if duration == 0 {
+                // Instant move using enigo
+                let mut enigo = Enigo::new(&Settings::default())
+                    .map_err(|e| format!("Failed to create Enigo: {:?}", e))?;
+                enigo.move_mouse(x, y, Coordinate::Abs)
+                    .map_err(|e| format!("Failed to move mouse: {:?}", e))?;
+            } else {
+                // Smooth move: get current position then interpolate
+                let start = input::get_mouse_position()?;
+                input::smooth_move(start.0, start.1, x, y, duration)?;
+            }
+        }
     }
 
+    Ok(())
+}
+
+/// Execute a mouse scroll action
+fn execute_mouse_scroll(action: &MouseScrollAction, ctx: &ExecContext) -> Result<(), String> {
+    // Windows default wheel delta is 120 per "click"
+    let delta = (action.amount as i32) * 120;
+
+    match ctx.backend {
+        InputBackend::Win32 => {
+            let hwnd = ctx.target_hwnd
+                .ok_or("Win32 backend requires target window for mouse scroll")?;
+            input::win32_input::send_mouse_scroll(hwnd, delta)?;
+        }
+        InputBackend::Enigo => {
+            let mut enigo = Enigo::new(&Settings::default())
+                .map_err(|e| format!("Failed to create Enigo: {:?}", e))?;
+
+            // Enigo scroll: length (positive=down/right, negative=up/left), axis
+            let (length, axis) = match action.direction {
+                ScrollDirection::Up => (-(action.amount as i32), Axis::Vertical),
+                ScrollDirection::Down => (action.amount as i32, Axis::Vertical),
+                ScrollDirection::Left => (-(action.amount as i32), Axis::Horizontal),
+                ScrollDirection::Right => (action.amount as i32, Axis::Horizontal),
+            };
+
+            enigo.scroll(length, axis)
+                .map_err(|e| format!("Failed to scroll: {:?}", e))?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Execute a delay action
+fn execute_delay(action: &DelayAction) -> Result<(), String> {
+    std::thread::sleep(std::time::Duration::from_millis(action.duration_ms));
     Ok(())
 }
 
