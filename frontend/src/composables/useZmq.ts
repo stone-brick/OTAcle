@@ -13,9 +13,6 @@ const isConnected = ref(false)
 const address = ref('')
 const messages = ref<ZmqMessage[]>([])
 
-let unlistenLog: UnlistenFn | null = null
-let unlistenError: UnlistenFn | null = null
-
 function formatTime(): string {
   const now = new Date()
   return now.toLocaleTimeString('zh-CN', { hour12: false })
@@ -23,6 +20,10 @@ function formatTime(): string {
 
 export function useZmq() {
   const { addLog } = useLog()
+
+  // Listener refs - inside useZmq() so each component instance has its own
+  const unlistenLog = ref<UnlistenFn | null>(null)
+  const unlistenError = ref<UnlistenFn | null>(null)
 
   async function fetchStatus() {
     try {
@@ -53,7 +54,6 @@ export function useZmq() {
       await fetchStatus()
     } catch (e) {
       addLog(`停止 ZMQ 连接失败: ${e}`, 'error')
-      throw e
     }
   }
 
@@ -77,18 +77,18 @@ export function useZmq() {
     await fetchStatus()
 
     // Listen for ZMQ log events
-    unlistenLog = await listen<string>('zmq:log', (event) => {
+    unlistenLog.value = await listen<string>('zmq:log', (event) => {
       addMessage(event.payload, 'success')
     })
 
-    unlistenError = await listen<string>('zmq:error', (event) => {
+    unlistenError.value = await listen<string>('zmq:error', (event) => {
       addMessage(event.payload, 'error')
     })
   })
 
   onUnmounted(() => {
-    unlistenLog?.()
-    unlistenError?.()
+    unlistenLog.value?.()
+    unlistenError.value?.()
   })
 
   return {

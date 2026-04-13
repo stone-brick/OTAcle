@@ -8,15 +8,16 @@
 //!
 //! ```json
 //! {
-//!   "0": {"type": "key", "key": "space"},
-//!   "1": {"type": "key_sequence", "keys": ["ctrl", "c"], "interval_ms": 10},
-//!   "2": {"type": "mouse_click", "button": "left", "count": 2},
-//!   "3": {"type": "mouse_move", "x": 100, "y": 200},
-//!   "4": {"type": "text", "content": "Hello World"}
+//!   "default_backend": "win32",
+//!   "actions": [
+//!     {"index": 0, "name": "jump", "type": "key", "key": "space"},
+//!     {"index": 1, "name": "copy", "type": "key", "key": "ctrl+c"},
+//!     {"index": 2, "name": "move", "type": "mouse_move", "x": 100, "y": 200},
+//!     {"index": 3, "name": "hello", "type": "text", "content": "Hello World"}
+//!   ]
 //! }
 //! ```
 
 pub mod config;
 pub mod executor;
-pub mod resolver;
 pub mod types;

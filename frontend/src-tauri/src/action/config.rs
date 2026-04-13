@@ -1,11 +1,13 @@
 //! JSON configuration parsing and validation for action config
 
-use super::types::{Action, ActionConfig, ActionConfigList, ActionItem, InputBackend, PlaceholderString};
+use crate::input;
+use super::types::{Action, ActionConfig, ActionConfigList, ActionItem, InputBackend};
 use lazy_static::lazy_static;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
 use std::sync::Mutex;
+use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
 
 lazy_static! {
     /// Global action configuration storage (maps index to Action)
@@ -14,8 +16,27 @@ lazy_static! {
     static ref ACTION_LIST: Mutex<Option<ActionConfigList>> = Mutex::new(None);
     /// Global default backend for actions without explicit backend
     static ref DEFAULT_BACKEND: Mutex<InputBackend> = Mutex::new(InputBackend::Win32);
-    /// Global placeholder name to action index mapping (for uniqueness validation)
-    static ref PLACEHOLDER_MAP: Mutex<Option<HashMap<String, u32>>> = Mutex::new(None);
+    /// Global target window for action execution (HWND)
+    pub static ref TARGET_WINDOW: Mutex<Option<isize>> = Mutex::new(None);
+    /// Global execution backend override
+    pub static ref EXECUTION_BACKEND: Mutex<InputBackend> = Mutex::new(InputBackend::Win32);
+}
+
+/// Maximum history entries
+const MAX_HISTORY_SIZE: usize = 50;
+
+/// History entry for undo/redo
+#[derive(Clone)]
+pub struct HistoryEntry {
+    pub actions: ActionConfigList,
+    pub default_backend: InputBackend,
+}
+
+lazy_static! {
+    /// Undo history stack
+    pub static ref UNDO_STACK: Mutex<Vec<HistoryEntry>> = Mutex::new(Vec::new());
+    /// Redo history stack
+    pub static ref REDO_STACK: Mutex<Vec<HistoryEntry>> = Mutex::new(Vec::new());
 }
 
 /// JSON config structure
@@ -87,7 +108,7 @@ pub fn load_config(path: &str) -> Result<(ActionConfig, InputBackend), String> {
 /// Load configuration into global storage
 pub fn load_config_with_backend(path: &str, _backend: InputBackend) -> Result<(), String> {
     // Backend is now specified per-config file, not per-call
-    let (config, default_backend, _placeholder_map) = load_config_with_validation(path)?;
+    let (config, default_backend) = load_config(path)?;
 
     let mut global_config = ACTION_CONFIG
         .lock()
@@ -134,6 +155,84 @@ pub fn get_default_backend() -> Result<InputBackend, String> {
     Ok(global.clone())
 }
 
+/// Set the target window for action execution
+pub fn set_target_window(window: Option<String>) -> Result<(), String> {
+    let hwnd = match window {
+        Some(spec) => {
+            let search = input::parse_window_spec(&spec);
+
+            // Empty spec means foreground window
+            if search.title.is_none()
+                && search.class_name.is_none()
+                && search.hwnd.is_none()
+                && search.pid.is_none()
+                && search.exe_name.is_none()
+            {
+                let hwnd = unsafe { GetForegroundWindow() };
+                if hwnd.0.is_null() {
+                    return Err("No foreground window found".to_string());
+                }
+                hwnd.0 as isize
+            } else {
+                // Resolve window spec to HWND
+                input::find_window(&search)
+                    .ok_or_else(|| format!("Window not found: {}", spec))?
+            }
+        }
+        None => {
+            // Clear target window
+            let mut global = TARGET_WINDOW
+                .lock()
+                .map_err(|_| "Failed to lock target window".to_string())?;
+            *global = None;
+            return Ok(());
+        }
+    };
+
+    let mut global = TARGET_WINDOW
+        .lock()
+        .map_err(|_| "Failed to lock target window".to_string())?;
+    *global = Some(hwnd);
+    Ok(())
+}
+
+/// Get the current target window (HWND)
+pub fn get_target_window() -> Option<isize> {
+    TARGET_WINDOW
+        .lock()
+        .map(|g| g.clone())
+        .unwrap_or(None)
+}
+
+/// Set the execution backend override
+pub fn set_execution_backend(backend: InputBackend) -> Result<(), String> {
+    let mut global = EXECUTION_BACKEND
+        .lock()
+        .map_err(|_| "Failed to lock execution backend".to_string())?;
+    *global = backend;
+    Ok(())
+}
+
+/// Get the current execution backend override
+pub fn get_execution_backend() -> InputBackend {
+    EXECUTION_BACKEND
+        .lock()
+        .map(|g| g.clone())
+        .unwrap_or(InputBackend::Win32)
+}
+
+/// Set the default backend (with history tracking)
+pub fn set_default_backend(backend: InputBackend) -> Result<(), String> {
+    // Save current state to history before modification
+    save_to_history()?;
+
+    let mut global = DEFAULT_BACKEND
+        .lock()
+        .map_err(|_| "Failed to lock default backend".to_string())?;
+    *global = backend;
+    Ok(())
+}
+
 /// Validate a single action
 fn validate_action(action: &Action) -> Result<(), String> {
     match action {
@@ -153,12 +252,9 @@ fn validate_action(action: &Action) -> Result<(), String> {
             }
         }
         Action::MouseClick(click_action) => {
-            if let Ok(count) = click_action.count.parse::<u32>() {
-                if count == 0 {
-                    return Err("Click count must be at least 1".to_string());
-                }
+            if click_action.count == 0 {
+                return Err("Click count must be at least 1".to_string());
             }
-            // If parsing fails, let it fail at execution time
         }
         Action::MouseMove(_) => {
             // x, y can be any value - no validation needed
@@ -193,131 +289,29 @@ pub fn validate_config(config: &ActionConfig) -> Result<(), String> {
     Ok(())
 }
 
-/// Collect all placeholder names from an action
-fn collect_placeholders_from_action(action: &Action) -> Vec<String> {
-    match action {
-        Action::Key(key_action) => {
-            let ph = PlaceholderString::new(&key_action.key);
-            if ph.has_placeholder() {
-                ph.extract_placeholders()
-            } else {
-                Vec::new()
-            }
-        }
-        Action::KeySequence(_) => {
-            // Key sequences don't support placeholders in keys currently
-            Vec::new()
-        }
-        Action::MouseClick(click_action) => {
-            let ph = PlaceholderString::new(&click_action.count);
-            if ph.has_placeholder() {
-                ph.extract_placeholders()
-            } else {
-                Vec::new()
-            }
-        }
-        Action::MouseMove(move_action) => {
-            let mut names = Vec::new();
-            let x_ph = PlaceholderString::new(&move_action.x);
-            if x_ph.has_placeholder() {
-                names.extend(x_ph.extract_placeholders());
-            }
-            let y_ph = PlaceholderString::new(&move_action.y);
-            if y_ph.has_placeholder() {
-                names.extend(y_ph.extract_placeholders());
-            }
-            names
-        }
-        Action::MouseScroll(_) => Vec::new(),
-        Action::Delay(_) => Vec::new(),
-        Action::Text(text_action) => {
-            let ph = PlaceholderString::new(&text_action.content);
-            if ph.has_placeholder() {
-                ph.extract_placeholders()
-            } else {
-                Vec::new()
-            }
-        }
-    }
-}
+// Save current state to undo history
+pub fn save_to_history() -> Result<(), String> {
+    let actions = get_action_list()?;
+    let backend = get_default_backend()?;
 
-/// Validate that all placeholder names are unique across actions
-/// Returns the placeholder map (name -> action index) if valid
-fn validate_placeholder_uniqueness(config: &ActionConfig) -> Result<HashMap<String, u32>, String> {
-    let mut placeholder_map: HashMap<String, u32> = HashMap::new();
-    let mut duplicates: Vec<(String, u32, u32)> = Vec::new();
+    let entry = HistoryEntry {
+        actions,
+        default_backend: backend,
+    };
 
-    for (&action_idx, action) in config {
-        for placeholder_name in collect_placeholders_from_action(action) {
-            if let Some(&existing_idx) = placeholder_map.get(&placeholder_name) {
-                if existing_idx != action_idx {
-                    duplicates.push((placeholder_name, existing_idx, action_idx));
-                }
-            } else {
-                placeholder_map.insert(placeholder_name, action_idx);
-            }
-        }
+    let mut undo = UNDO_STACK.lock().map_err(|_| "Failed to lock undo stack")?;
+    undo.push(entry);
+
+    // Limit history size
+    if undo.len() > MAX_HISTORY_SIZE {
+        undo.remove(0);
     }
 
-    if !duplicates.is_empty() {
-        let msg = duplicates
-            .iter()
-            .map(|(name, idx1, idx2)| format!("'{}' used in action {} and {}", name, idx1, idx2))
-            .collect::<Vec<_>>()
-            .join("; ");
-        return Err(format!("Duplicate placeholder names found: {}", msg));
-    }
+    // New action clears redo stack
+    let mut redo = REDO_STACK.lock().map_err(|_| "Failed to lock redo stack")?;
+    redo.clear();
 
-    Ok(placeholder_map)
-}
-
-/// Load and validate configuration with placeholder uniqueness check
-pub fn load_config_with_validation(path: &str) -> Result<(ActionConfig, InputBackend, HashMap<String, u32>), String> {
-    let content = fs::read_to_string(path)
-        .map_err(|e| format!("Failed to read config file: {}", e))?;
-
-    let config: Config = serde_json::from_str(&content)
-        .map_err(|e| format!("Failed to parse config: {}", e))?;
-
-    let mut result: ActionConfig = HashMap::new();
-    let mut action_list: ActionConfigList = Vec::new();
-
-    for item in config.actions {
-        result.insert(item.index, item.action.clone());
-        action_list.push(super::types::ActionItem {
-            index: item.index,
-            name: item.name,
-            data: item.action,
-        });
-    }
-
-    validate_config(&result)?;
-
-    // Validate placeholder uniqueness and get the placeholder map
-    let placeholder_map = validate_placeholder_uniqueness(&result)?;
-
-    // Store the list for later access
-    let mut global_list = ACTION_LIST.lock()
-        .map_err(|_| "Failed to lock action list".to_string())?;
-    *global_list = Some(action_list);
-
-    // Store the placeholder map
-    let mut global_placeholder_map = PLACEHOLDER_MAP.lock()
-        .map_err(|_| "Failed to lock placeholder map".to_string())?;
-    *global_placeholder_map = Some(placeholder_map.clone());
-
-    Ok((result, config.default_backend, placeholder_map))
-}
-
-/// Get the placeholder name to action index mapping
-pub fn get_placeholder_map() -> Result<HashMap<String, u32>, String> {
-    let global = PLACEHOLDER_MAP
-        .lock()
-        .map_err(|_| "Failed to lock placeholder map".to_string())?;
-
-    global
-        .clone()
-        .ok_or_else(|| "No configuration loaded. Call load_action_config first.".to_string())
+    Ok(())
 }
 
 /// Get the next available action index (max index + 1, or 0 if empty)
@@ -337,6 +331,9 @@ pub fn get_next_available_index() -> Result<u32, String> {
 
 /// Create a new action in memory and return its assigned index
 pub fn create_action(action: Action, name: Option<String>) -> Result<u32, String> {
+    // Save current state to history before modification
+    save_to_history()?;
+
     // Validate the action first
     validate_action(&action)?;
 
@@ -383,6 +380,9 @@ pub fn create_action(action: Action, name: Option<String>) -> Result<u32, String
 
 /// Update an existing action by index
 pub fn update_action(index: u32, action: Action, name: Option<String>) -> Result<(), String> {
+    // Save current state to history before modification
+    save_to_history()?;
+
     // Validate the action first
     validate_action(&action)?;
 
@@ -431,6 +431,9 @@ pub fn update_action(index: u32, action: Action, name: Option<String>) -> Result
 
 /// Delete an action by index
 pub fn delete_action(index: u32) -> Result<(), String> {
+    // Save current state to history before modification
+    save_to_history()?;
+
     // Delete from ACTION_LIST
     {
         let mut list = ACTION_LIST
@@ -495,4 +498,81 @@ pub fn save_config(path: &str, default_backend: InputBackend, actions: &ActionCo
     load_config_with_backend(path, default_backend)?;
 
     Ok(())
+}
+
+// Undo - restore previous state
+pub fn undo() -> Result<(), String> {
+    let mut undo = UNDO_STACK.lock().map_err(|_| "Failed to lock undo stack")?;
+    let mut redo = REDO_STACK.lock().map_err(|_| "Failed to lock redo stack")?;
+
+    if undo.is_empty() {
+        return Err("Nothing to undo".to_string());
+    }
+
+    // Save current state to redo stack
+    let current = HistoryEntry {
+        actions: get_action_list()?,
+        default_backend: get_default_backend()?,
+    };
+    redo.push(current);
+
+    // Restore previous state
+    let prev = undo.pop().unwrap();
+    reload_from_entry(&prev)?;
+
+    Ok(())
+}
+
+// Redo - restore next state
+pub fn redo() -> Result<(), String> {
+    let mut undo = UNDO_STACK.lock().map_err(|_| "Failed to lock undo stack")?;
+    let mut redo = REDO_STACK.lock().map_err(|_| "Failed to lock redo stack")?;
+
+    if redo.is_empty() {
+        return Err("Nothing to redo".to_string());
+    }
+
+    // Save current state to undo stack
+    let current = HistoryEntry {
+        actions: get_action_list()?,
+        default_backend: get_default_backend()?,
+    };
+    undo.push(current);
+
+    // Restore next state
+    let next = redo.pop().unwrap();
+    reload_from_entry(&next)?;
+
+    Ok(())
+}
+
+// Reload state from a history entry
+fn reload_from_entry(entry: &HistoryEntry) -> Result<(), String> {
+    // Update global ACTION_CONFIG HashMap
+    let mut config = ACTION_CONFIG.lock().map_err(|_| "Failed to lock config")?;
+    *config = Some(entry.actions.iter().map(|a| (a.index, a.data.clone())).collect());
+
+    // Update global ACTION_LIST
+    let mut list = ACTION_LIST.lock().map_err(|_| "Failed to lock action list")?;
+    *list = Some(entry.actions.clone());
+
+    // Update global DEFAULT_BACKEND
+    let mut backend = DEFAULT_BACKEND.lock().map_err(|_| "Failed to lock default backend")?;
+    *backend = entry.default_backend.clone();
+
+    Ok(())
+}
+
+// Clear undo/redo history
+pub fn clear_history() -> Result<(), String> {
+    UNDO_STACK.lock().map_err(|_| "Failed to lock undo stack")?.clear();
+    REDO_STACK.lock().map_err(|_| "Failed to lock redo stack")?.clear();
+    Ok(())
+}
+
+// Get history status (undo count, redo count)
+pub fn get_history_status() -> (usize, usize) {
+    let undo_len = UNDO_STACK.lock().map(|g| g.len()).unwrap_or(0);
+    let redo_len = REDO_STACK.lock().map(|g| g.len()).unwrap_or(0);
+    (undo_len, redo_len)
 }

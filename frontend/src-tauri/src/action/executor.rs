@@ -3,8 +3,7 @@
 //! Executes configured actions based on action IDs.
 
 use super::config;
-use super::resolver::ActionResolver;
-use super::types::{Action, DelayAction, InputBackend, KeyAction, KeySequenceAction, MouseButton, MouseClickAction, MouseMoveAction, MouseScrollAction, ParamValue, ScrollDirection, TextAction};
+use super::types::{Action, DelayAction, InputBackend, KeyAction, KeySequenceAction, MouseButton, MouseClickAction, MouseMoveAction, MouseScrollAction, ScrollDirection, TextAction};
 use crate::input;
 use enigo::{Axis, Button, Coordinate, Direction, Enigo, Mouse, Settings};
 use std::collections::HashMap;
@@ -50,19 +49,16 @@ impl ExecContext {
 }
 
 /// Get the effective backend for an action
-/// Priority: action.backend > default_backend > call_parameter
-fn resolve_backend(action: &Action, default_backend: InputBackend, call_backend: Option<&str>) -> InputBackend {
+/// Priority: action.backend > execution_backend > default_backend
+fn resolve_backend(action: &Action, default_backend: InputBackend, execution_backend: Option<InputBackend>) -> InputBackend {
     // First priority: action's own backend setting
     if let Some(backend) = get_action_backend(action) {
         return backend;
     }
 
-    // Second priority: call parameter (if provided)
-    if let Some(param) = call_backend {
-        return match param {
-            "enigo" => InputBackend::Enigo,
-            _ => InputBackend::Win32,
-        };
+    // Second priority: execution_backend (global override)
+    if let Some(backend) = execution_backend {
+        return backend;
     }
 
     // Third priority: config default_backend
@@ -137,13 +133,11 @@ fn send_text_event(text: &str, ctx: &ExecContext) -> Result<(), String> {
 ///
 /// # Arguments
 /// * `action_id` - The numeric ID of the action to execute
-/// * `window` - Optional window spec to activate before executing
-/// * `backend` - Optional call parameter to override; if not provided, uses config default
 /// * `default_backend` - The default backend from loaded config (used when action has no backend)
+///
+/// Target window and execution backend are read from global config.
 pub fn execute_action(
     action_id: u32,
-    window: Option<String>,
-    backend: Option<String>,
     default_backend: InputBackend,
 ) -> Result<(), String> {
     // Get config
@@ -152,15 +146,12 @@ pub fn execute_action(
     let action = actions.get(&action_id)
         .ok_or_else(|| format!("Action {} not found in configuration", action_id))?;
 
-    // Resolve the effective backend: action > default > call_param
-    let resolved_backend = resolve_backend(action, default_backend, backend.as_deref());
+    // Get global execution backend (overrides default if set)
+    let execution_backend = config::get_execution_backend();
+    let resolved_backend = resolve_backend(action, default_backend, Some(execution_backend));
 
-    // Resolve target hwnd if window spec provided
-    let target_hwnd = if let Some(ref spec) = window {
-        Some(get_hwnd_from_spec(spec)?)
-    } else {
-        None
-    };
+    // Get global target window (already resolved to HWND)
+    let target_hwnd = config::get_target_window();
 
     // Activate window if using Enigo backend (Win32 doesn't need activation)
     if resolved_backend == InputBackend::Enigo {
@@ -176,23 +167,18 @@ pub fn execute_action(
     execute_action_impl(action, &ctx)
 }
 
-/// Execute an action by its ID with runtime parameters
-///
-/// This function allows dynamically resolving placeholders in action configurations
-/// using parameters provided at runtime via ZMQ or other interfaces.
+/// Execute an action by its ID with optional params for variable substitution
 ///
 /// # Arguments
 /// * `action_id` - The numeric ID of the action to execute
-/// * `window` - Optional window spec to activate before executing
-/// * `backend` - Optional call parameter to override; if not provided, uses config default
+/// * `params` - Optional parameters for dynamic field substitution
 /// * `default_backend` - The default backend from loaded config
-/// * `params` - Optional HashMap of parameter values for placeholder substitution
+///
+/// Target window and execution backend are read from global config.
 pub fn execute_action_with_params(
     action_id: u32,
-    window: Option<String>,
-    backend: Option<String>,
+    params: HashMap<String, serde_json::Value>,
     default_backend: InputBackend,
-    params: Option<HashMap<String, ParamValue>>,
 ) -> Result<(), String> {
     // Get config
     let actions = config::get_config()?;
@@ -200,23 +186,19 @@ pub fn execute_action_with_params(
     let action = actions.get(&action_id)
         .ok_or_else(|| format!("Action {} not found in configuration", action_id))?;
 
-    // Resolve placeholders if params are provided
-    let resolved_action = if let Some(p) = params {
-        let resolver = ActionResolver::new(p);
-        resolver.resolve_action(action)?
+    // Apply dynamic parameters if provided
+    let resolved_action = if !params.is_empty() {
+        apply_params(action, &params)?
     } else {
         action.clone()
     };
 
-    // Resolve the effective backend: action > default > call_param
-    let resolved_backend = resolve_backend(&resolved_action, default_backend, backend.as_deref());
+    // Get global execution backend (overrides default if set)
+    let execution_backend = config::get_execution_backend();
+    let resolved_backend = resolve_backend(&resolved_action, default_backend, Some(execution_backend));
 
-    // Resolve target hwnd if window spec provided
-    let target_hwnd = if let Some(ref spec) = window {
-        Some(get_hwnd_from_spec(spec)?)
-    } else {
-        None
-    };
+    // Get global target window (already resolved to HWND)
+    let target_hwnd = config::get_target_window();
 
     // Activate window if using Enigo backend (Win32 doesn't need activation)
     if resolved_backend == InputBackend::Enigo {
@@ -236,16 +218,22 @@ pub fn execute_action_with_params(
 ///
 /// # Arguments
 /// * `execute` - Vector of booleans where index corresponds to action index
-/// * `params` - Optional HashMap of parameter values for placeholder substitution
+/// * `params` - Optional parameters for dynamic field substitution
 /// * `default_backend` - The default backend from loaded config
 ///
 /// Returns Ok(()) if all executed actions succeed, Err on first failure
 pub fn execute_actions(
     execute: Vec<bool>,
-    params: Option<HashMap<String, ParamValue>>,
+    params: HashMap<String, serde_json::Value>,
     default_backend: InputBackend,
 ) -> Result<(), String> {
     let actions = config::get_config()?;
+
+    // Get global target window (already resolved to HWND)
+    let target_hwnd = config::get_target_window();
+
+    // Get global execution backend
+    let execution_backend = config::get_execution_backend();
 
     // 先收集所有需要执行的 action
     let actions_to_execute: Vec<(u32, &Action)> = execute
@@ -258,43 +246,91 @@ pub fn execute_actions(
         })
         .collect();
 
-    // 如果有 params，检查是否满足所有需要执行的 action 的占位符
-    if let Some(ref p) = params {
-        let mut missing = Vec::new();
-
-        for (_, action) in &actions_to_execute {
-            for placeholder in ActionResolver::extract_needed_placeholders(action) {
-                if !p.contains_key(&placeholder) && !missing.contains(&placeholder) {
-                    missing.push(placeholder);
-                }
-            }
-        }
-
-        if !missing.is_empty() {
-            return Err(format!("Missing parameters: {}", missing.join(", ")));
-        }
-    }
-
-    let resolver = params.map(ActionResolver::new);
-
     for (_action_idx, action) in actions_to_execute {
-        // Resolve placeholders
-        let resolved_action = match &resolver {
-            Some(r) => r.resolve_action(action)?,
-            None => action.clone(),
+        // Apply dynamic parameters if provided
+        let resolved_action = if !params.is_empty() {
+            apply_params(action, &params)?
+        } else {
+            action.clone()
         };
 
-        // Resolve backend
-        let resolved_backend = resolve_backend(&resolved_action, default_backend.clone(), None);
+        // Resolve backend: action > execution_backend > default_backend
+        let resolved_backend = resolve_backend(&resolved_action, default_backend.clone(), Some(execution_backend.clone()));
 
-        // Create execution context (no window spec for ZMQ commands)
-        let ctx = ExecContext::new(resolved_backend, None);
+        // Create execution context with global target window
+        let ctx = ExecContext::new(resolved_backend, target_hwnd);
 
         // Execute
         execute_action_impl(&resolved_action, &ctx)?;
     }
 
     Ok(())
+}
+
+/// Apply dynamic parameters to an action based on its variables definition
+///
+/// Each Variable entry maps a param_name (from ZMQ params) to a field_name (action struct field).
+/// Only fields explicitly listed in variables can be overridden at runtime.
+fn apply_params(action: &Action, params: &HashMap<String, serde_json::Value>) -> Result<Action, String> {
+    let mut resolved = action.clone();
+
+    match &mut resolved {
+        Action::MouseMove(a) => {
+            for var in &a.variables {
+                if let Some(value) = params.get(&var.param_name) {
+                    match var.field_name.as_str() {
+                        "x" => apply_field(&mut a.x, &var.field_name, value)?,
+                        "y" => apply_field(&mut a.y, &var.field_name, value)?,
+                        _ => {
+                            return Err(format!(
+                                "Unknown field '{}' for mouse_move (expected 'x' or 'y')",
+                                var.field_name
+                            ));
+                        }
+                    }
+                }
+                // If param not provided, use the default value from config (do nothing)
+            }
+        }
+        Action::MouseClick(a) => {
+            for var in &a.variables {
+                if let Some(value) = params.get(&var.param_name) {
+                    match var.field_name.as_str() {
+                        "count" => apply_field(&mut a.count, &var.field_name, value)?,
+                        _ => {
+                            return Err(format!(
+                                "Unknown field '{}' for mouse_click (expected 'count')",
+                                var.field_name
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        _ => {}
+    }
+
+    Ok(resolved)
+}
+
+/// Apply a parameter value to a field
+fn apply_field<T: serde::de::DeserializeOwned + Clone>(
+    field: &mut T,
+    field_name: &str,
+    value: &serde_json::Value,
+) -> Result<(), String> {
+    match serde_json::from_value(value.clone()) {
+        Ok(new_val) => {
+            *field = new_val;
+            Ok(())
+        }
+        Err(_) => Err(format!(
+            "Invalid value type for field '{}': expected {}, got {}",
+            field_name,
+            std::any::type_name::<T>(),
+            value
+        )),
+    }
 }
 
 /// Helper to get HWND from a window spec string
@@ -477,9 +513,7 @@ fn execute_key_sequence(action: &KeySequenceAction, ctx: &ExecContext) -> Result
 
 /// Execute a mouse click action
 fn execute_mouse_click(action: &MouseClickAction, ctx: &ExecContext) -> Result<(), String> {
-    // Parse string count to u32
-    let count = action.count.parse::<u32>()
-        .map_err(|_| format!("Invalid click count: {}", action.count))?;
+    let count = action.count;
 
     // Note: For now, mouse clicks always use Enigo as it's more reliable for absolute positioning
     // This could be enhanced to support Win32 backend as well
@@ -518,11 +552,8 @@ fn execute_mouse_click(action: &MouseClickAction, ctx: &ExecContext) -> Result<(
 
 /// Execute a mouse move action
 fn execute_mouse_move(action: &MouseMoveAction, ctx: &ExecContext) -> Result<(), String> {
-    // Parse string coordinates to i32
-    let x = action.x.parse::<i32>()
-        .map_err(|_| format!("Invalid x coordinate: {}", action.x))?;
-    let y = action.y.parse::<i32>()
-        .map_err(|_| format!("Invalid y coordinate: {}", action.y))?;
+    let x = action.x;
+    let y = action.y;
 
     let duration = action.duration_ms.unwrap_or(0);
 

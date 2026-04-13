@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
-import type { ActionItem, Action, KeyAction, KeySequenceAction, MouseClickAction, MouseMoveAction, MouseScrollAction, DelayAction, TextAction } from '../../types';
+import type { ActionItem, Action, KeyAction, KeySequenceAction, MouseClickAction, MouseMoveAction, MouseScrollAction, DelayAction, TextAction, Variable } from '../../types';
 
 const props = defineProps<{
   action: ActionItem;
@@ -10,14 +10,20 @@ const emit = defineEmits<{
   update: [index: number, action: Action, name: string | null];
 }>();
 
+// Helper to construct Action from flattened ActionItem
+function getActionFromItem(item: ActionItem): Action {
+  const { index, name, type, ...actionData } = item;
+  return { type, ...actionData } as Action;
+}
+
 // Local editing state
-const editedAction = ref<Action>(JSON.parse(JSON.stringify(props.action.data)));
+const editedAction = ref<Action>(getActionFromItem(props.action));
 const editedName = ref<string | null>(props.action.name);
 const hasChanges = ref(false);
 
 // Watch for prop changes
 watch(() => props.action, (newAction) => {
-  editedAction.value = JSON.parse(JSON.parse(JSON.stringify(newAction.data)));
+  editedAction.value = getActionFromItem(newAction);
   editedName.value = newAction.name;
   hasChanges.value = false;
 }, { deep: true });
@@ -33,7 +39,7 @@ function handleSave() {
 }
 
 function handleCancel() {
-  editedAction.value = JSON.parse(JSON.stringify(props.action.data));
+  editedAction.value = getActionFromItem(props.action);
   editedName.value = props.action.name;
   hasChanges.value = false;
 }
@@ -49,6 +55,44 @@ function removeKeyFromSequence(index: number) {
   seq.keys.splice(index, 1);
 }
 
+// Variables management
+function getVariables(): Variable[] {
+  if (editedAction.value.type === 'mouse_move') {
+    const action = editedAction.value as MouseMoveAction;
+    return action.variables || [];
+  } else if (editedAction.value.type === 'mouse_click') {
+    const action = editedAction.value as MouseClickAction;
+    return action.variables || [];
+  }
+  return [];
+}
+
+function setVariables(vars: Variable[]) {
+  if (editedAction.value.type === 'mouse_move') {
+    (editedAction.value as MouseMoveAction).variables = vars.length > 0 ? vars : undefined;
+  } else if (editedAction.value.type === 'mouse_click') {
+    (editedAction.value as MouseClickAction).variables = vars.length > 0 ? vars : undefined;
+  }
+}
+
+function addVariable() {
+  const vars = getVariables();
+  vars.push({ param_name: '', field_name: '' });
+  setVariables(vars);
+}
+
+function removeVariable(index: number) {
+  const vars = getVariables();
+  vars.splice(index, 1);
+  setVariables(vars);
+}
+
+function updateVariableField(index: number, field: 'param_name' | 'field_name', value: string) {
+  const vars = getVariables();
+  vars[index][field] = value;
+  setVariables(vars);
+}
+
 // Computed action type label
 const actionTypeLabel = computed(() => {
   const labels: Record<string, string> = {
@@ -61,6 +105,21 @@ const actionTypeLabel = computed(() => {
     text: '文本输入',
   };
   return labels[editedAction.value.type] || editedAction.value.type;
+});
+
+// Available fields for variables
+const availableFields = computed(() => {
+  if (editedAction.value.type === 'mouse_move') {
+    return ['x', 'y'];
+  } else if (editedAction.value.type === 'mouse_click') {
+    return ['count'];
+  }
+  return [];
+});
+
+// Whether action supports variables
+const supportsVariables = computed(() => {
+  return ['mouse_move', 'mouse_click'].includes(editedAction.value.type);
 });
 </script>
 
@@ -156,12 +215,11 @@ const actionTypeLabel = computed(() => {
       <div class="form-field">
         <label>点击次数</label>
         <input
-          v-model="(editedAction as MouseClickAction).count"
-          type="text"
-          placeholder="1 或 {{click_count}}"
-          class="text-input"
+          v-model.number="(editedAction as MouseClickAction).count"
+          type="number"
+          min="1"
+          class="number-input"
         />
-        <span class="field-hint">支持占位符如 &#123;&#123;click_count&#125;&#125;</span>
       </div>
       <div class="form-field">
         <label>间隔 (ms)</label>
@@ -179,22 +237,18 @@ const actionTypeLabel = computed(() => {
       <div class="form-field">
         <label>X 坐标</label>
         <input
-          v-model="(editedAction as MouseMoveAction).x"
-          type="text"
-          placeholder="0 或 {{target_x}}"
-          class="text-input"
+          v-model.number="(editedAction as MouseMoveAction).x"
+          type="number"
+          class="number-input"
         />
-        <span class="field-hint">支持占位符如 &#123;&#123;target_x&#125;&#125;</span>
       </div>
       <div class="form-field">
         <label>Y 坐标</label>
         <input
-          v-model="(editedAction as MouseMoveAction).y"
-          type="text"
-          placeholder="0 或 {{target_y}}"
-          class="text-input"
+          v-model.number="(editedAction as MouseMoveAction).y"
+          type="number"
+          class="number-input"
         />
-        <span class="field-hint">支持占位符如 &#123;&#123;target_y&#125;&#125;</span>
       </div>
       <div class="form-field">
         <label>移动时长 (ms，可选)</label>
@@ -204,6 +258,42 @@ const actionTypeLabel = computed(() => {
           min="0"
           class="number-input"
         />
+      </div>
+    </template>
+
+    <!-- Variables Section (for actions that support it) -->
+    <template v-if="supportsVariables">
+      <div class="form-field">
+        <label>动态参数 (variables)</label>
+        <div class="variables-list">
+          <div
+            v-for="(variable, index) in getVariables()"
+            :key="index"
+            class="variable-item"
+          >
+            <select
+              :value="variable.field_name"
+              @change="updateVariableField(index, 'field_name', ($event.target as HTMLSelectElement).value)"
+              class="select-input"
+            >
+              <option value="">选择字段...</option>
+              <option v-for="field in availableFields" :key="field" :value="field">
+                {{ field }}
+              </option>
+            </select>
+            <span class="arrow">→</span>
+            <input
+              :value="variable.param_name"
+              @input="updateVariableField(index, 'param_name', ($event.target as HTMLInputElement).value)"
+              type="text"
+              placeholder="参数名"
+              class="text-input param-input"
+            />
+            <button class="remove-var-btn" @click="removeVariable(index)">✕</button>
+          </div>
+          <button class="add-var-btn" @click="addVariable">+ 添加参数</button>
+        </div>
+        <span class="field-hint">定义可动态覆盖的字段和参数名称，运行时通过 ZMQ params 传值</span>
       </div>
     </template>
 
@@ -249,11 +339,11 @@ const actionTypeLabel = computed(() => {
         <label>文本内容</label>
         <textarea
           v-model="(editedAction as TextAction).content"
-          placeholder="输入要发送的文本... 支持占位符如 {{text}}"
+          placeholder="输入要发送的文本..."
           class="textarea-input"
           rows="4"
         ></textarea>
-        <span class="field-hint">支持占位符如 &#123;&#123;text&#125;&#125;</span>
+        <span class="field-hint">支持通过 variables 动态参数覆盖</span>
       </div>
     </template>
 
@@ -263,7 +353,7 @@ const actionTypeLabel = computed(() => {
         取消
       </button>
       <button class="btn-primary" @click="handleSave" :disabled="!hasChanges">
-        保存修改
+        确认
       </button>
     </div>
   </div>
@@ -392,6 +482,59 @@ const actionTypeLabel = computed(() => {
 }
 
 .add-key-btn:hover {
+  background: var(--color-surface-hover);
+}
+
+/* Variables */
+.variables-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.variable-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.variable-item .select-input {
+  width: 100px;
+}
+
+.arrow {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.param-input {
+  flex: 1;
+}
+
+.remove-var-btn {
+  padding: 4px 8px;
+  font-size: 11px;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: none;
+  cursor: pointer;
+}
+
+.remove-var-btn:hover {
+  color: var(--color-error);
+}
+
+.add-var-btn {
+  padding: 8px;
+  font-size: 12px;
+  background: var(--color-surface-secondary);
+  color: var(--color-primary);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.add-var-btn:hover {
   background: var(--color-surface-hover);
 }
 

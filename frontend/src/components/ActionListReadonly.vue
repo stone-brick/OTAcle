@@ -1,21 +1,14 @@
 <script setup lang="ts">
-import type { ActionItem } from '../../types';
+import type { ActionItem } from '../types';
 
-const props = defineProps<{
+defineProps<{
   actions: ActionItem[];
   selectedIndex: number | null;
-  changedIndices?: number[];
 }>();
 
 const emit = defineEmits<{
   select: [index: number];
-  delete: [index: number];
-  discard: [index: number];
 }>();
-
-function isChanged(index: number): boolean {
-  return props.changedIndices?.includes(index) ?? false;
-}
 
 function getActionTypeLabel(item: ActionItem | undefined): string {
   if (!item) return '未知';
@@ -69,24 +62,19 @@ function getTypeClass(item: ActionItem | undefined): string {
 </script>
 
 <template>
-  <div class="action-list-editor">
+  <div class="action-list-readonly">
+    <div class="list-header">
+      <h4>动作列表</h4>
+    </div>
     <div v-if="actions.length === 0" class="empty-state">
-      <template v-if="changedIndices && changedIndices.length > 0">
-        已筛选变更动作（无匹配项）
-      </template>
-      <template v-else>
-        暂无动作，请点击上方「新建动作」创建
-      </template>
+      暂无动作
     </div>
     <div v-else class="action-items">
       <div
         v-for="item in actions"
         :key="item.index"
         class="action-item"
-        :class="{
-          selected: selectedIndex === item.index,
-          changed: isChanged(item.index)
-        }"
+        :class="{ selected: selectedIndex === item.index }"
         @click="emit('select', item.index)"
       >
         <div class="action-info">
@@ -95,27 +83,9 @@ function getTypeClass(item: ActionItem | undefined): string {
             <span class="type-badge" :class="getTypeClass(item)">
               {{ getActionTypeLabel(item) }}
             </span>
-            <span v-if="isChanged(item.index)" class="changed-indicator" title="已修改">●</span>
           </div>
           <div class="action-name" v-if="item.name">{{ item.name }}</div>
           <div class="action-detail">{{ formatActionDetail(item) }}</div>
-        </div>
-        <div class="action-buttons">
-          <button
-            v-if="isChanged(item.index)"
-            class="discard-btn"
-            @click.stop="emit('discard', item.index)"
-            title="撤销此动作的修改"
-          >
-            ↩
-          </button>
-          <button
-            class="delete-btn"
-            @click.stop="emit('delete', item.index)"
-            title="删除动作"
-          >
-            ✕
-          </button>
         </div>
       </div>
     </div>
@@ -123,26 +93,42 @@ function getTypeClass(item: ActionItem | undefined): string {
 </template>
 
 <style scoped>
-.action-list-editor {
+.action-list-readonly {
   flex: 1;
-  overflow-y: auto;
-  padding-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
 }
 
-.action-list-editor::-webkit-scrollbar {
+.list-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.list-header h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.action-list-readonly::-webkit-scrollbar {
   width: 6px;
 }
 
-.action-list-editor::-webkit-scrollbar-track {
+.action-list-readonly::-webkit-scrollbar-track {
   background: var(--color-surface);
 }
 
-.action-list-editor::-webkit-scrollbar-thumb {
+.action-list-readonly::-webkit-scrollbar-thumb {
   background: var(--color-border);
   border-radius: 3px;
 }
 
-.action-list-editor::-webkit-scrollbar-thumb:hover {
+.action-list-readonly::-webkit-scrollbar-thumb:hover {
   background: var(--color-text-muted);
 }
 
@@ -154,16 +140,17 @@ function getTypeClass(item: ActionItem | undefined): string {
 }
 
 .action-items {
+  flex: 1;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   padding: 8px;
 }
 
 .action-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 10px 12px;
   background: var(--color-surface-secondary);
   border-radius: var(--radius-sm);
@@ -179,11 +166,6 @@ function getTypeClass(item: ActionItem | undefined): string {
 .action-item.selected {
   background: var(--color-primary-bg);
   border-color: var(--color-primary);
-}
-
-.action-item.changed {
-  border-color: var(--color-warning);
-  background: color-mix(in srgb, var(--color-warning-bg) 30%, var(--color-surface-secondary));
 }
 
 .action-info {
@@ -263,44 +245,5 @@ function getTypeClass(item: ActionItem | undefined): string {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.changed-indicator {
-  color: var(--color-warning);
-  font-size: 8px;
-  margin-left: 2px;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 4px;
-}
-
-.discard-btn,
-.delete-btn {
-  padding: 4px 8px;
-  font-size: 11px;
-  background: transparent;
-  color: var(--color-text-muted);
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s, color 0.15s;
-}
-
-.action-item:hover .discard-btn,
-.action-item:hover .delete-btn {
-  opacity: 1;
-}
-
-.discard-btn:hover {
-  color: var(--color-warning);
-  background: var(--color-warning-bg);
-}
-
-.delete-btn:hover {
-  color: var(--color-error);
-  background: var(--color-error-bg);
 }
 </style>

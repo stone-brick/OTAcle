@@ -4,23 +4,26 @@ OTAcle Python ZMQ 命令辅助模块
 用于构建和发送命令到 OTAcle Rust 后端。
 
 Usage:
-    # 方式1: 按索引执行动作
-    from otacle import OTAcleCommand
-    cmd = OTAcleCommand()
-    cmd.execute_by_indices([0, 2])           # 执行 index 0 和 2
-    cmd.set_params({"x": 100, "y": 200})
-    cmd.send()
+    # 方式1: 上下文管理器（推荐）
+    with OTAcleCommand() as cmd:
+        cmd.execute([0, 2])                      # 执行 index 0 和 2
+        cmd.set_params({"target_x": 100, "target_y": 200})
+        cmd.send()
 
-    # 方式2: 按名称执行动作（需先加载 actions 配置）
-    from otacle import OTAcleCommand
+    # 方式2: 显式 close()
     cmd = OTAcleCommand()
-    cmd.load_actions("path/to/actions.json")
-    cmd.execute_by_names(["jump", "move_mouse"])
-    cmd.set_params({"x": 100, "y": 200})
+    cmd.execute([0])
     cmd.send()
+    cmd.close()
+
+    # 便捷函数
+    from otacle import send_command
+    send_command([0, 2], {"target_x": 100})
 """
 
+import atexit
 import json
+import time
 import zmq
 from typing import Optional
 
@@ -43,16 +46,47 @@ class OTAcleCommand:
         self._address = address or ZMQ_ADDR
         self._execute: list[bool] = [False] * action_count
         self._params: dict = {}
-        self._actions_config: Optional[dict] = None
+        self._ctx: Optional[zmq.Context] = None
+        self._sock: Optional[zmq.Socket] = None
+        atexit.register(self.close)
 
-    def set_action_count(self, count: int) -> "OTAleCommand":
+    def _ensure_connected(self) -> None:
+        """确保 ZMQ 连接已建立（复用已有连接）"""
+        if self._sock is not None:
+            return
+        self._ctx = zmq.Context()
+        self._sock = self._ctx.socket(zmq.PUSH)
+        self._sock.connect(self._address)
+
+    def close(self) -> None:
+        """关闭 ZMQ 连接"""
+        if self._sock:
+            self._sock.close()
+            self._sock = None
+        if self._ctx:
+            self._ctx.term()
+            self._ctx = None
+
+    def set_action_count(self, count: int) -> "OTAcleCommand":
         """设置动作数组长度"""
         self._execute = [False] * count
         return self
 
-    def execute_by_indices(self, indices: list[int]) -> "OTAleCommand":
+    def set_action(self, index: int, enabled: bool = True) -> "OTAcleCommand":
         """
-        按索引指定要执行的动作
+        设置指定索引的动作是否执行
+
+        Args:
+            index: 动作索引
+            enabled: 是否执行，默认为 True
+        """
+        if 0 <= index < len(self._execute):
+            self._execute[index] = enabled
+        return self
+
+    def execute(self, indices: list[int]) -> "OTAcleCommand":
+        """
+        按索引指定要执行的动作（追加式）
 
         Args:
             indices: 动作索引列表，如 [0, 2, 4]
@@ -62,79 +96,47 @@ class OTAcleCommand:
                 self._execute[idx] = True
         return self
 
-    def execute_all(self) -> "OTAleCommand":
+    def execute_all(self) -> "OTAcleCommand":
         """执行所有动作"""
         self._execute = [True] * len(self._execute)
         return self
 
-    def clear_execute(self) -> "OTAleCommand":
+    def clear_execute(self) -> "OTAcleCommand":
         """清除所有执行标记"""
         self._execute = [False] * len(self._execute)
         return self
 
-    def load_actions(self, config_path: str) -> "OTAleCommand":
+    def set_params(self, params: dict) -> "OTAcleCommand":
         """
-        从 JSON 文件加载动作配置
+        设置动态参数
 
         Args:
-            config_path: actions.json 文件路径
-        """
-        with open(config_path, "r", encoding="utf-8") as f:
-            self._actions_config = json.load(f)
-        # 根据配置设置动作数组长度
-        if "actions" in self._actions_config:
-            self._execute = [False] * len(self._actions_config["actions"])
-        return self
-
-    def execute_by_names(self, names: list[str]) -> "OTAleCommand":
-        """
-        按名称指定要执行的动作（需先调用 load_actions）
-
-        Args:
-            names: 动作名称列表
-
-        Raises:
-            RuntimeError: 如果未先加载动作配置
-        """
-        if self._actions_config is None:
-            raise RuntimeError(
-                "必须先调用 load_actions() 加载动作配置才能使用 execute_by_names()"
-            )
-
-        name_to_index = {}
-        for action in self._actions_config.get("actions", []):
-            if "name" in action:
-                name_to_index[action["name"]] = action["index"]
-
-        for name in names:
-            if name in name_to_index:
-                idx = name_to_index[name]
-                if 0 <= idx < len(self._execute):
-                    self._execute[idx] = True
-            else:
-                raise ValueError(f"未找到动作名称: {name}")
-
-        return self
-
-    def set_params(self, params: dict) -> "OTAleCommand":
-        """
-        设置占位符参数
-
-        Args:
-            params: 参数字典，如 {"x": 100, "y": 200}
+            params: 参数字典，键名对应动作配置中 variables 里的 param_name。
+                   例如 variables 为 [{"param_name": "target_x", "field_name": "x"}] 时，
+                   应传入 {"target_x": 100}。
         """
         self._params = params
         return self
 
-    def add_param(self, key: str, value) -> "OTAleCommand":
+    def add_param(self, key: str, value) -> "OTAcleCommand":
         """
-        添加单个参数
+        添加或更新单个参数
 
         Args:
-            key: 参数名
+            key: 参数名（对应 variables 中的 param_name）
             value: 参数值（支持 int, float, str）
         """
         self._params[key] = value
+        return self
+
+    def remove_param(self, key: str) -> "OTAcleCommand":
+        """
+        删除指定参数
+
+        Args:
+            key: 参数名（对应 variables 中的 param_name）
+        """
+        self._params.pop(key, None)
         return self
 
     def build(self) -> dict:
@@ -153,24 +155,23 @@ class OTAcleCommand:
         """返回 JSON 格式的命令字符串"""
         return json.dumps(self.build(), ensure_ascii=False)
 
-    def send(self, address: Optional[str] = None) -> None:
-        """
-        发送命令到 ZMQ 地址
-
-        Args:
-            address: 可选的 ZMQ 地址，如果为 None 则使用初始化时的地址
-        """
-        addr = address or self._address
-        ctx = zmq.Context()
-        sock = ctx.socket(zmq.PUB)
-        sock.connect(addr)
-        try:
-            sock.send_string(self.to_json())
-        finally:
-            ctx.term()
+    def send(self) -> None:
+        """发送命令到 ZMQ 地址（连接会被复用）"""
+        self._ensure_connected()
+        self._sock.send_string(self.to_json())
 
     def __repr__(self) -> str:
-        return f"OTAleCommand(execute={self._execute}, params={self._params})"
+        return f"OTAcleCommand(execute={self._execute}, params={self._params})"
+
+    def __del__(self) -> None:
+        """析构时确保连接关闭"""
+        self.close()
+
+    def __enter__(self) -> "OTAcleCommand":
+        return self
+
+    def __exit__(self, *args) -> None:
+        self.close()
 
 
 def send_command(
@@ -183,21 +184,12 @@ def send_command(
 
     Args:
         execute_indices: 要执行的动作索引列表
-        params: 占位符参数字典
+        params: 动态参数字典，键名对应 variables 中的 param_name
         address: ZMQ 地址
     """
-    cmd = OTAcleCommand()
-    cmd.execute_by_indices(execute_indices)
+    cmd = OTAcleCommand(address=address)
+    cmd.execute(execute_indices)
     if params:
         cmd.set_params(params)
-    cmd.send(address)
-
-
-if __name__ == "__main__":
-    # 简单的自测代码
-    cmd = OTAcleCommand()
-    cmd.execute_by_indices([0, 2, 4])
-    cmd.set_params({"x": 100, "y": 200, "name": "test"})
-    print("测试命令:")
-    print(cmd.to_json())
-    print(f"\n地址: {ZMQ_ADDR}")
+    cmd.send()
+    cmd.close()

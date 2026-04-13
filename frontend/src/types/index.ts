@@ -17,6 +17,12 @@ export type MouseButton = 'left' | 'right' | 'middle';
 // Scroll direction type
 export type ScrollDirection = 'up' | 'down' | 'left' | 'right';
 
+// Variable definition - maps a parameter name to an action field name
+export interface Variable {
+  param_name: string;
+  field_name: string;
+}
+
 // Action types from action config
 export interface KeyAction {
   type: 'key';
@@ -39,15 +45,17 @@ export interface KeySequenceAction {
 export interface MouseClickAction {
   type: 'mouse_click';
   button: MouseButton;
-  count: string;
+  count: number;
   interval_ms?: number;
+  variables?: Variable[];
 }
 
 export interface MouseMoveAction {
   type: 'mouse_move';
-  x: string;
-  y: string;
+  x: number;
+  y: number;
   duration_ms?: number;
+  variables?: Variable[];
 }
 
 export interface MouseScrollAction {
@@ -71,12 +79,82 @@ export type Action = KeyAction | KeySequenceAction | MouseClickAction | MouseMov
 // Action config map (JSON format)
 export type ActionConfig = Record<string, Action>;
 
-// Action item with index and name (matches backend ActionItem)
-export interface ActionItem {
+// Action item types - flattened to match Rust backend's #[serde(flatten)]
+// Each variant has index, name, type, and action-specific fields at top level
+
+export interface KeyActionItem {
   index: number;
   name: string | null;
-  data: Action;
+  type: 'key';
+  key: string;
+  hold_time_ms?: number;
+  backend?: InputBackend;
 }
+
+export interface KeySequenceActionItem {
+  index: number;
+  name: string | null;
+  type: 'key_sequence';
+  keys: KeySequenceItem[];
+  default_interval_ms: number;
+  backend?: InputBackend;
+}
+
+export interface MouseClickActionItem {
+  index: number;
+  name: string | null;
+  type: 'mouse_click';
+  button: MouseButton;
+  count: number;
+  interval_ms?: number;
+  hold_time_ms?: number;
+  backend?: InputBackend;
+  variables?: Variable[];
+}
+
+export interface MouseMoveActionItem {
+  index: number;
+  name: string | null;
+  type: 'mouse_move';
+  x: number;
+  y: number;
+  duration_ms?: number;
+  backend?: InputBackend;
+  variables?: Variable[];
+}
+
+export interface MouseScrollActionItem {
+  index: number;
+  name: string | null;
+  type: 'mouse_scroll';
+  direction: ScrollDirection;
+  amount: number;
+  backend?: InputBackend;
+}
+
+export interface DelayActionItem {
+  index: number;
+  name: string | null;
+  type: 'delay';
+  duration_ms: number;
+}
+
+export interface TextActionItem {
+  index: number;
+  name: string | null;
+  type: 'text';
+  content: string;
+  backend?: InputBackend;
+}
+
+export type ActionItem =
+  | KeyActionItem
+  | KeySequenceActionItem
+  | MouseClickActionItem
+  | MouseMoveActionItem
+  | MouseScrollActionItem
+  | DelayActionItem
+  | TextActionItem;
 
 // Action config data (full config structure)
 export interface ActionConfigData {

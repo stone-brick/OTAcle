@@ -26,11 +26,24 @@
         {"key": "space", "interval_ms": 10}
       ]
     },
-    {"index": 5, "name": "scroll", "type": "mouse_scroll", "direction": "down", "amount": 3},
-    {"index": 6, "name": "wait", "type": "delay", "duration_ms": 1000}
+    {
+      "index": 5,
+      "name": "move",
+      "type": "mouse_move",
+      "x": 0,
+      "y": 0,
+      "variables": [
+        {"param_name": "target_x", "field_name": "x"},
+        {"param_name": "target_y", "field_name": "y"}
+      ]
+    },
+    {"index": 6, "name": "scroll", "type": "mouse_scroll", "direction": "down", "amount": 3},
+    {"index": 7, "name": "wait", "type": "delay", "duration_ms": 1000}
   ]
 }
 ```
+
+> 参考示例：`example/python/test_actions.json`
 
 ### 全局配置
 
@@ -80,6 +93,7 @@
 | `interval_ms`  | number | 否   | `0` | 每次点击之间的间隔（毫秒）                |
 | `hold_time_ms` | number | 否   | `5` | 按住时长（毫秒），防止事件被丢弃             |
 | `backend`      | string | 否   | 继承  | 输入后端                         |
+| `variables`    | array | 否   | -   | 动态参数列表，见下方说明               |
 
 #### 4. `mouse_move` - 鼠标移动
 
@@ -90,6 +104,7 @@
 | `y`           | number | 是   | -   | 目标 Y 坐标               |
 | `duration_ms` | number | 否   | `0` | 平滑移动过渡时长（毫秒），0 表示瞬间移动 |
 | `backend`     | string | 否   | 继承  | 输入后端                  |
+| `variables`    | array | 否   | -   | 动态参数列表，见下方说明               |
 
 #### 5. `mouse_scroll` - 鼠标滚轮
 
@@ -114,6 +129,41 @@
 | `type`    | string | 是   | -   | 固定为 `"text"` |
 | `content` | string | 是   | -   | 要输入的文本内容     |
 | `backend` | string | 否   | 继承  | 输入后端         |
+
+### 动态参数 (variables)
+
+支持动态参数的动作类型（`mouse_move`、`mouse_click`）可以通过 `variables` 字段声明可动态覆盖的参数。
+
+| 字段           | 类型     | 说明                     |
+| ------------ | ------ | ---------------------- |
+| `param_name` | string | 运行时传参时的参数名称           |
+| `field_name` | string | 动作配置中要覆盖的字段名         |
+
+**示例**：
+
+```json
+{
+  "type": "mouse_move",
+  "x": 0,
+  "y": 0,
+  "variables": [
+    {"param_name": "target_x", "field_name": "x"},
+    {"param_name": "target_y", "field_name": "y"}
+  ]
+}
+```
+
+**运行时不传参**：使用配置文件中的默认值 `x: 0, y: 0`
+
+```json
+{"execute": [true]}
+```
+
+**运行时传参**：通过 ZMQ `params` 动态覆盖
+
+```json
+{"execute": [true], "params": {"target_x": 500, "target_y": 300}}
+```
 
 ### 输入后端 (InputBackend)
 
@@ -163,7 +213,37 @@
 
 ## ZMQ 命令格式
 
-Python 端通过 ZeroMQ PUB-SUB 向 Rust 端发送控制命令。
+Python 端通过 ZeroMQ PUSH-PULL 向 Rust 端发送控制命令。
+
+### Python 辅助模块
+
+参考实现 `example/python/otacle.py`：
+
+```python
+from otacle import OTAcleCommand
+
+# 方式1: 上下文管理器（推荐）
+with OTAcleCommand() as cmd:
+    cmd.execute_by_indices([0, 2])      # 执行 index 0 和 2
+    cmd.set_params({"target_x": 100, "target_y": 200})
+    cmd.send()
+
+# 方式2: 显式 close()
+cmd = OTAcleCommand()
+cmd.execute_by_indices([0])
+cmd.send()
+cmd.close()
+
+# 便捷函数
+from otacle import send_command
+send_command([0, 2], {"target_x": 100})
+```
+
+### 连接复用
+
+`OTAcleCommand` 内部维护持久连接，多次 `send()` 复用同一 ZMQ socket，无需每次创建销毁。
+
+程序退出时自动通过 `atexit` 关闭连接，也支持 `with` 语句或显式 `close()`。
 
 ### 消息格式
 
@@ -181,7 +261,7 @@ Python 端通过 ZeroMQ PUB-SUB 向 Rust 端发送控制命令。
 | 字段        | 必填  | 类型          | 说明                                                      |
 | --------- | --- | ----------- | ------------------------------------------------------- |
 | `execute` | 是   | `Vec<bool>` | 执行列表，按 index 对应配置中的 action。<br>`true` = 执行，`false` = 跳过 |
-| `params`  | 否   | `object`    | 占位符参数映射。如果动作中没有占位符可省略。                                  |
+| `params`  | 否   | `object`    | 动态参数映射，用于 variables 参数替换。如果无动态参数可省略。                        |
 
 ### execute 数组规则
 
@@ -191,29 +271,29 @@ Python 端通过 ZeroMQ PUB-SUB 向 Rust 端发送控制命令。
 
 **示例**：`{"execute": [true, false, true]}` 表示执行 index=0 和 index=2 的动作。
 
-### 占位符参数
+### params 参数
 
-使用 `{{variable_name}}` 在动作配置中声明占位符，运行时通过 `params` 替换：
+`params` 中的键名对应动作 `variables` 中定义的 `param_name`：
 
 ```json
-// 动作配置
-{"type": "mouse_move", "x": "{{target_x}}", "y": "{{target_y}}"}
+// 动作配置（test_actions.json）
+{"type": "mouse_move", "x": 0, "y": 0, "variables": [
+  {"param_name": "target_x", "field_name": "x"},
+  {"param_name": "target_y", "field_name": "y"}
+]}
 
-// ZMQ 消息
-{"execute": [true], "params": {"target_x": 100, "target_y": 200}}
+// ZMQ 消息 - 传参
+{"execute": [true], "params": {"target_x": 500, "target_y": 300}}
+
+// ZMQ 消息 - 不传参，使用默认值
+{"execute": [true]}
 ```
 
 **约束**：
 
-- 只有 `execute` 中为 `true` 的动作才会检查其占位符
-- 如果某动作有占位符但未被执行，不会报错
-- 占位符值支持整数、字符串
-
-### params 约束
-
-- **可以省略**：表示没有占位符替换
-- **不能为 `null`**：会报错
-- **不能为空对象 `{}`**：会报错
+- `params` 可省略：表示不使用动态参数，所有动作使用配置文件中的默认值
+- `params` 可为空对象 `{}`：效果同省略
+- 支持数字和字符串类型的参数值
 
 ## 开发
 
