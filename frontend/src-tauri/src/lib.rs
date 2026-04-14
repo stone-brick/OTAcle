@@ -394,6 +394,16 @@ fn clear_action_history() -> Result<(), String> {
 }
 
 #[tauri::command]
+fn discard_changes() -> Result<(), String> {
+    action::config::discard_changes()
+}
+
+#[tauri::command]
+fn discard_action(index: u32) -> Result<(), String> {
+    action::config::discard_action(index)
+}
+
+#[tauri::command]
 fn get_foreground_window() -> Result<i64, String> {
     let hwnd = unsafe { GetForegroundWindow() };
     if hwnd.0.is_null() {
@@ -572,6 +582,8 @@ pub fn run() {
             redo_action,
             get_history_status,
             clear_action_history,
+            discard_changes,
+            discard_action,
             list_windows,
             get_window_info,
             get_foreground_window,

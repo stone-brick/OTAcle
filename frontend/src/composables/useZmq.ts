@@ -21,9 +21,9 @@ function formatTime(): string {
 export function useZmq() {
   const { addLog } = useLog()
 
-  // Listener refs - inside useZmq() so each component instance has its own
-  const unlistenLog = ref<UnlistenFn | null>(null)
-  const unlistenError = ref<UnlistenFn | null>(null)
+  // Listener handles - inside useZmq() so each component instance has its own
+  let unlistenLog: UnlistenFn | null = null
+  let unlistenError: UnlistenFn | null = null
 
   async function fetchStatus() {
     try {
@@ -77,18 +77,18 @@ export function useZmq() {
     await fetchStatus()
 
     // Listen for ZMQ log events
-    unlistenLog.value = await listen<string>('zmq:log', (event) => {
+    unlistenLog = await listen<string>('zmq:log', (event) => {
       addMessage(event.payload, 'success')
     })
 
-    unlistenError.value = await listen<string>('zmq:error', (event) => {
+    unlistenError = await listen<string>('zmq:error', (event) => {
       addMessage(event.payload, 'error')
     })
   })
 
   onUnmounted(() => {
-    unlistenLog.value?.()
-    unlistenError.value?.()
+    unlistenLog?.()
+    unlistenError?.()
   })
 
   return {

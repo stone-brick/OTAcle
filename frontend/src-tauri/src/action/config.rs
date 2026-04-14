@@ -37,6 +37,8 @@ lazy_static! {
     pub static ref UNDO_STACK: Mutex<Vec<HistoryEntry>> = Mutex::new(Vec::new());
     /// Redo history stack
     pub static ref REDO_STACK: Mutex<Vec<HistoryEntry>> = Mutex::new(Vec::new());
+    /// Original state for discard (loaded or last saved)
+    pub static ref ORIGINAL_ENTRY: Mutex<Option<HistoryEntry>> = Mutex::new(None);
 }
 
 /// JSON config structure
@@ -52,9 +54,7 @@ pub struct Config {
 /// Wrapper for parsing action items from JSON
 #[derive(Debug, Clone, Deserialize)]
 pub struct ActionItemWrapper {
-    /// Action index (used as identifier and fallback name)
-    pub index: u32,
-    /// Optional action name (uses index as name if not provided)
+    /// Optional action name
     #[serde(default)]
     pub name: Option<String>,
     #[serde(flatten)]
@@ -86,10 +86,10 @@ pub fn load_config(path: &str) -> Result<(ActionConfig, InputBackend), String> {
     let mut result: ActionConfig = HashMap::new();
     let mut action_list: ActionConfigList = Vec::new();
 
-    for item in config.actions {
-        result.insert(item.index, item.action.clone());
+    for (idx, item) in config.actions.into_iter().enumerate() {
+        let index = idx as u32;
+        result.insert(index, item.action.clone());
         action_list.push(super::types::ActionItem {
-            index: item.index,
             name: item.name,
             data: item.action,
         });
@@ -119,7 +119,15 @@ pub fn load_config_with_backend(path: &str, _backend: InputBackend) -> Result<()
         .map_err(|_| "Failed to lock default backend".to_string())?;
 
     *global_config = Some(config);
-    *global_backend = default_backend;
+    *global_backend = default_backend.clone();
+
+    // Set original entry for discard
+    let action_list = ACTION_LIST.lock().map_err(|_| "Failed to lock action list")?;
+    let mut original = ORIGINAL_ENTRY.lock().map_err(|_| "Failed to lock original")?;
+    *original = Some(HistoryEntry {
+        actions: action_list.clone().unwrap_or_default(),
+        default_backend,
+    });
 
     Ok(())
 }
@@ -314,19 +322,38 @@ pub fn save_to_history() -> Result<(), String> {
     Ok(())
 }
 
-/// Get the next available action index (max index + 1, or 0 if empty)
+/// Get the next available action index (list length, or 0 if empty)
 pub fn get_next_available_index() -> Result<u32, String> {
     let list = ACTION_LIST
         .lock()
         .map_err(|_| "Failed to lock action list".to_string())?;
 
-    match list.as_ref() {
-        Some(items) if !items.is_empty() => {
-            let max_index = items.iter().map(|a| a.index).max().unwrap();
-            Ok(max_index + 1)
-        }
-        _ => Ok(0),
-    }
+    Ok(list.as_ref().map(|items| items.len()).unwrap_or(0) as u32)
+}
+
+/// Rebuild the HashMap from the current action list to ensure indices match positions
+fn rebuild_config_from_list() -> Result<(), String> {
+    let list = ACTION_LIST
+        .lock()
+        .map_err(|_| "Failed to lock action list".to_string())?;
+
+    let new_config: ActionConfig = list
+        .as_ref()
+        .map(|items| {
+            items
+                .iter()
+                .enumerate()
+                .map(|(idx, item)| (idx as u32, item.data.clone()))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let mut config = ACTION_CONFIG
+        .lock()
+        .map_err(|_| "Failed to lock configuration".to_string())?;
+    *config = Some(new_config);
+
+    Ok(())
 }
 
 /// Create a new action in memory and return its assigned index
@@ -341,15 +368,10 @@ pub fn create_action(action: Action, name: Option<String>) -> Result<u32, String
         .lock()
         .map_err(|_| "Failed to lock action list".to_string())?;
 
-    let index = match list.as_ref() {
-        Some(items) if !items.is_empty() => {
-            items.iter().map(|a| a.index).max().unwrap() + 1
-        }
-        _ => 0,
-    };
+    // Index is the length of the list (append at end)
+    let index = list.as_ref().map(|items| items.len()).unwrap_or(0) as u32;
 
     let item = ActionItem {
-        index,
         name,
         data: action.clone(),
     };
@@ -393,7 +415,7 @@ pub fn update_action(index: u32, action: Action, name: Option<String>) -> Result
             .map_err(|_| "Failed to lock action list".to_string())?;
 
         let found = if let Some(ref mut items) = *list {
-            if let Some(item) = items.iter_mut().find(|a| a.index == index) {
+            if let Some(item) = items.get_mut(index as usize) {
                 item.data = action.clone();
                 item.name = name;
                 true
@@ -441,9 +463,8 @@ pub fn delete_action(index: u32) -> Result<(), String> {
             .map_err(|_| "Failed to lock action list".to_string())?;
 
         let found = if let Some(ref mut items) = *list {
-            let pos = items.iter().position(|a| a.index == index);
-            if let Some(pos) = pos {
-                items.remove(pos);
+            if (index as usize) < items.len() {
+                items.remove(index as usize);
                 true
             } else {
                 false
@@ -457,18 +478,8 @@ pub fn delete_action(index: u32) -> Result<(), String> {
         }
     }
 
-    // Delete from ACTION_CONFIG HashMap
-    {
-        let mut config = ACTION_CONFIG
-            .lock()
-            .map_err(|_| "Failed to lock configuration".to_string())?;
-
-        if let Some(ref mut map) = *config {
-            if map.remove(&index).is_none() {
-                return Err(format!("Action {} not found in config map", index));
-            }
-        }
-    }
+    // Rebuild HashMap from list to maintain index-to-position correspondence
+    rebuild_config_from_list()?;
 
     Ok(())
 }
@@ -546,11 +557,66 @@ pub fn redo() -> Result<(), String> {
     Ok(())
 }
 
+// Discard all changes - restore to original state (undoable)
+pub fn discard_changes() -> Result<(), String> {
+    // Save current state to history (so we can undo)
+    save_to_history()?;
+
+    // Restore from original
+    let original = ORIGINAL_ENTRY.lock().map_err(|_| "Failed to lock original")?;
+    let entry = original
+        .clone()
+        .ok_or_else(|| "No original state to discard to".to_string())?;
+    drop(original);
+
+    reload_from_entry(&entry)?;
+
+    Ok(())
+}
+
+// Discard a specific action - restore to original state (undoable)
+pub fn discard_action(index: u32) -> Result<(), String> {
+    // Save current state to history (so we can undo)
+    save_to_history()?;
+
+    // Get original action at this index
+    let original = ORIGINAL_ENTRY.lock().map_err(|_| "Failed to lock original")?;
+    let entry = original
+        .clone()
+        .ok_or_else(|| "No original state to discard to".to_string())?;
+
+    let original_action = entry
+        .actions
+        .get(index as usize)
+        .ok_or_else(|| format!("No action at index {}", index))?;
+    drop(original);
+
+    // Update the specific action in global state
+    let mut config = ACTION_CONFIG.lock().map_err(|_| "Failed to lock config")?;
+    if let Some(ref mut c) = *config {
+        c.insert(index, original_action.data.clone());
+    }
+
+    let mut list = ACTION_LIST.lock().map_err(|_| "Failed to lock action list")?;
+    if let Some(ref mut l) = *list {
+        l[index as usize] = original_action.clone();
+    }
+
+    Ok(())
+}
+
 // Reload state from a history entry
 fn reload_from_entry(entry: &HistoryEntry) -> Result<(), String> {
-    // Update global ACTION_CONFIG HashMap
+    // Update global ACTION_CONFIG HashMap using array positions as indices
     let mut config = ACTION_CONFIG.lock().map_err(|_| "Failed to lock config")?;
-    *config = Some(entry.actions.iter().map(|a| (a.index, a.data.clone())).collect());
+    *config = Some(
+        entry
+            .actions
+            .iter()
+            .enumerate()
+            .map(|(idx, a)| (idx as u32, a.data.clone()))
+            .collect(),
+    );
 
     // Update global ACTION_LIST
     let mut list = ACTION_LIST.lock().map_err(|_| "Failed to lock action list")?;

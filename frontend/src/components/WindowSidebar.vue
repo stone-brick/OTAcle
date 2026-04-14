@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import type { WindowInfo } from '../types';
+import { ref } from 'vue';
+import type { WindowInfo, SearchMode } from '../types';
 
-const props = defineProps<{
+defineProps<{
   windows: WindowInfo[];
   selectedHwnd: number | null;
   isLoading: boolean;
@@ -14,22 +14,8 @@ const emit = defineEmits<{
   search: [mode: SearchMode, value: string];
 }>();
 
-type SearchMode = 'title' | 'titleContains' | 'class' | 'pid' | 'exe' | 'hwnd';
-
 const searchMode = ref<SearchMode>('title');
 const searchValue = ref('');
-
-const filteredWindows = computed(() => {
-  if (!searchValue.value.trim()) {
-    return props.windows;
-  }
-  const query = searchValue.value.toLowerCase();
-  return props.windows.filter(w =>
-    w.title.toLowerCase().includes(query) ||
-    w.processName.toLowerCase().includes(query) ||
-    w.className.toLowerCase().includes(query)
-  );
-});
 
 function handleSelect(hwnd: number) {
   emit('select', hwnd);
@@ -91,7 +77,7 @@ function truncateTitle(title: string, maxLen: number = 30): string {
     <!-- Window List -->
     <div class="window-list">
       <div
-        v-for="win in filteredWindows"
+        v-for="win in windows"
         :key="win.hwnd"
         class="window-item"
         :class="{ selected: win.hwnd === selectedHwnd }"
@@ -109,7 +95,7 @@ function truncateTitle(title: string, maxLen: number = 30): string {
         <div class="window-hwnd">HWND: 0x{{ win.hwnd.toString(16) }}</div>
       </div>
 
-      <div v-if="filteredWindows.length === 0" class="empty-state">
+      <div v-if="windows.length === 0" class="empty-state">
         <template v-if="searchValue">未找到匹配的窗口</template>
         <template v-else>暂无窗口</template>
       </div>

@@ -1,14 +1,53 @@
 {
   "default_backend": "win32",
   "actions": [
-    {"index": 0, "name": "space", "type": "key", "key": "space"},
-    {"index": 1, "name": "enter", "type": "key", "key": "enter"},
-    {"index": 2, "name": "ctrl_c", "type": "key", "key": "ctrl+c"},
-    {"index": 3, "name": "scroll_up", "type": "mouse_scroll", "direction": "up", "amount": 3},
-    {"index": 4, "name": "move_mouse", "type": "mouse_move", "x": 0, "y": 0,
-     "variables": [{"param_name": "target_x", "field_name": "x"}, {"param_name": "target_y", "field_name": "y"}]},
-    {"index": 5, "name": "left_click", "type": "mouse_click", "button": "left", "count": 1},
-    {"index": 6, "name": "delay_1s", "type": "delay", "duration_ms": 1000},
-    {"index": 7, "name": "hello_text", "type": "text", "content": "Hello OTAcle!"}
+    {
+      "name": "space",
+      "type": "key",
+      "key": "space",
+      "hold_time_ms": 5,
+      "backend": null
+    },
+    {
+      "name": "scroll_up",
+      "type": "mouse_scroll",
+      "direction": "up",
+      "amount": 3,
+      "backend": null
+    },
+    {
+      "name": "move_mouse",
+      "type": "mouse_move",
+      "x": 0,
+      "y": 0,
+      "duration_ms": null,
+      "backend": null,
+      "variables": [
+        {
+          "param_name": "target_x",
+          "field_name": "x"
+        },
+        {
+          "param_name": "target_y",
+          "field_name": "y"
+        }
+      ]
+    },
+    {
+      "name": "left_click",
+      "type": "mouse_click",
+      "button": "left",
+      "count": 1,
+      "interval_ms": null,
+      "hold_time_ms": 5,
+      "backend": null,
+      "variables": []
+    },
+    {
+      "name": "hello_text",
+      "type": "text",
+      "content": "Hello OTAcle!",
+      "backend": null
+    }
   ]
 }

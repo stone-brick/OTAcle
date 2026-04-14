@@ -18,7 +18,7 @@ const runtimeParams = ref<Record<string, string>>({});
 
 const selectedAction = computed(() => {
   if (props.selectedActionIndex === null) return null;
-  return props.actions.find(a => a.index === props.selectedActionIndex) || null;
+  return props.actions[props.selectedActionIndex] || null;
 });
 
 // Extract variables from the selected action

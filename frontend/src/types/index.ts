@@ -83,7 +83,6 @@ export type ActionConfig = Record<string, Action>;
 // Each variant has index, name, type, and action-specific fields at top level
 
 export interface KeyActionItem {
-  index: number;
   name: string | null;
   type: 'key';
   key: string;
@@ -92,7 +91,6 @@ export interface KeyActionItem {
 }
 
 export interface KeySequenceActionItem {
-  index: number;
   name: string | null;
   type: 'key_sequence';
   keys: KeySequenceItem[];
@@ -101,7 +99,6 @@ export interface KeySequenceActionItem {
 }
 
 export interface MouseClickActionItem {
-  index: number;
   name: string | null;
   type: 'mouse_click';
   button: MouseButton;
@@ -113,7 +110,6 @@ export interface MouseClickActionItem {
 }
 
 export interface MouseMoveActionItem {
-  index: number;
   name: string | null;
   type: 'mouse_move';
   x: number;
@@ -124,7 +120,6 @@ export interface MouseMoveActionItem {
 }
 
 export interface MouseScrollActionItem {
-  index: number;
   name: string | null;
   type: 'mouse_scroll';
   direction: ScrollDirection;
@@ -133,14 +128,12 @@ export interface MouseScrollActionItem {
 }
 
 export interface DelayActionItem {
-  index: number;
   name: string | null;
   type: 'delay';
   duration_ms: number;
 }
 
 export interface TextActionItem {
-  index: number;
   name: string | null;
   type: 'text';
   content: string;
@@ -174,3 +167,6 @@ export interface LogEntry {
 
 // App status
 export type AppStatus = 'ready' | 'sending' | 'error';
+
+// Window search mode
+export type SearchMode = 'title' | 'titleContains' | 'class' | 'pid' | 'exe' | 'hwnd';

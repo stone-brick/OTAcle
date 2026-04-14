@@ -38,12 +38,8 @@ async function selectWindow(hwnd: number): Promise<void> {
   }
 }
 
-function clearSelection(): void {
-  selectedWindow.value = null;
-}
-
 // ============================================================================
-// Dedicated window search functions - explicit API for each search type
+// Dedicated window search functions
 // ============================================================================
 
 /**
@@ -62,25 +58,6 @@ async function findWindowsByTitle(title: string): Promise<number[]> {
 }
 
 /**
- * Find first window by title (prefix match)
- */
-async function findFirstWindowByTitle(title: string): Promise<number | null> {
-  const { addLog } = useLog();
-  try {
-    const result = await invoke<number | null>('find_first_window_by_title', { title });
-    if (result !== null) {
-      addLog(`按标题查找 "${title}"：找到 HWND ${result}`, 'info');
-    } else {
-      addLog(`按标题查找 "${title}"：未找到`, 'info');
-    }
-    return result;
-  } catch (e) {
-    addLog(`按标题查找失败: ${e}`, 'error');
-    throw e;
-  }
-}
-
-/**
  * Find all windows by title (contains match)
  */
 async function findWindowsByTitleContains(title: string): Promise<number[]> {
@@ -89,25 +66,6 @@ async function findWindowsByTitleContains(title: string): Promise<number[]> {
     const results = await invoke<number[]>('find_windows_by_title_contains', { title });
     addLog(`按标题包含查找 "${title}"：找到 ${results.length} 个窗口`, 'info');
     return results;
-  } catch (e) {
-    addLog(`按标题包含查找失败: ${e}`, 'error');
-    throw e;
-  }
-}
-
-/**
- * Find first window by title (contains match)
- */
-async function findFirstWindowByTitleContains(title: string): Promise<number | null> {
-  const { addLog } = useLog();
-  try {
-    const result = await invoke<number | null>('find_first_window_by_title_contains', { title });
-    if (result !== null) {
-      addLog(`按标题包含查找 "${title}"：找到 HWND ${result}`, 'info');
-    } else {
-      addLog(`按标题包含查找 "${title}"：未找到`, 'info');
-    }
-    return result;
   } catch (e) {
     addLog(`按标题包含查找失败: ${e}`, 'error');
     throw e;
@@ -182,6 +140,16 @@ async function findWindowByHwnd(hwnd: number): Promise<number | null> {
   }
 }
 
+/**
+ * Get WindowInfo for multiple hwnds
+ */
+async function getWindowsInfoByHwnds(hwnds: number[]): Promise<WindowInfo[]> {
+  const results = await Promise.all(
+    hwnds.map(hwnd => invoke<WindowInfo | null>('get_window_info', { hwnd }))
+  );
+  return results.filter((info): info is WindowInfo => info !== null);
+}
+
 export function useWindows() {
   return {
     windows,
@@ -189,15 +157,13 @@ export function useWindows() {
     isLoading,
     refreshWindows,
     selectWindow,
-    clearSelection,
     // Dedicated search functions
     findWindowsByTitle,
-    findFirstWindowByTitle,
     findWindowsByTitleContains,
-    findFirstWindowByTitleContains,
     findWindowByClass,
     findWindowsByPid,
     findWindowsByExe,
     findWindowByHwnd,
+    getWindowsInfoByHwnds,
   };
 }

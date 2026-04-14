@@ -2,6 +2,7 @@ import { ref, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import type { Action, ActionItem, InputBackend } from '../types';
 import { useLog } from './useLog';
+import { useActionHistory } from './useActionHistory';
 
 const actions = ref<ActionItem[]>([]);
 const originalActions = ref<ActionItem[]>([]);  // 原始数据快照
@@ -11,23 +12,11 @@ const configPath = ref<string>('');
 const isDirty = ref(false);
 const selectedIndex = ref<number | null>(null);
 const isLoaded = ref(false);
-const targetWindow = ref<string | null>(null);
-const executionBackend = ref<InputBackend>('win32');
 
-// History count from backend
-const historyCount = ref({ undo: 0, redo: 0 });
+// 组合 useActionHistory
+const { refreshHistoryCount } = useActionHistory();
 
-// Refresh history count from backend
-async function refreshHistoryCount(): Promise<void> {
-  try {
-    const [undo, redo] = await invoke<[number, number]>('get_history_status');
-    historyCount.value = { undo, redo };
-  } catch {
-    historyCount.value = { undo: 0, redo: 0 };
-  }
-}
-
-// Refresh action list from backend
+// Refresh action list from backend (exported for use by undo/redo)
 async function refreshActionList(): Promise<void> {
   const actionList = await invoke<ActionItem[]>('get_action_list');
   const backend = await invoke<InputBackend>('get_default_backend');
@@ -115,6 +104,7 @@ async function createAction(type: string, name?: string): Promise<number> {
     // Refresh state from backend
     await refreshActionList();
     await refreshHistoryCount();
+
     updateDirtyState();
 
     addLog(`已创建动作 #${index}: ${name || type}`, 'success');
@@ -155,16 +145,18 @@ async function deleteAction(index: number): Promise<void> {
     // Call backend to delete action (which saves to history)
     await invoke('delete_action', { index });
 
-    // Refresh state from backend
+    // Refresh state from backend (indices are rebuilt by backend)
     await refreshActionList();
     await refreshHistoryCount();
-    updateDirtyState();
 
-    if (selectedIndex.value === index) {
-      selectedIndex.value = null;
+    // Adjust selectedIndex if needed (may now be out of bounds)
+    if (selectedIndex.value !== null && selectedIndex.value >= actions.value.length) {
+      selectedIndex.value = actions.value.length > 0 ? actions.value.length - 1 : null;
     }
 
-    addLog(`已删除动作 #${index}`, 'success');
+    updateDirtyState();
+
+    addLog(`已删除动作`, 'success');
   } catch (e) {
     addLog(`删除动作失败: ${e}`, 'error');
     throw e;
@@ -202,142 +194,52 @@ function clearEditor(): void {
   isDirty.value = false;
   selectedIndex.value = null;
   isLoaded.value = false;
-  targetWindow.value = null;
-  executionBackend.value = 'win32';
 }
 
-// Check if a specific action has changed from original
+// Check if a specific action has changed from original (by array position)
 function hasActionChanged(index: number): boolean {
-  const original = originalActions.value.find(a => a.index === index);
-  const current = actions.value.find(a => a.index === index);
+  const original = originalActions.value[index];
+  const current = actions.value[index];
   if (!original && !current) return false;
   if (!original || !current) return true;
   return JSON.stringify(original) !== JSON.stringify(current);
 }
 
-// Get list of changed action indices
+// Get list of changed action indices (array positions)
 function getChangedIndices(): number[] {
-  return actions.value.filter(a => hasActionChanged(a.index)).map(a => a.index);
+  return actions.value
+    .map((_, idx) => idx)
+    .filter(idx => hasActionChanged(idx));
 }
 
-// Discard all changes and restore original state
-function discardChanges(): void {
-  actions.value = JSON.parse(JSON.stringify(originalActions.value));
-  defaultBackend.value = originalDefaultBackend.value;
+// Sync originalActions snapshot to current state (call after undo/redo)
+function syncOriginalActions(): void {
+  originalActions.value = JSON.parse(JSON.stringify(actions.value));
+  originalDefaultBackend.value = defaultBackend.value;
   isDirty.value = false;
 }
 
-// Discard changes for a specific action
-function discardAction(index: number): void {
-  const original = originalActions.value.find(a => a.index === index);
+// Discard all changes - restore to original state (calls backend for undo/redo support)
+async function discardChanges(): Promise<void> {
+  await invoke('discard_changes');
+  await refreshActionList();
+  await refreshHistoryCount();
+  syncOriginalActions();
+}
 
-  // If action doesn't exist in original, nothing to discard
-  if (!original) return;
-
-  const idx = actions.value.findIndex(a => a.index === index);
-
-  if (idx === -1) {
-    // Action was deleted - restore it
-    actions.value.push(JSON.parse(JSON.stringify(original)));
-  } else {
-    // Action was modified - restore original
-    actions.value[idx] = JSON.parse(JSON.stringify(original));
-  }
-
-  updateDirtyState();
+// Discard changes for a specific action (by array position) - calls backend for undo/redo support
+async function discardAction(index: number): Promise<void> {
+  await invoke('discard_action', { index });
+  await refreshActionList();
+  await refreshHistoryCount();
+  syncOriginalActions();
 }
 
 // Update isDirty based on actual changes
 function updateDirtyState(): void {
   const backendChanged = defaultBackend.value !== originalDefaultBackend.value;
-  const actionsChanged = actions.value.some(a => hasActionChanged(a.index));
+  const actionsChanged = actions.value.some((_, idx) => hasActionChanged(idx));
   isDirty.value = backendChanged || actionsChanged;
-}
-
-async function executeActionWithParams(
-  actionId: number,
-  params: Record<string, any>
-): Promise<void> {
-  const { addLog } = useLog();
-
-  try {
-    await invoke('execute_action_with_params', {
-      actionId,
-      params,
-    });
-    addLog(`执行动作 #${actionId} 成功`, 'success');
-  } catch (e) {
-    addLog(`执行动作 #${actionId} 失败: ${e}`, 'error');
-    throw e;
-  }
-}
-
-async function setTargetWindow(window: string | null): Promise<void> {
-  const { addLog } = useLog();
-
-  try {
-    await invoke('set_target_window', { window });
-    // Fetch the actual stored HWND from backend
-    const hwnd = await invoke<number | null>('get_target_window');
-    targetWindow.value = hwnd !== null ? `id:${hwnd}` : null;
-    addLog(`目标窗口已设置为: ${hwnd !== null ? `HWND ${hwnd}` : '(空)'}`, 'success');
-  } catch (e) {
-    addLog(`设置目标窗口失败: ${e}`, 'error');
-    throw e;
-  }
-}
-
-async function setExecutionBackend(backend: InputBackend): Promise<void> {
-  const { addLog } = useLog();
-
-  try {
-    await invoke('set_execution_backend', { backend });
-    executionBackend.value = backend;
-    addLog(`执行后端已设置为: ${backend}`, 'success');
-  } catch (e) {
-    addLog(`设置执行后端失败: ${e}`, 'error');
-    throw e;
-  }
-}
-
-// Undo - restore previous state (calls backend)
-async function undo(): Promise<void> {
-  const { addLog } = useLog();
-
-  try {
-    await invoke('undo_action');
-    await refreshActionList();
-    await refreshHistoryCount();
-    updateDirtyState();
-    addLog(`撤销 (${historyCount.value.undo} 步可用)`, 'info');
-  } catch (e) {
-    addLog(`撤销失败: ${e}`, 'error');
-  }
-}
-
-// Redo - restore next state (calls backend)
-async function redo(): Promise<void> {
-  const { addLog } = useLog();
-
-  try {
-    await invoke('redo_action');
-    await refreshActionList();
-    await refreshHistoryCount();
-    updateDirtyState();
-    addLog(`重做 (${historyCount.value.redo} 步可用)`, 'info');
-  } catch (e) {
-    addLog(`重做失败: ${e}`, 'error');
-  }
-}
-
-// Check if undo is available (from backend)
-function canUndoState(): boolean {
-  return historyCount.value.undo > 0;
-}
-
-// Check if redo is available (from backend)
-function canRedoState(): boolean {
-  return historyCount.value.redo > 0;
 }
 
 // Helper to create default action based on type
@@ -365,11 +267,16 @@ function createDefaultAction(type: string): Action {
 export function useActionEditor() {
   const selectedAction = computed(() => {
     if (selectedIndex.value === null) return null;
-    return actions.value.find(a => a.index === selectedIndex.value) || null;
+    return actions.value[selectedIndex.value] || null;
   });
 
   const hasChanges = computed(() => {
-    return actions.value.some(a => hasActionChanged(a.index));
+    const backendChanged = defaultBackend.value !== originalDefaultBackend.value;
+    // Check length changes (deletions)
+    if (actions.value.length !== originalActions.value.length) return true;
+    // Check each action for modifications
+    const actionsChanged = actions.value.some((_, idx) => hasActionChanged(idx));
+    return backendChanged || actionsChanged;
   });
 
   return {
@@ -381,8 +288,6 @@ export function useActionEditor() {
     isDirty,
     selectedIndex,
     isLoaded,
-    targetWindow,
-    executionBackend,
 
     // Computed
     selectedAction,
@@ -398,20 +303,13 @@ export function useActionEditor() {
     selectAction,
     setDefaultBackend,
     clearEditor,
-    executeActionWithParams,
-    setTargetWindow,
-    setExecutionBackend,
+    refreshActionList,
 
     // Change tracking
     hasActionChanged,
     getChangedIndices,
     discardChanges,
     discardAction,
-
-    // Undo/Redo
-    undo,
-    redo,
-    canUndo: canUndoState,
-    canRedo: canRedoState,
+    syncOriginalActions,
   };
 }

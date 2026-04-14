@@ -205,13 +205,11 @@ pub enum Action {
     Text(TextAction),
 }
 
-/// A single action item with index, optional name, and the action data
+/// A single action item with optional name and the action data
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct ActionItem {
-    /// Action index (used as identifier and fallback name)
-    pub index: u32,
-    /// Optional action name (uses index as name if not provided)
+    /// Optional action name (uses array index as name if not provided)
     #[serde(default)]
     pub name: Option<String>,
     /// The action data
@@ -220,9 +218,9 @@ pub struct ActionItem {
 }
 
 impl ActionItem {
-    /// Get the effective name of this action
-    pub fn effective_name(&self) -> String {
-        self.name.clone().unwrap_or_else(|| self.index.to_string())
+    /// Get the effective name of this action (requires explicit index since ActionItem has no index field)
+    pub fn effective_name(&self, index: u32) -> String {
+        self.name.clone().unwrap_or_else(|| index.to_string())
     }
 }
 

@@ -4,6 +4,7 @@ import type { ActionItem, Action, KeyAction, KeySequenceAction, MouseClickAction
 
 const props = defineProps<{
   action: ActionItem;
+  actionIndex: number;
 }>();
 
 const emit = defineEmits<{
@@ -12,7 +13,7 @@ const emit = defineEmits<{
 
 // Helper to construct Action from flattened ActionItem
 function getActionFromItem(item: ActionItem): Action {
-  const { index, name, type, ...actionData } = item;
+  const { name, type, ...actionData } = item;
   return { type, ...actionData } as Action;
 }
 
@@ -34,7 +35,7 @@ watch([editedAction, editedName], () => {
 }, { deep: true });
 
 function handleSave() {
-  emit('update', props.action.index, editedAction.value, editedName.value);
+  emit('update', props.actionIndex, editedAction.value, editedName.value);
   hasChanges.value = false;
 }
 
@@ -126,7 +127,7 @@ const supportsVariables = computed(() => {
 <template>
   <div class="action-form">
     <div class="form-header">
-      <h4>编辑动作 #{{ action.index }}</h4>
+      <h4>编辑动作 #{{ actionIndex }}</h4>
       <span class="action-type-label">{{ actionTypeLabel }}</span>
     </div>
 
