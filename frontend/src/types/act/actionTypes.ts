@@ -7,7 +7,7 @@ import type {
   MouseScrollActionItem,
   DelayActionItem,
   TextActionItem,
-} from './index';
+} from '../index';
 
 export function isKeyAction(item: ActionItem): item is KeyActionItem {
   return item.type === 'key';

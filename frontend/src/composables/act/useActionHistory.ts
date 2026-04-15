@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
-import { useLog } from './useLog';
+import { useLog } from '../useLog';
 
 const historyCount = ref({ undo: 0, redo: 0 });
 

@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { InputBackend } from '../types';
-import { useLog } from './useLog';
+import type { InputBackend } from '../../types';
+import { useLog } from '../useLog';
 
 async function executeActionWithParams(
   actionId: number,

@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
-import type { ActionItem, InputBackend } from '../types';
-import { useLog } from './useLog';
+import type { ActionItem, InputBackend } from '../../types';
+import { useLog } from '../useLog';
 import { useActionHistory } from './useActionHistory';
 
 const actions = ref<ActionItem[]>([]);

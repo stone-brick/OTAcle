@@ -5,7 +5,7 @@ import {
   isKeyAction, isKeySequenceAction, isMouseClickAction,
   isMouseMoveAction, isMouseScrollAction, isDelayAction, isTextAction,
   getActionTypeLabel
-} from '../../types/actionTypes';
+} from '../../types/act/actionTypes';
 import KeyActionForm from './forms/KeyActionForm.vue';
 import KeySequenceForm from './forms/KeySequenceForm.vue';
 import MouseClickForm from './forms/MouseClickForm.vue';

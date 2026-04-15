@@ -1,4 +1,4 @@
-mod action;
+mod act;
 mod input;
 mod zmq_pull;
 
@@ -89,10 +89,10 @@ fn zmq_start(
     // Start listening in a separate thread
     puller.start(running_for_thread, move |cmd: ZmqCommand| {
         // Execute actions based on the execute vector
-        let default_backend = action::config::get_default_backend()
-            .unwrap_or(action::types::InputBackend::Win32);
+        let default_backend = act::config::get_default_backend()
+            .unwrap_or(act::types::InputBackend::Win32);
 
-        let result = action::executor::execute_actions(
+        let result = act::executor::execute_actions(
             cmd.execute,
             cmd.params,
             default_backend,
@@ -205,22 +205,22 @@ fn activate_window_by_title(title: String) -> Result<bool, String> {
 
 #[tauri::command]
 fn load_action_config(path: String, backend: Option<String>) -> Result<(), String> {
-    use action::types::InputBackend;
+    use act::types::InputBackend;
 
     let backend = match backend.as_deref() {
         Some("win32") => InputBackend::Win32,
         _ => InputBackend::Enigo,
     };
 
-    action::config::load_config_with_backend(&path, backend)
+    act::config::load_config_with_backend(&path, backend)
 }
 
 #[tauri::command]
 fn execute_action(action_id: u32) -> Result<(), String> {
     // Get default backend from config, fallback to Win32 if not loaded
-    let default_backend = action::config::get_default_backend()
-        .unwrap_or(action::types::InputBackend::Win32);
-    action::executor::execute_action(action_id, default_backend)
+    let default_backend = act::config::get_default_backend()
+        .unwrap_or(act::types::InputBackend::Win32);
+    act::executor::execute_action(action_id, default_backend)
 }
 
 #[tauri::command]
@@ -229,34 +229,34 @@ fn execute_action_with_params(
     params: std::collections::HashMap<String, serde_json::Value>,
 ) -> Result<(), String> {
     // Get default backend from config, fallback to Win32 if not loaded
-    let default_backend = action::config::get_default_backend()
-        .unwrap_or(action::types::InputBackend::Win32);
-    action::executor::execute_action_with_params(action_id, params, default_backend)
+    let default_backend = act::config::get_default_backend()
+        .unwrap_or(act::types::InputBackend::Win32);
+    act::executor::execute_action_with_params(action_id, params, default_backend)
 }
 
 #[tauri::command]
 fn set_target_window(window: Option<String>) -> Result<(), String> {
-    action::config::set_target_window(window)
+    act::config::set_target_window(window)
 }
 
 #[tauri::command]
 fn get_target_window() -> Result<Option<i64>, String> {
-    Ok(action::config::get_target_window().map(|hwnd| hwnd as i64))
+    Ok(act::config::get_target_window().map(|hwnd| hwnd as i64))
 }
 
 #[tauri::command]
 fn set_execution_backend(backend: String) -> Result<(), String> {
     let backend = match backend.as_str() {
-        "win32" => action::types::InputBackend::Win32,
-        "enigo" => action::types::InputBackend::Enigo,
+        "win32" => act::types::InputBackend::Win32,
+        "enigo" => act::types::InputBackend::Enigo,
         _ => return Err(format!("Unknown backend: {}", backend)),
     };
-    action::config::set_execution_backend(backend)
+    act::config::set_execution_backend(backend)
 }
 
 #[tauri::command]
-fn get_execution_backend() -> Result<action::types::InputBackend, String> {
-    Ok(action::config::get_execution_backend())
+fn get_execution_backend() -> Result<act::types::InputBackend, String> {
+    Ok(act::config::get_execution_backend())
 }
 
 #[tauri::command]
@@ -325,82 +325,82 @@ fn get_window_info(hwnd: i64) -> Result<input::find_window::WindowInfo, String> 
 }
 
 #[tauri::command]
-fn get_config() -> Result<action::types::ActionConfig, String> {
-    action::config::get_config()
+fn get_config() -> Result<act::types::ActionConfig, String> {
+    act::config::get_config()
 }
 
 #[tauri::command]
-fn get_action_list() -> Result<action::types::ActionConfigList, String> {
-    action::config::get_action_list()
+fn get_action_list() -> Result<act::types::ActionConfigList, String> {
+    act::config::get_action_list()
 }
 
 #[tauri::command]
-fn get_default_backend() -> Result<action::types::InputBackend, String> {
-    action::config::get_default_backend()
+fn get_default_backend() -> Result<act::types::InputBackend, String> {
+    act::config::get_default_backend()
 }
 
 #[tauri::command]
-fn set_default_backend(backend: action::types::InputBackend) -> Result<(), String> {
-    action::config::set_default_backend(backend)
+fn set_default_backend(backend: act::types::InputBackend) -> Result<(), String> {
+    act::config::set_default_backend(backend)
 }
 
 #[tauri::command]
 fn get_next_action_index() -> Result<u32, String> {
-    action::config::get_next_available_index()
+    act::config::get_next_available_index()
 }
 
 #[tauri::command]
-fn create_action(action: action::types::Action, name: Option<String>) -> Result<u32, String> {
-    action::config::create_action(action, name)
+fn create_action(action: act::types::Action, name: Option<String>) -> Result<u32, String> {
+    act::config::create_action(action, name)
 }
 
 #[tauri::command]
-fn update_action(index: u32, action: action::types::Action, name: Option<String>) -> Result<(), String> {
-    action::config::update_action(index, action, name)
+fn update_action(index: u32, action: act::types::Action, name: Option<String>) -> Result<(), String> {
+    act::config::update_action(index, action, name)
 }
 
 #[tauri::command]
 fn delete_action(index: u32) -> Result<(), String> {
-    action::config::delete_action(index)
+    act::config::delete_action(index)
 }
 
 #[tauri::command]
 fn save_action_config(
     path: String,
-    default_backend: action::types::InputBackend,
-    actions: action::types::ActionConfigList,
+    default_backend: act::types::InputBackend,
+    actions: act::types::ActionConfigList,
 ) -> Result<(), String> {
-    action::config::save_config(&path, default_backend, &actions)
+    act::config::save_config(&path, default_backend, &actions)
 }
 
 #[tauri::command]
 fn undo_action() -> Result<(), String> {
-    action::config::undo()
+    act::config::undo()
 }
 
 #[tauri::command]
 fn redo_action() -> Result<(), String> {
-    action::config::redo()
+    act::config::redo()
 }
 
 #[tauri::command]
 fn get_history_status() -> Result<(usize, usize), String> {
-    Ok(action::config::get_history_status())
+    Ok(act::config::get_history_status())
 }
 
 #[tauri::command]
 fn clear_action_history() -> Result<(), String> {
-    action::config::clear_history()
+    act::config::clear_history()
 }
 
 #[tauri::command]
 fn discard_changes() -> Result<(), String> {
-    action::config::discard_changes()
+    act::config::discard_changes()
 }
 
 #[tauri::command]
 fn discard_action(index: u32) -> Result<(), String> {
-    action::config::discard_action(index)
+    act::config::discard_action(index)
 }
 
 #[tauri::command]

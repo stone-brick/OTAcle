@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import ActTabNav from '../components/nav/ActTabNav.vue';
-import ZmqMonitor from '../components/ZmqMonitor.vue';
-import ConfigPanel from './act/ConfigPanel.vue';
-import WindowsTabPanel from './act/WindowsTabPanel.vue';
-import { useWindows } from '../composables/useWindows';
-import { useActionEditor } from '../composables/useActionEditor';
-import { useActionHistory } from '../composables/useActionHistory';
-import { useActionExecutor } from '../composables/useActionExecutor';
-import type { InputBackend, SearchMode } from '../types';
+import ActTabNav from '../../components/nav/ActTabNav.vue';
+import ZmqMonitor from '../../components/ZmqMonitor.vue';
+import ConfigPanel from './ConfigPanel.vue';
+import WindowsTabPanel from './WindowsTabPanel.vue';
+import { useWindows } from '../../composables/useWindows';
+import { useActionEditor } from '../../composables/act/useActionEditor';
+import { useActionHistory } from '../../composables/act/useActionHistory';
+import { useActionExecutor } from '../../composables/act/useActionExecutor';
+import type { InputBackend, SearchMode } from '../../types';
 
 const activeTab = ref<'monitor' | 'config' | 'windows'>('monitor');
 
