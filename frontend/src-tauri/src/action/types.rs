@@ -217,12 +217,6 @@ pub struct ActionItem {
     pub data: Action,
 }
 
-impl ActionItem {
-    /// Get the effective name of this action (requires explicit index since ActionItem has no index field)
-    pub fn effective_name(&self, index: u32) -> String {
-        self.name.clone().unwrap_or_else(|| index.to_string())
-    }
-}
 
 /// Action configuration as a list of action items
 pub type ActionConfigList = Vec<ActionItem>;

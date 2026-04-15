@@ -272,7 +272,7 @@ fn validate_action(action: &Action) -> Result<(), String> {
                 return Err("Scroll amount must not be zero".to_string());
             }
         }
-        Action::Delay(delay_action) => {
+        Action::Delay(_delay_action) => {
             // duration can be any value - allow 0 for no-op
         }
         Action::Text(text_action) => {

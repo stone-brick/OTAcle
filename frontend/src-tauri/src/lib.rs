@@ -506,7 +506,7 @@ fn send_combination_key(
                 if let Some(vk) = input::win32_input::vk_for_key(key) {
                     unsafe {
                         use windows::Win32::Foundation::{WPARAM, LPARAM};
-                        use windows::Win32::UI::WindowsAndMessaging::{WM_KEYDOWN, WM_KEYUP};
+                        use windows::Win32::UI::WindowsAndMessaging::WM_KEYDOWN;
                         let _ = windows::Win32::UI::WindowsAndMessaging::PostMessageW(
                             hwnd, WM_KEYDOWN, WPARAM(vk as usize), LPARAM(1),
                         );

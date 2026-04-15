@@ -21,7 +21,6 @@ pub struct ZmqCommand {
 
 /// ZMQ 接收者
 pub struct ZmqPuller {
-    context: Context,
     socket: Socket,
 }
 
@@ -37,10 +36,7 @@ impl ZmqPuller {
             .bind(addr)
             .map_err(|e| format!("Failed to bind to {}: {}", addr, e))?;
 
-        Ok(Self {
-            context: ctx,
-            socket,
-        })
+        Ok(Self { socket })
     }
 
     /// 启动监听循环

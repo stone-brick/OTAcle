@@ -368,7 +368,7 @@ pub fn find_window(search: &WindowSearch) -> Option<isize> {
 
     unsafe {
         let lparam = LPARAM(&mut ctx as *mut EnumContext as isize);
-        EnumWindows(Some(enum_callback), lparam);
+        let _ = EnumWindows(Some(enum_callback), lparam);
     }
 
     if ctx.result == 0 {

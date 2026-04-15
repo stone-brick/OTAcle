@@ -37,7 +37,7 @@ pub fn activate_window(hwnd: isize) -> Result<bool, String> {
 
         // Check if minimized and restore if needed
         if IsIconic(hwnd).as_bool() {
-            ShowWindow(hwnd, SW_RESTORE);
+            let _ = ShowWindow(hwnd, SW_RESTORE);
         }
 
         // Get foreground window thread for three-way attach

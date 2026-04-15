@@ -7,7 +7,6 @@ use super::types::{Action, DelayAction, InputBackend, KeyAction, KeySequenceActi
 use crate::input;
 use enigo::{Axis, Button, Coordinate, Direction, Enigo, Mouse, Settings};
 use std::collections::HashMap;
-use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
 
 /// Default interval between key events (milliseconds)
 const DEFAULT_KEY_INTERVAL_MS: u64 = 2;
@@ -333,27 +332,6 @@ fn apply_field<T: serde::de::DeserializeOwned + Clone>(
     }
 }
 
-/// Helper to get HWND from a window spec string
-fn get_hwnd_from_spec(spec: &str) -> Result<isize, String> {
-    let search = input::parse_window_spec(spec);
-
-    // Empty spec means foreground window
-    if search.title.is_none()
-        && search.class_name.is_none()
-        && search.hwnd.is_none()
-        && search.pid.is_none()
-        && search.exe_name.is_none()
-    {
-        let hwnd = unsafe { GetForegroundWindow() };
-        if hwnd.0.is_null() {
-            return Err("No foreground window found".to_string());
-        }
-        return Ok(hwnd.0 as isize);
-    }
-
-    input::find_window(&search).ok_or_else(|| "Window not found".to_string())
-}
-
 /// Execute action implementation
 fn execute_action_impl(action: &Action, ctx: &ExecContext) -> Result<(), String> {
     match action {
@@ -512,7 +490,7 @@ fn execute_key_sequence(action: &KeySequenceAction, ctx: &ExecContext) -> Result
 }
 
 /// Execute a mouse click action
-fn execute_mouse_click(action: &MouseClickAction, ctx: &ExecContext) -> Result<(), String> {
+fn execute_mouse_click(action: &MouseClickAction, _ctx: &ExecContext) -> Result<(), String> {
     let count = action.count;
 
     // Note: For now, mouse clicks always use Enigo as it's more reliable for absolute positioning
