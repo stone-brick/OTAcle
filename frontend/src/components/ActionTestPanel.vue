@@ -399,7 +399,7 @@ function formatFieldName(fieldName: string): string {
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--transition-duration);
 }
 
 .execute-btn:hover:not(:disabled) {
@@ -409,14 +409,5 @@ function formatFieldName(fieldName: string): string {
 .execute-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.execute-log {
-  font-size: 13px;
-  color: var(--color-text);
-  background: var(--color-surface-secondary);
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  word-break: break-all;
 }
 </style>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { InputBackend } from '../../types';
+import BackendSelector from '../../components/editor/BackendSelector.vue';
 
 defineProps<{
   defaultBackend: InputBackend;
@@ -15,34 +16,17 @@ const emit = defineEmits<{
   undo: [];
   redo: [];
 }>();
-
-function handleBackendChange(backend: InputBackend) {
-  emit('backendChange', backend);
-}
 </script>
 
 <template>
   <div class="top-bar">
     <div class="top-bar-left">
       <span class="top-bar-label">执行后台</span>
-      <div class="backend-selector">
-        <label class="radio-label" :class="{ active: defaultBackend === 'win32' }">
-          <input
-            type="radio"
-            :checked="defaultBackend === 'win32'"
-            @change="handleBackendChange('win32')"
-          />
-          <span>Win32</span>
-        </label>
-        <label class="radio-label" :class="{ active: defaultBackend === 'enigo' }">
-          <input
-            type="radio"
-            :checked="defaultBackend === 'enigo'"
-            @change="handleBackendChange('enigo')"
-          />
-          <span>Enigo</span>
-        </label>
-      </div>
+      <BackendSelector
+        :modelValue="defaultBackend"
+        :hideDefault="true"
+        @update:modelValue="emit('backendChange', $event as InputBackend)"
+      />
     </div>
 
     <div class="top-bar-right">
@@ -102,31 +86,6 @@ function handleBackendChange(backend: InputBackend) {
   font-size: 13px;
   color: var(--color-text-secondary);
   font-weight: 500;
-}
-
-.backend-selector {
-  display: flex;
-  gap: 8px;
-}
-
-.radio-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: var(--color-surface-secondary);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.radio-label.active {
-  background: var(--color-primary-bg);
-  border: 1px solid var(--color-primary);
-}
-
-.radio-label input[type="radio"] {
-  accent-color: var(--color-primary);
 }
 
 .btn-primary {

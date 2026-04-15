@@ -23,123 +23,76 @@ export interface Variable {
   field_name: string;
 }
 
-// Action types from action config
-export interface KeyAction {
+// =============================================================================
+// ActionItem Types (Unified - replaces separate Action and ActionItem types)
+// =============================================================================
+
+// Base interface for all action types - common fields
+export interface ActionItemBase {
+  name?: string | null;
+  backend?: InputBackend | null;
+}
+
+// Key Action - single key press
+export interface KeyActionItem extends ActionItemBase {
   type: 'key';
   key: string;
   hold_time_ms?: number;
 }
 
+// Key Sequence Item
 export interface KeySequenceItem {
   key: string;
   hold_time_ms?: number;
-  interval_ms?: number;
+  interval_ms?: number | null;
 }
 
-export interface KeySequenceAction {
+// Key Sequence Action - multiple key presses
+export interface KeySequenceActionItem extends ActionItemBase {
   type: 'key_sequence';
   keys: KeySequenceItem[];
   default_interval_ms: number;
 }
 
-export interface MouseClickAction {
+// Mouse Click Action
+export interface MouseClickActionItem extends ActionItemBase {
   type: 'mouse_click';
   button: MouseButton;
   count: number;
-  interval_ms?: number;
+  interval_ms?: number | null;
+  hold_time_ms?: number;
   variables?: Variable[];
 }
 
-export interface MouseMoveAction {
+// Mouse Move Action
+export interface MouseMoveActionItem extends ActionItemBase {
   type: 'mouse_move';
   x: number;
   y: number;
-  duration_ms?: number;
+  duration_ms?: number | null;
   variables?: Variable[];
 }
 
-export interface MouseScrollAction {
+// Mouse Scroll Action
+export interface MouseScrollActionItem extends ActionItemBase {
   type: 'mouse_scroll';
   direction: ScrollDirection;
   amount: number;
 }
 
-export interface DelayAction {
+// Delay Action
+export interface DelayActionItem extends ActionItemBase {
   type: 'delay';
   duration_ms: number;
 }
 
-export interface TextAction {
+// Text Action
+export interface TextActionItem extends ActionItemBase {
   type: 'text';
   content: string;
 }
 
-export type Action = KeyAction | KeySequenceAction | MouseClickAction | MouseMoveAction | MouseScrollAction | DelayAction | TextAction;
-
-// Action config map (JSON format)
-export type ActionConfig = Record<string, Action>;
-
-// Action item types - flattened to match Rust backend's #[serde(flatten)]
-// Each variant has index, name, type, and action-specific fields at top level
-
-export interface KeyActionItem {
-  name: string | null;
-  type: 'key';
-  key: string;
-  hold_time_ms?: number;
-  backend?: InputBackend;
-}
-
-export interface KeySequenceActionItem {
-  name: string | null;
-  type: 'key_sequence';
-  keys: KeySequenceItem[];
-  default_interval_ms: number;
-  backend?: InputBackend;
-}
-
-export interface MouseClickActionItem {
-  name: string | null;
-  type: 'mouse_click';
-  button: MouseButton;
-  count: number;
-  interval_ms?: number;
-  hold_time_ms?: number;
-  backend?: InputBackend;
-  variables?: Variable[];
-}
-
-export interface MouseMoveActionItem {
-  name: string | null;
-  type: 'mouse_move';
-  x: number;
-  y: number;
-  duration_ms?: number;
-  backend?: InputBackend;
-  variables?: Variable[];
-}
-
-export interface MouseScrollActionItem {
-  name: string | null;
-  type: 'mouse_scroll';
-  direction: ScrollDirection;
-  amount: number;
-  backend?: InputBackend;
-}
-
-export interface DelayActionItem {
-  name: string | null;
-  type: 'delay';
-  duration_ms: number;
-}
-
-export interface TextActionItem {
-  name: string | null;
-  type: 'text';
-  content: string;
-  backend?: InputBackend;
-}
-
+// Union type for all action items
 export type ActionItem =
   | KeyActionItem
   | KeySequenceActionItem
@@ -149,14 +102,14 @@ export type ActionItem =
   | DelayActionItem
   | TextActionItem;
 
+// ActionItem type for editor (same as ActionItem - kept for backwards compatibility)
+export type ActionType = ActionItem['type'];
+
 // Action config data (full config structure)
 export interface ActionConfigData {
   default_backend: InputBackend;
   actions: ActionItem[];
 }
-
-// Action type for editor
-export type ActionType = 'key' | 'key_sequence' | 'mouse_click' | 'mouse_move' | 'mouse_scroll' | 'delay' | 'text';
 
 // Log entry
 export interface LogEntry {

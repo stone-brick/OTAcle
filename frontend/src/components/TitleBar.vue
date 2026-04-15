@@ -103,7 +103,7 @@ async function handleClose() {
   background: transparent;
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background var(--transition-duration), color var(--transition-duration);
 }
 
 .control-btn:hover {

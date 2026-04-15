@@ -1,10 +1,6 @@
-import { ref } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import type { InputBackend } from '../types';
 import { useLog } from './useLog';
-
-const targetWindow = ref<string | null>(null);
-const executionBackend = ref<InputBackend>('win32');
 
 async function executeActionWithParams(
   actionId: number,
@@ -29,10 +25,7 @@ async function setTargetWindow(window: string | null): Promise<void> {
 
   try {
     await invoke('set_target_window', { window });
-    // Fetch the actual stored HWND from backend
-    const hwnd = await invoke<number | null>('get_target_window');
-    targetWindow.value = hwnd !== null ? `id:${hwnd}` : null;
-    addLog(`目标窗口已设置为: ${hwnd !== null ? `HWND ${hwnd}` : '(空)'}`, 'success');
+    addLog(`目标窗口已设置为: ${window ?? '(空)'}`, 'success');
   } catch (e) {
     addLog(`设置目标窗口失败: ${e}`, 'error');
   }
@@ -43,7 +36,6 @@ async function setExecutionBackend(backend: InputBackend): Promise<void> {
 
   try {
     await invoke('set_execution_backend', { backend });
-    executionBackend.value = backend;
     addLog(`执行后端已设置为: ${backend}`, 'success');
   } catch (e) {
     addLog(`设置执行后端失败: ${e}`, 'error');
@@ -52,8 +44,6 @@ async function setExecutionBackend(backend: InputBackend): Promise<void> {
 
 export function useActionExecutor() {
   return {
-    targetWindow,
-    executionBackend,
     executeActionWithParams,
     setTargetWindow,
     setExecutionBackend,

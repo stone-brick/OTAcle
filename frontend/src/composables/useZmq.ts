@@ -1,7 +1,8 @@
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, effectScope } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { useLog } from './useLog'
+import { MAX_ZMQ_MESSAGES } from '../utils/constants'
 
 export interface ZmqMessage {
   time: string
@@ -13,17 +14,20 @@ const isConnected = ref(false)
 const address = ref('')
 const messages = ref<ZmqMessage[]>([])
 
+// Create a single effect scope for all reactive effects managed by this composable
+const scope = effectScope()
+
 function formatTime(): string {
   const now = new Date()
   return now.toLocaleTimeString('zh-CN', { hour12: false })
 }
 
+// Listener handles - stored at module level for cleanup access
+let unlistenLog: UnlistenFn | null = null
+let unlistenError: UnlistenFn | null = null
+
 export function useZmq() {
   const { addLog } = useLog()
-
-  // Listener handles - inside useZmq() so each component instance has its own
-  let unlistenLog: UnlistenFn | null = null
-  let unlistenError: UnlistenFn | null = null
 
   async function fetchStatus() {
     try {
@@ -63,8 +67,8 @@ export function useZmq() {
       type,
       content,
     })
-    // Keep only last 100 messages
-    if (messages.value.length > 100) {
+    // Keep only last MAX_ZMQ_MESSAGES messages
+    if (messages.value.length > MAX_ZMQ_MESSAGES) {
       messages.value.shift()
     }
   }
@@ -73,7 +77,11 @@ export function useZmq() {
     messages.value = []
   }
 
-  onMounted(async () => {
+  /**
+   * Start listening for ZMQ events. Call this in component's onMounted.
+   */
+  async function startListening() {
+    // Fetch initial status
     await fetchStatus()
 
     // Listen for ZMQ log events
@@ -84,12 +92,25 @@ export function useZmq() {
     unlistenError = await listen<string>('zmq:error', (event) => {
       addMessage(event.payload, 'error')
     })
-  })
+  }
 
-  onUnmounted(() => {
+  /**
+   * Stop listening for ZMQ events. Call this in component's onUnmounted.
+   */
+  function stopListening() {
     unlistenLog?.()
     unlistenError?.()
-  })
+    unlistenLog = null
+    unlistenError = null
+  }
+
+  /**
+   * Cleanup all resources. Call this when permanently disposing of this composable.
+   */
+  function cleanup() {
+    stopListening()
+    scope.stop()
+  }
 
   return {
     isConnected,
@@ -100,5 +121,8 @@ export function useZmq() {
     stop,
     addMessage,
     clearMessages,
+    startListening,
+    stopListening,
+    cleanup,
   }
 }

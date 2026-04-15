@@ -83,9 +83,9 @@ function isActive(path: string): boolean {
   gap: 10px;
   padding: 12px 16px;
   margin-bottom: 4px;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background var(--transition-duration), color var(--transition-duration);
   color: var(--color-text-secondary);
 }
 

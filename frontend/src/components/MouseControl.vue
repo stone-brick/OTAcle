@@ -181,7 +181,7 @@ function handleGetPosition() {
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--transition-duration);
 }
 
 .action-btn:hover:not(:disabled) {

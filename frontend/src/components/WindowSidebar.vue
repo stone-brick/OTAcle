@@ -214,7 +214,7 @@ function truncateTitle(title: string, maxLen: number = 30): string {
 }
 
 .window-list::-webkit-scrollbar {
-  width: 6px;
+  width: var(--scrollbar-width);
 }
 
 .window-list::-webkit-scrollbar-track {
@@ -223,7 +223,7 @@ function truncateTitle(title: string, maxLen: number = 30): string {
 
 .window-list::-webkit-scrollbar-thumb {
   background: var(--color-border);
-  border-radius: 3px;
+  border-radius: var(--scrollbar-radius);
 }
 
 .window-list::-webkit-scrollbar-thumb:hover {
@@ -233,9 +233,9 @@ function truncateTitle(title: string, maxLen: number = 30): string {
 .window-item {
   padding: 10px 12px;
   margin-bottom: 4px;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--transition-duration);
 }
 
 .window-item:hover {

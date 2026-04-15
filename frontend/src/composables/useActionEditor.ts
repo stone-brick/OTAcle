@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
-import type { Action, ActionItem, InputBackend } from '../types';
+import type { ActionItem, InputBackend } from '../types';
 import { useLog } from './useLog';
 import { useActionHistory } from './useActionHistory';
 
@@ -9,7 +9,6 @@ const originalActions = ref<ActionItem[]>([]);  // 原始数据快照
 const originalDefaultBackend = ref<InputBackend>('win32');
 const defaultBackend = ref<InputBackend>('win32');
 const configPath = ref<string>('');
-const isDirty = ref(false);
 const selectedIndex = ref<number | null>(null);
 const isLoaded = ref(false);
 
@@ -45,7 +44,6 @@ async function loadConfig(path: string): Promise<void> {
     originalDefaultBackend.value = backend;
 
     isLoaded.value = true;
-    isDirty.value = false;
 
     // Clear backend history on load
     await invoke('clear_action_history');
@@ -73,13 +71,12 @@ async function saveConfig(path?: string): Promise<void> {
       actions: actions.value,
     });
     configPath.value = savePath;
-    isDirty.value = false;
 
-    // Save successful - update original snapshot and clear backend history
+    // Save successful - update original snapshot
+    // Note: do NOT clear history here - saving should not destroy undo/redo capability
     originalActions.value = JSON.parse(JSON.stringify(actions.value));
     originalDefaultBackend.value = defaultBackend.value;
-    await invoke('clear_action_history');
-    await refreshHistoryCount();
+    // History is NOT cleared - user can still undo/redo after save
 
     addLog(`已保存配置文件: ${savePath}`, 'success');
   } catch (e) {
@@ -105,8 +102,6 @@ async function createAction(type: string, name?: string): Promise<number> {
     await refreshActionList();
     await refreshHistoryCount();
 
-    updateDirtyState();
-
     addLog(`已创建动作 #${index}: ${name || type}`, 'success');
     return index;
   } catch (e) {
@@ -115,7 +110,7 @@ async function createAction(type: string, name?: string): Promise<number> {
   }
 }
 
-async function updateAction(index: number, action: Action, name?: string): Promise<void> {
+async function updateAction(index: number, action: ActionItem, name?: string): Promise<void> {
   const { addLog } = useLog();
 
   try {
@@ -129,7 +124,6 @@ async function updateAction(index: number, action: Action, name?: string): Promi
     // Refresh state from backend
     await refreshActionList();
     await refreshHistoryCount();
-    updateDirtyState();
 
     addLog(`已更新动作 #${index}`, 'success');
   } catch (e) {
@@ -154,8 +148,6 @@ async function deleteAction(index: number): Promise<void> {
       selectedIndex.value = actions.value.length > 0 ? actions.value.length - 1 : null;
     }
 
-    updateDirtyState();
-
     addLog(`已删除动作`, 'success');
   } catch (e) {
     addLog(`删除动作失败: ${e}`, 'error');
@@ -179,7 +171,6 @@ async function setDefaultBackend(backend: InputBackend): Promise<void> {
     await invoke('set_default_backend', { backend });
     defaultBackend.value = backend;
     await refreshHistoryCount();
-    updateDirtyState();
   } catch (e) {
     addLog(`设置默认后端失败: ${e}`, 'error');
   }
@@ -191,7 +182,6 @@ function clearEditor(): void {
   originalDefaultBackend.value = 'win32';
   defaultBackend.value = 'win32';
   configPath.value = '';
-  isDirty.value = false;
   selectedIndex.value = null;
   isLoaded.value = false;
 }
@@ -216,7 +206,6 @@ function getChangedIndices(): number[] {
 function syncOriginalActions(): void {
   originalActions.value = JSON.parse(JSON.stringify(actions.value));
   originalDefaultBackend.value = defaultBackend.value;
-  isDirty.value = false;
 }
 
 // Discard all changes - restore to original state (calls backend for undo/redo support)
@@ -235,15 +224,8 @@ async function discardAction(index: number): Promise<void> {
   syncOriginalActions();
 }
 
-// Update isDirty based on actual changes
-function updateDirtyState(): void {
-  const backendChanged = defaultBackend.value !== originalDefaultBackend.value;
-  const actionsChanged = actions.value.some((_, idx) => hasActionChanged(idx));
-  isDirty.value = backendChanged || actionsChanged;
-}
-
 // Helper to create default action based on type
-function createDefaultAction(type: string): Action {
+function createDefaultAction(type: string): ActionItem {
   switch (type) {
     case 'key':
       return { type: 'key', key: 'a' };
@@ -285,7 +267,6 @@ export function useActionEditor() {
     originalActions,
     defaultBackend,
     configPath,
-    isDirty,
     selectedIndex,
     isLoaded,
 

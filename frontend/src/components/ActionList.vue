@@ -1,117 +1,158 @@
 <script setup lang="ts">
-import type { Action } from '../types';
+import type { ActionItem } from '../types';
+import { getActionTypeLabel, formatActionDetail, getTypeClass } from '../utils/actionHelpers';
 
 defineProps<{
-  actions: Record<string, Action>;
-  selectedHwnd: number | null;
+  actions: ActionItem[];
+  selectedIndex: number | null;
+  showDelete?: boolean;
 }>();
 
 const emit = defineEmits<{
-  execute: [id: number];
+  select: [index: number];
+  delete: [index: number];
 }>();
-
-function formatAction(_id: string, action: Action): string {
-  switch (action.type) {
-    case 'key':
-      return `按键: ${action.key}`;
-    case 'key_sequence':
-      return `序列: ${action.keys.join(' → ')}`;
-    case 'mouse_click':
-      return `点击: ${action.button}键 x${action.count}`;
-    case 'mouse_move':
-      return `移动: (${action.x}, ${action.y})`;
-    case 'text':
-      const content = action.content.length > 15 ? action.content.substring(0, 15) + '...' : action.content;
-      return `文本: "${content}"`;
-    default:
-      return '未知动作';
-  }
-}
-
-function handleExecute(id: number) {
-  emit('execute', id);
-}
 </script>
 
 <template>
   <div class="action-list">
-    <table class="action-table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>类型</th>
-          <th>详情</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(action, id) in actions" :key="id">
-          <td class="action-id">{{ id }}</td>
-          <td>
-            <span class="type-badge" :class="action.type">
-              {{ action.type }}
+    <div class="list-header">
+      <h4>动作列表</h4>
+    </div>
+    <div v-if="actions.length === 0" class="empty-state">
+      <slot name="empty">暂无动作</slot>
+    </div>
+    <div v-else class="action-items">
+      <div
+        v-for="(item, idx) in actions"
+        :key="idx"
+        class="action-item"
+        :class="{ selected: selectedIndex === idx }"
+        @click="emit('select', idx)"
+      >
+        <div class="action-info">
+          <div class="action-header">
+            <span class="action-index">#{{ idx }}</span>
+            <span class="type-badge" :class="getTypeClass(item)">
+              {{ getActionTypeLabel(item) }}
             </span>
-          </td>
-          <td class="action-detail">{{ formatAction(id, action) }}</td>
-          <td>
-            <button
-              class="execute-btn"
-              @click="handleExecute(Number(id))"
-              :disabled="!selectedHwnd"
-            >
-              执行
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div v-if="Object.keys(actions).length === 0" class="empty-state">
-      暂无动作配置
+          </div>
+          <div class="action-name" v-if="item.name">{{ item.name }}</div>
+          <div class="action-detail">{{ formatActionDetail(item) }}</div>
+        </div>
+        <div v-if="showDelete" class="action-buttons">
+          <button
+            class="delete-btn"
+            @click.stop="emit('delete', idx)"
+            title="删除动作"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
 .action-list {
-  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
 }
 
-.action-table {
-  width: 100%;
-  border-collapse: collapse;
+.list-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.list-header h4 {
+  margin: 0;
   font-size: 13px;
-}
-
-.action-table th {
-  text-align: left;
-  padding: 10px 12px;
   font-weight: 600;
-  color: var(--color-text-secondary);
-  border-bottom: 2px solid var(--color-border);
-  font-size: 11px;
-  text-transform: uppercase;
-}
-
-.action-table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--color-border-light);
   color: var(--color-text);
 }
 
-.action-table tr:hover {
-  background: var(--color-hover);
+.action-list::-webkit-scrollbar {
+  width: var(--scrollbar-width);
 }
 
-.action-id {
+.action-list::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+
+.action-list::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--scrollbar-radius);
+}
+
+.action-list::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 24px 12px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.action-items {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--color-surface-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-duration);
+  border: 1px solid transparent;
+}
+
+.action-item:hover {
+  background: var(--color-surface-hover);
+}
+
+.action-item.selected {
+  background: var(--color-primary-bg);
+  border-color: var(--color-primary);
+}
+
+.action-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.action-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.action-index {
   font-family: monospace;
   font-weight: 600;
+  font-size: 12px;
   color: var(--color-primary);
 }
 
 .type-badge {
   display: inline-block;
-  padding: 2px 8px;
+  padding: 2px 6px;
   font-size: 10px;
   font-weight: 600;
   border-radius: 3px;
@@ -119,58 +160,79 @@ function handleExecute(id: number) {
 }
 
 .type-badge.key {
-  background: #3b82f6;
+  background: var(--color-action-key);
   color: white;
 }
 
 .type-badge.key_sequence {
-  background: #8b5cf6;
+  background: var(--color-action-key_sequence);
   color: white;
 }
 
 .type-badge.mouse_click {
-  background: #f59e0b;
+  background: var(--color-action-mouse_click);
   color: white;
 }
 
 .type-badge.mouse_move {
-  background: #10b981;
+  background: var(--color-action-mouse_move);
+  color: white;
+}
+
+.type-badge.mouse_scroll {
+  background: var(--color-action-mouse_scroll);
+  color: white;
+}
+
+.type-badge.delay {
+  background: var(--color-action-delay);
   color: white;
 }
 
 .type-badge.text {
-  background: #ec4899;
+  background: var(--color-action-text);
   color: white;
+}
+
+.action-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+  margin-bottom: 2px;
 }
 
 .action-detail {
-  color: var(--color-text-secondary);
+  font-size: 11px;
+  color: var(--color-text-muted);
   font-family: monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.execute-btn {
-  padding: 4px 14px;
-  font-size: 12px;
-  font-weight: 500;
-  background: var(--color-success);
-  color: white;
+.action-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.delete-btn {
+  padding: 4px 8px;
+  font-size: 11px;
+  background: transparent;
+  color: var(--color-text-muted);
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--transition-duration), color var(--transition-duration);
 }
 
-.execute-btn:hover:not(:disabled) {
-  opacity: 0.9;
+.action-item:hover .delete-btn {
+  opacity: 1;
 }
 
-.execute-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 24px;
-  color: var(--color-text-muted);
+.delete-btn:hover {
+  color: var(--color-error);
+  background: var(--color-error-bg);
 }
 </style>

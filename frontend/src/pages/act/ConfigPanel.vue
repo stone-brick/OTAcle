@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import type { ActionItem, InputBackend, Action } from '../../types';
+import { ref } from 'vue';
+import type { ActionItem, InputBackend } from '../../types';
 import EditorHeader from './EditorHeader.vue';
 import EditorTopBar from './EditorTopBar.vue';
-import ActionListEditor from '../../components/editor/ActionListEditor.vue';
+import ActionList from '../../components/ActionList.vue';
 import ActionForm from '../../components/editor/ActionForm.vue';
 import NewActionModal from './NewActionModal.vue';
 
@@ -11,13 +11,12 @@ defineProps<{
   actions: ActionItem[];
   defaultBackend: InputBackend;
   configPath: string;
-  isDirty: boolean;
   selectedIndex: number | null;
   isLoaded: boolean;
   selectedAction: ActionItem | null;
   hasChanges: boolean;
-  canUndo: () => boolean;
-  canRedo: () => boolean;
+  canUndo: boolean;
+  canRedo: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -25,9 +24,8 @@ const emit = defineEmits<{
   save: [];
   saveAs: [];
   selectAction: [index: number | null];
-  updateAction: [index: number, action: Action, name: string | null | undefined];
+  updateAction: [index: number, action: ActionItem];
   deleteAction: [index: number];
-  discardAction: [index: number];
   discardChanges: [];
   undo: [];
   redo: [];
@@ -35,10 +33,6 @@ const emit = defineEmits<{
   setExecutionBackend: [backend: InputBackend];
   createAction: [type: string, name: string | undefined];
 }>();
-
-const changedIndices = computed(() => {
-  return []; // Change tracking is done in useActionEditor
-});
 
 // Modal state
 const showNewActionModal = ref(false);
@@ -65,16 +59,12 @@ function handleSelectAction(index: number) {
   emit('selectAction', index);
 }
 
-function handleUpdateAction(index: number, action: Action, name: string | null) {
-  emit('updateAction', index, action, name || undefined);
+function handleUpdateAction(index: number, action: ActionItem) {
+  emit('updateAction', index, action);
 }
 
 function handleDeleteAction(index: number) {
   emit('deleteAction', index);
-}
-
-function handleDiscardAction(index: number) {
-  emit('discardAction', index);
 }
 </script>
 
@@ -82,7 +72,7 @@ function handleDiscardAction(index: number) {
   <div class="config-panel">
     <EditorHeader
       :configPath="configPath"
-      :isDirty="isDirty"
+      :isDirty="hasChanges"
       :isLoaded="isLoaded"
       @load="emit('load', $event)"
       @save="emit('save')"
@@ -92,15 +82,18 @@ function handleDiscardAction(index: number) {
     <div class="editor-content">
       <!-- Left Panel: Action List -->
       <div class="left-panel">
-        <ActionListEditor
+        <ActionList
           v-if="isLoaded"
           :actions="actions"
           :selectedIndex="selectedIndex"
-          :changedIndices="changedIndices"
+          :showDelete="true"
           @select="handleSelectAction"
           @delete="handleDeleteAction"
-          @discard="handleDiscardAction"
-        />
+        >
+          <template #empty>
+            <div class="empty-state-custom">暂无动作，请点击上方「新建动作」创建</div>
+          </template>
+        </ActionList>
         <div v-else class="empty-state">
           <p>请先加载配置文件</p>
         </div>
@@ -111,8 +104,8 @@ function handleDiscardAction(index: number) {
         <EditorTopBar
           :defaultBackend="defaultBackend"
           :hasChanges="hasChanges"
-          :canUndo="canUndo()"
-          :canRedo="canRedo()"
+          :canUndo="canUndo"
+          :canRedo="canRedo"
           @backendChange="handleBackendChange"
           @openNewActionModal="openNewActionModal"
           @discardAll="emit('discardChanges')"
@@ -199,5 +192,12 @@ function handleDiscardAction(index: number) {
 
 .empty-state p {
   margin: 4px 0;
+}
+
+.empty-state-custom {
+  text-align: center;
+  padding: 24px 12px;
+  color: var(--color-text-muted);
+  font-size: 13px;
 }
 </style>

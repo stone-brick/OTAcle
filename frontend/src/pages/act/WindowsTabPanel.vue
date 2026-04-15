@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import type { ActionItem, WindowInfo, SearchMode } from '../../types';
 import WindowSidebar from '../../components/WindowSidebar.vue';
-import ActionListReadonly from '../../components/ActionListReadonly.vue';
+import ActionList from '../../components/ActionList.vue';
 import ActionTestPanel from '../../components/ActionTestPanel.vue';
 
 const props = defineProps<{
@@ -63,7 +63,7 @@ function handleExecute(payload: { actionId: number; params: Record<string, any> 
       @refresh="emit('refreshWindows'); searchResults = null"
       @search="handleSearch"
     />
-    <ActionListReadonly
+    <ActionList
       :actions="actions"
       :selectedIndex="selectedTestActionIndex"
       @select="handleSelectTestAction"

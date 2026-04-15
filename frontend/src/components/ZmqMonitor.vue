@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useZmq } from '../composables/useZmq'
 
 const {
@@ -10,9 +10,20 @@ const {
   start,
   stop,
   clearMessages,
+  startListening,
+  cleanup,
 } = useZmq()
 
 const inputAddress = ref('tcp://127.0.0.1:5555')
+
+// Correctly manage ZMQ listener lifecycle
+onMounted(async () => {
+  await startListening()
+})
+
+onUnmounted(() => {
+  cleanup()
+})
 
 async function handleStart() {
   await start(inputAddress.value)
@@ -174,7 +185,7 @@ async function handleStop() {
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: opacity var(--transition-duration);
 }
 
 .btn:hover {

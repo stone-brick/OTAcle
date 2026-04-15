@@ -85,7 +85,7 @@ function handleClear() {
 }
 
 .log-list::-webkit-scrollbar {
-  width: 6px;
+  width: var(--scrollbar-width);
 }
 
 .log-list::-webkit-scrollbar-track {
@@ -94,7 +94,7 @@ function handleClear() {
 
 .log-list::-webkit-scrollbar-thumb {
   background: var(--color-border);
-  border-radius: 3px;
+  border-radius: var(--scrollbar-radius);
 }
 
 .log-list::-webkit-scrollbar-thumb:hover {

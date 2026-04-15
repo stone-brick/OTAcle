@@ -89,7 +89,7 @@ function selectTab(tab: TabItem) {
   padding: 8px 16px;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background var(--transition-duration), color var(--transition-duration);
   color: var(--color-text-secondary);
 }
 

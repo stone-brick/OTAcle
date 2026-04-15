@@ -141,7 +141,7 @@ function handleKeydown(e: KeyboardEvent) {
   cursor: pointer;
   font-size: 13px;
   color: var(--color-text);
-  transition: all 0.15s;
+  transition: all var(--transition-duration);
 }
 
 .type-btn:hover {

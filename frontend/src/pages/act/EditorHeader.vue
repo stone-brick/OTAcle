@@ -14,7 +14,6 @@ const emit = defineEmits<{
 }>();
 
 const pathInput = ref('');
-const pathBeforeEdit = ref('');
 const isPathFocused = ref(false);
 
 // Sync with prop
@@ -26,7 +25,6 @@ watch(() => props.configPath, (newPath) => {
 
 function handleFocus() {
   isPathFocused.value = true;
-  pathBeforeEdit.value = pathInput.value;
 }
 
 function handleBlur(e: FocusEvent) {

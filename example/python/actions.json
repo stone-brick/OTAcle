@@ -48,6 +48,19 @@
       "type": "text",
       "content": "Hello OTAcle!",
       "backend": null
+    },
+    {
+      "name": null,
+      "type": "key_sequence",
+      "keys": [
+        {
+          "key": "a",
+          "hold_time_ms": 5,
+          "interval_ms": null
+        }
+      ],
+      "default_interval_ms": 5,
+      "backend": "enigo"
     }
   ]
 }

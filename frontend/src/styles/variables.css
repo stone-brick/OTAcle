@@ -35,6 +35,22 @@
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
+
+  /* Transition */
+  --transition-duration: 0.15s;
+
+  /* Scrollbar */
+  --scrollbar-width: 6px;
+  --scrollbar-radius: 3px;
+
+  /* Action type colors */
+  --color-action-key: #3b82f6;
+  --color-action-key_sequence: #8b5cf6;
+  --color-action-mouse_click: #f59e0b;
+  --color-action-mouse_move: #10b981;
+  --color-action-mouse_scroll: #06b6d4;
+  --color-action-delay: #6b7280;
+  --color-action-text: #ec4899;
 }
 
 /* Light theme */

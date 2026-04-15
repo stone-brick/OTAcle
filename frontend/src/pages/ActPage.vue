@@ -20,7 +20,7 @@ const {
 } = useWindows();
 
 const actionEditor = useActionEditor();
-const actionHistory = useActionHistory();
+const actionHistory = useActionHistory(() => actionEditor.refreshActionList());
 const actionExecutor = useActionExecutor();
 
 async function searchWindows(mode: SearchMode, value: string): Promise<number[]> {
@@ -66,16 +66,12 @@ function handleSelectAction(index: number | null) {
   actionEditor.selectAction(index);
 }
 
-async function handleUpdateAction(index: number, action: any, name: string | null | undefined) {
-  await actionEditor.updateAction(index, action, name ?? undefined);
+async function handleUpdateAction(index: number, action: any) {
+  await actionEditor.updateAction(index, action);
 }
 
 async function handleDeleteAction(index: number) {
   await actionEditor.deleteAction(index);
-}
-
-async function handleDiscardAction(index: number) {
-  await actionEditor.discardAction(index);
 }
 
 async function handleDiscardChanges() {
@@ -84,14 +80,10 @@ async function handleDiscardChanges() {
 
 async function handleUndo() {
   await actionHistory.undo();
-  await actionEditor.refreshActionList();
-  // 不 syncOriginalActions - undo 操作本身通过后端 history 管理
 }
 
 async function handleRedo() {
   await actionHistory.redo();
-  await actionEditor.refreshActionList();
-  // 不 syncOriginalActions - redo 操作本身通过后端 history 管理
 }
 
 function handleSetDefaultBackend(backend: InputBackend) {
@@ -133,20 +125,18 @@ async function handleExecuteAction(payload: { actionId: number; params: Record<s
         :actions="actionEditor.actions.value"
         :defaultBackend="actionEditor.defaultBackend.value"
         :configPath="actionEditor.configPath.value"
-        :isDirty="actionEditor.isDirty.value"
         :selectedIndex="actionEditor.selectedIndex.value"
         :isLoaded="actionEditor.isLoaded.value"
         :selectedAction="actionEditor.selectedAction.value"
         :hasChanges="actionEditor.hasChanges.value"
-        :canUndo="actionHistory.canUndo"
-        :canRedo="actionHistory.canRedo"
+        :canUndo="actionHistory.canUndo.value"
+        :canRedo="actionHistory.canRedo.value"
         @load="handleLoad"
         @save="handleSave"
         @saveAs="handleSaveAs"
         @selectAction="handleSelectAction"
         @updateAction="handleUpdateAction"
         @deleteAction="handleDeleteAction"
-        @discardAction="handleDiscardAction"
         @discardChanges="handleDiscardChanges"
         @undo="handleUndo"
         @redo="handleRedo"
