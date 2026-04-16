@@ -1,4 +1,4 @@
-//! JSON configuration parsing and validation for action config
+//! 动作配置的 JSON 解析和验证
 
 use crate::input;
 use super::types::{Action, ActionConfig, ActionConfigList, ActionItem, InputBackend};
@@ -10,22 +10,22 @@ use std::sync::Mutex;
 use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
 
 lazy_static! {
-    /// Global action configuration storage (maps index to Action)
+    /// 全局动作配置存储（将索引映射到 Action）
     static ref ACTION_CONFIG: Mutex<Option<ActionConfig>> = Mutex::new(None);
-    /// Global action list storage (preserves order and names)
+    /// 全局动作列表存储（保留顺序和名称）
     static ref ACTION_LIST: Mutex<Option<ActionConfigList>> = Mutex::new(None);
-    /// Global default backend for actions without explicit backend
+    /// 没有明确后端的动作的全局默认后端
     static ref DEFAULT_BACKEND: Mutex<InputBackend> = Mutex::new(InputBackend::Win32);
-    /// Global target window for action execution (HWND)
+    /// 动作执行的目标窗口（HWND）
     pub static ref TARGET_WINDOW: Mutex<Option<isize>> = Mutex::new(None);
-    /// Global execution backend override
-    pub static ref EXECUTION_BACKEND: Mutex<InputBackend> = Mutex::new(InputBackend::Win32);
+    /// 全局执行后端覆盖（None 表示未设置，使用默认后端）
+    pub static ref EXECUTION_BACKEND: Mutex<Option<InputBackend>> = Mutex::new(None);
 }
 
-/// Maximum history entries
+/// 最大历史记录条目数
 const MAX_HISTORY_SIZE: usize = 50;
 
-/// History entry for undo/redo
+/// 撤销/重做的历史记录条目
 #[derive(Clone)]
 pub struct HistoryEntry {
     pub actions: ActionConfigList,
@@ -33,28 +33,28 @@ pub struct HistoryEntry {
 }
 
 lazy_static! {
-    /// Undo history stack
+    /// 撤销历史栈
     pub static ref UNDO_STACK: Mutex<Vec<HistoryEntry>> = Mutex::new(Vec::new());
-    /// Redo history stack
+    /// 重做历史栈
     pub static ref REDO_STACK: Mutex<Vec<HistoryEntry>> = Mutex::new(Vec::new());
-    /// Original state for discard (loaded or last saved)
+    /// 用于丢弃的原始状态（加载的或上次保存的）
     pub static ref ORIGINAL_ENTRY: Mutex<Option<HistoryEntry>> = Mutex::new(None);
 }
 
-/// JSON config structure
+/// JSON 配置结构
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
-    /// Default input backend when action doesn't specify one
+    /// 动作未指定时的默认输入后端
     #[serde(default = "default_win32")]
     pub default_backend: InputBackend,
-    /// List of action items
+    /// 动作项列表
     pub actions: Vec<ActionItemWrapper>,
 }
 
-/// Wrapper for parsing action items from JSON
+/// 用于从 JSON 解析动作项的包装器
 #[derive(Debug, Clone, Deserialize)]
 pub struct ActionItemWrapper {
-    /// Optional action name
+    /// 可选的动作名称
     #[serde(default)]
     pub name: Option<String>,
     #[serde(flatten)]
@@ -65,9 +65,9 @@ fn default_win32() -> InputBackend {
     InputBackend::Win32
 }
 
-/// Load action configuration from a JSON file
+/// 从 JSON 文件加载动作配置
 ///
-/// **JSON format**:
+/// **JSON 格式**：
 /// ```json
 /// {
 ///   "default_backend": "win32",
@@ -97,7 +97,7 @@ pub fn load_config(path: &str) -> Result<(ActionConfig, InputBackend), String> {
 
     validate_config(&result)?;
 
-    // Store the list for later access
+    // 保存列表以供后续访问
     let mut global_list = ACTION_LIST.lock()
         .map_err(|_| "Failed to lock action list".to_string())?;
     *global_list = Some(action_list);
@@ -105,9 +105,9 @@ pub fn load_config(path: &str) -> Result<(ActionConfig, InputBackend), String> {
     Ok((result, config.default_backend))
 }
 
-/// Load configuration into global storage
+/// 将配置加载到全局存储
 pub fn load_config_with_backend(path: &str, _backend: InputBackend) -> Result<(), String> {
-    // Backend is now specified per-config file, not per-call
+    // 后端现在在每个配置文件中指定，而不是每次调用
     let (config, default_backend) = load_config(path)?;
 
     let mut global_config = ACTION_CONFIG
@@ -121,7 +121,7 @@ pub fn load_config_with_backend(path: &str, _backend: InputBackend) -> Result<()
     *global_config = Some(config);
     *global_backend = default_backend.clone();
 
-    // Set original entry for discard
+    // 设置原始条目用于丢弃
     let action_list = ACTION_LIST.lock().map_err(|_| "Failed to lock action list")?;
     let mut original = ORIGINAL_ENTRY.lock().map_err(|_| "Failed to lock original")?;
     *original = Some(HistoryEntry {
@@ -132,7 +132,7 @@ pub fn load_config_with_backend(path: &str, _backend: InputBackend) -> Result<()
     Ok(())
 }
 
-/// Get currently loaded configuration (maps index to Action)
+/// 获取当前加载的配置（将索引映射到 Action）
 pub fn get_config() -> Result<ActionConfig, String> {
     let global = ACTION_CONFIG
         .lock()
@@ -143,7 +143,7 @@ pub fn get_config() -> Result<ActionConfig, String> {
         .ok_or_else(|| "No configuration loaded. Call load_action_config first.".to_string())
 }
 
-/// Get the action list with names (preserves order and names)
+/// 获取带名称的动作列表（保留顺序和名称）
 pub fn get_action_list() -> Result<ActionConfigList, String> {
     let global = ACTION_LIST
         .lock()
@@ -154,7 +154,7 @@ pub fn get_action_list() -> Result<ActionConfigList, String> {
         .ok_or_else(|| "No configuration loaded. Call load_action_config first.".to_string())
 }
 
-/// Get the default backend from loaded configuration
+/// 从加载的配置获取默认后端
 pub fn get_default_backend() -> Result<InputBackend, String> {
     let global = DEFAULT_BACKEND
         .lock()
@@ -163,13 +163,13 @@ pub fn get_default_backend() -> Result<InputBackend, String> {
     Ok(global.clone())
 }
 
-/// Set the target window for action execution
+/// 设置动作执行的目标窗口
 pub fn set_target_window(window: Option<String>) -> Result<(), String> {
     let hwnd = match window {
         Some(spec) => {
             let search = input::parse_window_spec(&spec);
 
-            // Empty spec means foreground window
+            // 空规格表示前台窗口
             if search.title.is_none()
                 && search.class_name.is_none()
                 && search.hwnd.is_none()
@@ -182,13 +182,13 @@ pub fn set_target_window(window: Option<String>) -> Result<(), String> {
                 }
                 hwnd.0 as isize
             } else {
-                // Resolve window spec to HWND
+                // 将窗口规格解析为 HWND
                 input::find_window(&search)
                     .ok_or_else(|| format!("Window not found: {}", spec))?
             }
         }
         None => {
-            // Clear target window
+            // 清除目标窗口
             let mut global = TARGET_WINDOW
                 .lock()
                 .map_err(|_| "Failed to lock target window".to_string())?;
@@ -204,7 +204,7 @@ pub fn set_target_window(window: Option<String>) -> Result<(), String> {
     Ok(())
 }
 
-/// Get the current target window (HWND)
+/// 获取当前目标窗口（HWND）
 pub fn get_target_window() -> Option<isize> {
     TARGET_WINDOW
         .lock()
@@ -212,26 +212,26 @@ pub fn get_target_window() -> Option<isize> {
         .unwrap_or(None)
 }
 
-/// Set the execution backend override
+/// 设置执行后端覆盖
 pub fn set_execution_backend(backend: InputBackend) -> Result<(), String> {
     let mut global = EXECUTION_BACKEND
         .lock()
         .map_err(|_| "Failed to lock execution backend".to_string())?;
-    *global = backend;
+    *global = Some(backend);
     Ok(())
 }
 
-/// Get the current execution backend override
-pub fn get_execution_backend() -> InputBackend {
+/// 获取当前执行后端覆盖（None 表示未设置）
+pub fn get_execution_backend() -> Option<InputBackend> {
     EXECUTION_BACKEND
         .lock()
         .map(|g| g.clone())
-        .unwrap_or(InputBackend::Win32)
+        .unwrap_or(None)
 }
 
-/// Set the default backend (with history tracking)
+/// 设置默认后端（带历史跟踪）
 pub fn set_default_backend(backend: InputBackend) -> Result<(), String> {
-    // Save current state to history before modification
+    // 修改前保存当前状态到历史记录
     save_to_history()?;
 
     let mut global = DEFAULT_BACKEND
@@ -241,7 +241,7 @@ pub fn set_default_backend(backend: InputBackend) -> Result<(), String> {
     Ok(())
 }
 
-/// Validate a single action
+/// 验证单个动作
 fn validate_action(action: &Action) -> Result<(), String> {
     match action {
         Action::Key(key_action) => {
@@ -265,7 +265,7 @@ fn validate_action(action: &Action) -> Result<(), String> {
             }
         }
         Action::MouseMove(_) => {
-            // x, y can be any value - no validation needed
+            // x, y 可以是任意值 - 无需验证
         }
         Action::MouseScroll(scroll_action) => {
             if scroll_action.amount == 0 {
@@ -273,7 +273,7 @@ fn validate_action(action: &Action) -> Result<(), String> {
             }
         }
         Action::Delay(_delay_action) => {
-            // duration can be any value - allow 0 for no-op
+            // duration 可以是任意值 - 允许 0 表示无操作
         }
         Action::Text(text_action) => {
             if text_action.content.is_empty() {
@@ -284,7 +284,7 @@ fn validate_action(action: &Action) -> Result<(), String> {
     Ok(())
 }
 
-/// Validate entire configuration
+/// 验证整个配置
 pub fn validate_config(config: &ActionConfig) -> Result<(), String> {
     if config.is_empty() {
         return Err("Configuration is empty".to_string());
@@ -297,7 +297,7 @@ pub fn validate_config(config: &ActionConfig) -> Result<(), String> {
     Ok(())
 }
 
-// Save current state to undo history
+// 保存当前状态到撤销历史
 pub fn save_to_history() -> Result<(), String> {
     let actions = get_action_list()?;
     let backend = get_default_backend()?;
@@ -310,19 +310,19 @@ pub fn save_to_history() -> Result<(), String> {
     let mut undo = UNDO_STACK.lock().map_err(|_| "Failed to lock undo stack")?;
     undo.push(entry);
 
-    // Limit history size
+    // 限制历史大小
     if undo.len() > MAX_HISTORY_SIZE {
         undo.remove(0);
     }
 
-    // New action clears redo stack
+    // 新动作清除重做栈
     let mut redo = REDO_STACK.lock().map_err(|_| "Failed to lock redo stack")?;
     redo.clear();
 
     Ok(())
 }
 
-/// Get the next available action index (list length, or 0 if empty)
+/// 获取下一个可用动作索引（列表长度，如果为空则为 0）
 pub fn get_next_available_index() -> Result<u32, String> {
     let list = ACTION_LIST
         .lock()
@@ -331,7 +331,7 @@ pub fn get_next_available_index() -> Result<u32, String> {
     Ok(list.as_ref().map(|items| items.len()).unwrap_or(0) as u32)
 }
 
-/// Rebuild the HashMap from the current action list to ensure indices match positions
+/// 从当前动作列表重建 HashMap 以确保索引与位置匹配
 fn rebuild_config_from_list() -> Result<(), String> {
     let list = ACTION_LIST
         .lock()
@@ -356,19 +356,19 @@ fn rebuild_config_from_list() -> Result<(), String> {
     Ok(())
 }
 
-/// Create a new action in memory and return its assigned index
+/// 在内存中创建新动作并返回其分配的索引
 pub fn create_action(action: Action, name: Option<String>) -> Result<u32, String> {
-    // Save current state to history before modification
+    // 修改前保存当前状态到历史记录
     save_to_history()?;
 
-    // Validate the action first
+    // 首先验证动作
     validate_action(&action)?;
 
     let mut list = ACTION_LIST
         .lock()
         .map_err(|_| "Failed to lock action list".to_string())?;
 
-    // Index is the length of the list (append at end)
+    // 索引是列表的长度（追加到末尾）
     let index = list.as_ref().map(|items| items.len()).unwrap_or(0) as u32;
 
     let item = ActionItem {
@@ -376,7 +376,7 @@ pub fn create_action(action: Action, name: Option<String>) -> Result<u32, String
         data: action.clone(),
     };
 
-    // Ensure list is initialized
+    // 确保列表已初始化
     if list.is_none() {
         *list = Some(Vec::new());
     }
@@ -385,7 +385,7 @@ pub fn create_action(action: Action, name: Option<String>) -> Result<u32, String
         items.push(item);
     }
 
-    // Also update the HashMap
+    // 同时更新 HashMap
     let mut config = ACTION_CONFIG
         .lock()
         .map_err(|_| "Failed to lock configuration".to_string())?;
@@ -400,15 +400,15 @@ pub fn create_action(action: Action, name: Option<String>) -> Result<u32, String
     Ok(index)
 }
 
-/// Update an existing action by index
+/// 按索引更新现有动作
 pub fn update_action(index: u32, action: Action, name: Option<String>) -> Result<(), String> {
-    // Save current state to history before modification
+    // 修改前保存当前状态到历史记录
     save_to_history()?;
 
-    // Validate the action first
+    // 首先验证动作
     validate_action(&action)?;
 
-    // Update in ACTION_LIST
+    // 在 ACTION_LIST 中更新
     {
         let mut list = ACTION_LIST
             .lock()
@@ -431,7 +431,7 @@ pub fn update_action(index: u32, action: Action, name: Option<String>) -> Result
         }
     }
 
-    // Update in ACTION_CONFIG HashMap
+    // 在 ACTION_CONFIG HashMap 中更新
     {
         let mut config = ACTION_CONFIG
             .lock()
@@ -451,12 +451,12 @@ pub fn update_action(index: u32, action: Action, name: Option<String>) -> Result
     Ok(())
 }
 
-/// Delete an action by index
+/// 按索引删除动作
 pub fn delete_action(index: u32) -> Result<(), String> {
-    // Save current state to history before modification
+    // 修改前保存当前状态到历史记录
     save_to_history()?;
 
-    // Delete from ACTION_LIST
+    // 从 ACTION_LIST 中删除
     {
         let mut list = ACTION_LIST
             .lock()
@@ -478,13 +478,13 @@ pub fn delete_action(index: u32) -> Result<(), String> {
         }
     }
 
-    // Rebuild HashMap from list to maintain index-to-position correspondence
+    // 从列表重建 HashMap 以维护索引到位置的对应关系
     rebuild_config_from_list()?;
 
     Ok(())
 }
 
-/// Save configuration to a JSON file
+/// 将配置保存到 JSON 文件
 pub fn save_config(path: &str, default_backend: InputBackend, actions: &ActionConfigList) -> Result<(), String> {
     use serde::Serialize;
 
@@ -505,13 +505,13 @@ pub fn save_config(path: &str, default_backend: InputBackend, actions: &ActionCo
     fs::write(path, json)
         .map_err(|e| format!("Failed to write config file: {}", e))?;
 
-    // Reload the saved config into global state
+    // 将保存的配置重新加载到全局状态
     load_config_with_backend(path, default_backend)?;
 
     Ok(())
 }
 
-// Undo - restore previous state
+// 撤销 - 恢复上一个状态
 pub fn undo() -> Result<(), String> {
     let mut undo = UNDO_STACK.lock().map_err(|_| "Failed to lock undo stack")?;
     let mut redo = REDO_STACK.lock().map_err(|_| "Failed to lock redo stack")?;
@@ -520,21 +520,21 @@ pub fn undo() -> Result<(), String> {
         return Err("Nothing to undo".to_string());
     }
 
-    // Save current state to redo stack
+    // 保存当前状态到重做栈
     let current = HistoryEntry {
         actions: get_action_list()?,
         default_backend: get_default_backend()?,
     };
     redo.push(current);
 
-    // Restore previous state
+    // 恢复上一个状态
     let prev = undo.pop().unwrap();
     reload_from_entry(&prev)?;
 
     Ok(())
 }
 
-// Redo - restore next state
+// 重做 - 恢复下一个状态
 pub fn redo() -> Result<(), String> {
     let mut undo = UNDO_STACK.lock().map_err(|_| "Failed to lock undo stack")?;
     let mut redo = REDO_STACK.lock().map_err(|_| "Failed to lock redo stack")?;
@@ -543,26 +543,26 @@ pub fn redo() -> Result<(), String> {
         return Err("Nothing to redo".to_string());
     }
 
-    // Save current state to undo stack
+    // 保存当前状态到撤销栈
     let current = HistoryEntry {
         actions: get_action_list()?,
         default_backend: get_default_backend()?,
     };
     undo.push(current);
 
-    // Restore next state
+    // 恢复下一个状态
     let next = redo.pop().unwrap();
     reload_from_entry(&next)?;
 
     Ok(())
 }
 
-// Discard all changes - restore to original state (undoable)
+// 丢弃所有更改 - 恢复到原始状态（可撤销）
 pub fn discard_changes() -> Result<(), String> {
-    // Save current state to history (so we can undo)
+    // 保存当前状态到历史记录（以便我们可以撤销）
     save_to_history()?;
 
-    // Restore from original
+    // 从原始状态恢复
     let original = ORIGINAL_ENTRY.lock().map_err(|_| "Failed to lock original")?;
     let entry = original
         .clone()
@@ -574,12 +574,12 @@ pub fn discard_changes() -> Result<(), String> {
     Ok(())
 }
 
-// Discard a specific action - restore to original state (undoable)
+// 丢弃特定动作 - 恢复到原始状态（可撤销）
 pub fn discard_action(index: u32) -> Result<(), String> {
-    // Save current state to history (so we can undo)
+    // 保存当前状态到历史记录（以便我们可以撤销）
     save_to_history()?;
 
-    // Get original action at this index
+    // 获取此索引处的原始动作
     let original = ORIGINAL_ENTRY.lock().map_err(|_| "Failed to lock original")?;
     let entry = original
         .clone()
@@ -591,7 +591,7 @@ pub fn discard_action(index: u32) -> Result<(), String> {
         .ok_or_else(|| format!("No action at index {}", index))?;
     drop(original);
 
-    // Update the specific action in global state
+    // 在全局状态中更新特定动作
     let mut config = ACTION_CONFIG.lock().map_err(|_| "Failed to lock config")?;
     if let Some(ref mut c) = *config {
         c.insert(index, original_action.data.clone());
@@ -605,9 +605,9 @@ pub fn discard_action(index: u32) -> Result<(), String> {
     Ok(())
 }
 
-// Reload state from a history entry
+// 从历史条目重新加载状态
 fn reload_from_entry(entry: &HistoryEntry) -> Result<(), String> {
-    // Update global ACTION_CONFIG HashMap using array positions as indices
+    // 使用数组位置作为索引更新全局 ACTION_CONFIG HashMap
     let mut config = ACTION_CONFIG.lock().map_err(|_| "Failed to lock config")?;
     *config = Some(
         entry
@@ -618,25 +618,25 @@ fn reload_from_entry(entry: &HistoryEntry) -> Result<(), String> {
             .collect(),
     );
 
-    // Update global ACTION_LIST
+    // 更新全局 ACTION_LIST
     let mut list = ACTION_LIST.lock().map_err(|_| "Failed to lock action list")?;
     *list = Some(entry.actions.clone());
 
-    // Update global DEFAULT_BACKEND
+    // 更新全局 DEFAULT_BACKEND
     let mut backend = DEFAULT_BACKEND.lock().map_err(|_| "Failed to lock default backend")?;
     *backend = entry.default_backend.clone();
 
     Ok(())
 }
 
-// Clear undo/redo history
+// 清除撤销/重做历史
 pub fn clear_history() -> Result<(), String> {
     UNDO_STACK.lock().map_err(|_| "Failed to lock undo stack")?.clear();
     REDO_STACK.lock().map_err(|_| "Failed to lock redo stack")?.clear();
     Ok(())
 }
 
-// Get history status (undo count, redo count)
+// 获取历史状态（撤销计数，重做计数）
 pub fn get_history_status() -> (usize, usize) {
     let undo_len = UNDO_STACK.lock().map(|g| g.len()).unwrap_or(0);
     let redo_len = REDO_STACK.lock().map(|g| g.len()).unwrap_or(0);

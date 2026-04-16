@@ -22,7 +22,7 @@ export function useObserve() {
   // 开始观察
   async function startObserve(windowId: string): Promise<void> {
     try {
-      await invoke('start_observe', {
+      await invoke('observe_start', {
         window: windowId,
         config: config.value
       })
@@ -36,7 +36,7 @@ export function useObserve() {
   // 停止观察
   async function stopObserve(): Promise<void> {
     try {
-      await invoke('stop_observe')
+      await invoke('observe_stop')
       isObserving.value = false
     } catch (e) {
       throw e
@@ -49,7 +49,7 @@ export function useObserve() {
   // 获取观察状态
   async function fetchStatus(): Promise<void> {
     try {
-      const status = await invoke<boolean>('get_observe_status')
+      const status = await invoke<boolean>('observe_get_status')
       isObserving.value = status
     } catch (e) {
       console.error('Failed to get observe status:', e)
@@ -59,7 +59,7 @@ export function useObserve() {
   // 加载配置
   async function loadConfig(path: string): Promise<void> {
     try {
-      const loaded = await invoke<ObserveConfig>('load_observe_config', { path })
+      const loaded = await invoke<ObserveConfig>('observe_load_config', { path })
       config.value = loaded
     } catch (e) {
       console.error('Failed to load observe config:', e)
@@ -70,7 +70,7 @@ export function useObserve() {
   // 保存配置
   async function saveConfig(path: string): Promise<void> {
     try {
-      await invoke('save_observe_config', { path, config: config.value })
+      await invoke('observe_save_config', { path, config: config.value })
     } catch (e) {
       console.error('Failed to save observe config:', e)
       throw e

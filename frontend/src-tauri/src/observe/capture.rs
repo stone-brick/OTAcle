@@ -1,8 +1,7 @@
-//! Window capture implementation using Windows Graphics Capture API
+//! 使用 Windows Graphics Capture API 实现窗口截图
 //!
-//! Uses the windows-capture crate which wraps the Windows.Graphics.Capture API.
-//! This captures GPU-accelerated windows (games, WebView2, DirectX/Vulkan/OpenGL)
-//! that traditional GDI cannot capture.
+//! 使用 windows-capture crate 封装 Windows.Graphics.Capture API。
+//! 可以捕获传统 GDI 无法捕获的 GPU 加速窗口（游戏、WebView2、DirectX/Vulkan/OpenGL）。
 
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -24,10 +23,10 @@ use windows_capture::window::Window;
 use crate::observe::processor::ImageProcessor;
 use crate::observe::types::{CropBlock, FrameMessage, ObserveConfig};
 
-/// Throttle preview emit to frontend (ms)
+/// 限制预览帧发送到前端的频率（毫秒）
 const PREVIEW_THROTTLE_MS: u64 = 200;
 
-/// Data passed to WgcFrameHandler via Settings::Flags
+/// 通过 Settings::Flags 传递给 WgcFrameHandler 的数据
 struct WgcHandlerData {
     app: AppHandle,
     config: ObserveConfig,
@@ -37,7 +36,7 @@ struct WgcHandlerData {
     running: Arc<AtomicBool>,
 }
 
-/// The frame handler implementing GraphicsCaptureApiHandler trait
+/// 实现 GraphicsCaptureApiHandler trait 的帧处理器
 struct WgcFrameHandler {
     data: Arc<WgcHandlerData>,
 }
@@ -55,7 +54,7 @@ impl GraphicsCaptureApiHandler for WgcFrameHandler {
         frame: &mut Frame,
         capture_control: InternalCaptureControl,
     ) -> Result<(), Self::Error> {
-        // Check if stop was requested
+        // 检查是否请求停止
         if !self.data.running.load(Ordering::SeqCst) {
             capture_control.stop();
             return Ok(());
@@ -63,19 +62,19 @@ impl GraphicsCaptureApiHandler for WgcFrameHandler {
 
         let (width, height) = (frame.width(), frame.height());
 
-        // 1. Get frame buffer
+        // 1. 获取帧缓冲区
         let mut buffer = frame.buffer()
             .map_err(|e| format!("Failed to get frame buffer: {}", e))?;
 
-        // Try as_nopadding_buffer first (may return empty due to API bug)
+        // 先尝试 as_nopadding_buffer（可能因 API bug 返回空）
         let mut rgba = Vec::new();
         let _clean = buffer.as_nopadding_buffer(&mut rgba);
 
-        // Workaround: if as_nopadding_buffer returns empty, manually strip padding from raw buffer
+        // 变通方案：如果 as_nopadding_buffer 返回空，则手动从原始缓冲区去除填充
         if rgba.is_empty() || rgba.len() != (width as usize * height as usize * 4) {
             let row_pitch = buffer.row_pitch();
             let raw = buffer.as_raw_buffer();
-            let pixel_stride = 4; // RGBA8 = 4 bytes per pixel
+            let pixel_stride = 4; // RGBA8 = 每像素 4 字节
 
             rgba.clear();
             for row in 0..height {
@@ -87,7 +86,7 @@ impl GraphicsCaptureApiHandler for WgcFrameHandler {
             }
         }
 
-        // 2. Scale if needed
+        // 2. 如有需要则缩放
         let scaled = if self.data.config.capture.target_width != width as u32
             || self.data.config.capture.target_height != height as u32
         {
@@ -103,7 +102,7 @@ impl GraphicsCaptureApiHandler for WgcFrameHandler {
             rgba
         };
 
-        // 3. Crop regions or send full frame
+        // 3. 裁剪区域或发送完整帧
         let crop_blocks: Vec<CropBlock> = if self.data.config.crop_regions.is_empty() {
             vec![CropBlock {
                 x: 0,
@@ -122,7 +121,7 @@ impl GraphicsCaptureApiHandler for WgcFrameHandler {
             )
         };
 
-        // 4. Build FrameMessage
+        // 4. 构建 FrameMessage
         let frame_msg = FrameMessage {
             width: self.data.config.capture.target_width,
             height: self.data.config.capture.target_height,
@@ -134,16 +133,16 @@ impl GraphicsCaptureApiHandler for WgcFrameHandler {
             data: crop_blocks,
         };
 
-        // 5. Send via ZMQ (channel receiver thread)
+        // 5. 通过 ZMQ 发送（通道接收线程）
         let _ = self.data.zmq_tx.send(frame_msg.clone());
 
-        // 6. Emit to frontend for preview (throttled)
+        // 6. 发送到前端预览（节流）
         let now = Instant::now();
         let mut last_time = self.data.last_preview_time.lock().unwrap();
         let elapsed = now.duration_since(*last_time).as_millis() as u64;
         if elapsed >= PREVIEW_THROTTLE_MS {
             *last_time = now;
-            drop(last_time); // release lock before emit
+            drop(last_time); // 在发送前释放锁
             if let Err(e) = self.data.app.emit("observe:frame", &frame_msg) {
                 eprintln!("Tauri emit error: {}", e);
             }
@@ -153,14 +152,14 @@ impl GraphicsCaptureApiHandler for WgcFrameHandler {
     }
 }
 
-/// Capture session for window screen capture using Windows Graphics Capture API
+/// 使用 Windows Graphics Capture API 的窗口屏幕捕获会话
 pub struct CaptureSession {
     running: Arc<AtomicBool>,
     frame_id: Arc<AtomicU64>,
 }
 
 impl CaptureSession {
-    /// Create a new capture session
+    /// 创建新的捕获会话
     pub fn new() -> Self {
         Self {
             running: Arc::new(AtomicBool::new(false)),
@@ -168,71 +167,49 @@ impl CaptureSession {
         }
     }
 
-    /// Start the capture session
+    /// 启动捕获会话
+    ///
+    /// # 参数
+    /// * `hwnd` - 要捕获的窗口句柄
+    /// * `config` - Observe 配置
+    /// * `app` - 用于事件的 Tauri app handle
+    /// * `zmq_tx` - ZMQ 发布者的通道发送者
+    /// * `running` - 用于控制运行状态的原子标志
     pub fn start(
         &self,
         hwnd: isize,
         config: ObserveConfig,
         app: AppHandle,
+        zmq_tx: std::sync::mpsc::Sender<FrameMessage>,
+        running: Arc<AtomicBool>,
     ) -> Result<(), String> {
-        if self.running.load(Ordering::SeqCst) {
+        // 使用传入的 running 标志，而不是 self.running
+        if running.load(Ordering::SeqCst) {
             return Err("Capture session already running".to_string());
         }
 
+        running.store(true, Ordering::SeqCst);
+        // 保存运行标志，以便 stop/is_running 使用
         self.running.store(true, Ordering::SeqCst);
 
         let frame_id = self.frame_id.clone();
         let config_clone = config.clone();
         let app_clone = app.clone();
-        let running = self.running.clone();
 
-        // Create ZMQ channel and sender thread
-        let (zmq_tx, zmq_rx) = std::sync::mpsc::channel();
-        let zmq_addr = config.zmq.address.clone();
-        let zmq_tx_for_handler = zmq_tx.clone(); // handler data needs its own copy
-
-        // Sender thread - owns zmq_rx, keeps channel alive while running
-        thread::spawn(move || {
-            let ctx = zmq::Context::new();
-            let socket = match ctx.socket(zmq::PUB) {
-                Ok(s) => s,
-                Err(e) => {
-                    eprintln!("ZMQ socket creation failed: {}", e);
-                    return;
-                }
-            };
-            if let Err(e) = socket.bind(&zmq_addr) {
-                eprintln!("ZMQ bind failed for {}: {}", zmq_addr, e);
-                return;
-            }
-            let _ = socket.set_conflate(true);
-
-            while let Ok(frame) = zmq_rx.recv() {
-                let json = match serde_json::to_string(&frame) {
-                    Ok(j) => j,
-                    Err(_) => continue,
-                };
-                if socket.send(json.as_bytes(), 0).is_err() {
-                    break;
-                }
-            }
-        });
-
-        // Create Window from HWND
+        // 从 HWND 创建 Window
         let window = Window::from_raw_hwnd(hwnd as *mut std::ffi::c_void);
 
-        // Build handler data (Arc so it can be shared with the handler)
-        // zmq_tx_for_handler keeps the sender alive as long as the handler exists
+        // 构建处理器数据（使用 Arc 以便与处理器共享）
         let handler_data = Arc::new(WgcHandlerData {
             app: app_clone,
             config: config_clone,
-            zmq_tx: zmq_tx_for_handler,
+            zmq_tx,
             frame_id: frame_id.clone(),
             last_preview_time: Mutex::new(Instant::now()),
             running,
         });
 
-        // Build settings
+        // 构建设置
         let settings = Settings::new(
             window,
             CursorCaptureSettings::WithoutCursor,
@@ -244,28 +221,28 @@ impl CaptureSession {
             handler_data.clone(),
         );
 
-        // Spawn thread that calls start_free_threaded
-        // The capture runs on an internal background thread managed by windows-capture.
-        // The running flag signals when to stop - the handler checks it on each frame
-        // and calls capture_control.stop() when false.
+        // 生成调用 start_free_threaded 的线程
+        // 捕获在由 windows-capture 管理的内部后台线程上运行。
+        // running 标志指示何时停止 - 处理器在每帧到达时检查它
+        // 当为 false 时调用 capture_control.stop()。
         let _handle = thread::spawn(move || {
             let _control = WgcFrameHandler::start_free_threaded(settings);
-            // _control is dropped when the thread exits, which stops the capture.
-            // However, if stop() was called, the handler will have already called
-            // capture_control.stop() on the next frame arrival.
+            // 当线程退出时 _control 被丢弃，这会停止捕获。
+            // 但是，如果 stop() 被调用，处理器将在下一帧到达时
+            // 已经调用 capture_control.stop()。
         });
 
         Ok(())
     }
 
-    /// Stop the capture session
+    /// 停止捕获会话
     pub fn stop(&self) {
         self.running.store(false, Ordering::SeqCst);
-        // The handler will detect running=false on the next frame arrival
-        // and call capture_control.stop() to gracefully stop capture.
+        // 处理器将在下一帧到达时检测到 running=false
+        // 并调用 capture_control.stop() 以优雅地停止捕获。
     }
 
-    /// Check if capture session is running
+    /// 检查捕获会话是否正在运行
     pub fn is_running(&self) -> bool {
         self.running.load(Ordering::SeqCst)
     }

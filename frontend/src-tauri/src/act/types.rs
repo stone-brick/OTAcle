@@ -1,25 +1,25 @@
-//! Action type definitions for OTAcle
+//! OTAcle 的动作类型定义
 //!
-//! Defines the supported action types that can be configured via JSON.
+//! 定义可通过 JSON 配置的支持的动作类型。
 
 use serde::{Deserialize, Serialize};
 
-/// Variable definition - maps a parameter name to an action field name
+/// 变量定义 - 将参数名称映射到动作字段名称
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Variable {
-    /// The parameter name used in ZMQ params
+    /// ZMQ params 中使用的参数名称
     pub param_name: String,
-    /// The field name in this action to override
+    /// 此动作中要覆盖的字段名称
     pub field_name: String,
 }
 
-/// Input backend type - determines how input is sent to target window
+/// 输入后端类型 - 决定如何将输入发送到目标窗口
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum InputBackend {
-    /// Use enigo library - cross-platform, relies on foreground window
+    /// 使用 enigo 库 - 跨平台，依赖前台窗口
     Enigo,
-    /// Use Windows API - sends directly to target window, no foreground required
+    /// 使用 Windows API - 直接发送到目标窗口，无需前台
     Win32,
 }
 
@@ -29,7 +29,7 @@ impl Default for InputBackend {
     }
 }
 
-/// Mouse button variants
+/// 鼠标按钮变体
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum MouseButton {
@@ -38,7 +38,7 @@ pub enum MouseButton {
     Middle,
 }
 
-/// Mouse scroll direction
+/// 鼠标滚动方向
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum ScrollDirection {
@@ -48,44 +48,44 @@ pub enum ScrollDirection {
     Right,
 }
 
-/// Key action - single key operation
+/// 按键动作 - 单键操作
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct KeyAction {
-    /// Key name (e.g., "space", "enter", "a", "ctrl")
+    /// 按键名称（例如 "space"、"enter"、"a"、"ctrl"）
     pub key: String,
-    /// Hold time in milliseconds (default: 5ms, prevents events being dropped)
+    /// 按住时间（毫秒，默认 5ms，防止事件丢失）
     #[serde(default = "default_key_hold_time")]
     pub hold_time_ms: u64,
-    /// Override the default input backend for this action
+    /// 覆盖此动作的默认输入后端
     #[serde(default)]
     pub backend: Option<InputBackend>,
 }
 
-/// Key sequence action - multiple keys pressed in sequence
+/// 按键序列动作 - 按顺序按下多个按键
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct KeySequenceAction {
-    /// List of keys to press in order
+    /// 按顺序按下的按键列表
     pub keys: Vec<KeySequenceItem>,
-    /// Default interval between keys in milliseconds (default: 5ms)
+    /// 按键之间的默认间隔（毫秒，默认 5ms）
     #[serde(default = "default_interval_ms")]
     pub default_interval_ms: u64,
-    /// Override the default input backend for this action
+    /// 覆盖此动作的默认输入后端
     #[serde(default)]
     pub backend: Option<InputBackend>,
 }
 
-/// A single key item in a key sequence
+/// 按键序列中的单个按键项
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct KeySequenceItem {
-    /// Key name (e.g., "space", "enter", "ctrl")
+    /// 按键名称（例如 "space"、"enter"、"ctrl"）
     pub key: String,
-    /// Hold time in milliseconds (default: 5ms, prevents events being dropped)
+    /// 按住时间（毫秒，默认 5ms，防止事件丢失）
     #[serde(default = "default_key_hold_time")]
     pub hold_time_ms: u64,
-    /// Interval to the next key in milliseconds (overrides default_interval_ms)
+    /// 与下一个按键的间隔（毫秒，覆盖 default_interval_ms）
     #[serde(default)]
     pub interval_ms: Option<u64>,
 }
@@ -98,25 +98,25 @@ fn default_key_hold_time() -> u64 {
     5
 }
 
-/// Mouse click action
+/// 鼠标点击动作
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct MouseClickAction {
-    /// Mouse button to click
+    /// 要点击的鼠标按钮
     pub button: MouseButton,
-    /// Number of clicks
+    /// 点击次数
     #[serde(default = "default_click_count")]
     pub count: u32,
-    /// Interval between clicks in milliseconds (default: 0)
+    /// 点击之间的间隔（毫秒，默认 0）
     #[serde(default)]
     pub interval_ms: Option<u64>,
-    /// Hold time in milliseconds (default: 5ms, prevents events being dropped)
+    /// 按住时间（毫秒，默认 5ms，防止事件丢失）
     #[serde(default = "default_mouse_hold_time")]
     pub hold_time_ms: u64,
-    /// Override the default input backend for this action
+    /// 覆盖此动作的默认输入后端
     #[serde(default)]
     pub backend: Option<InputBackend>,
-    /// Dynamic variables for runtime parameter substitution
+    /// 用于运行时参数替换的动态变量
     #[serde(default)]
     pub variables: Vec<Variable>,
 }
@@ -129,35 +129,35 @@ fn default_mouse_hold_time() -> u64 {
     5
 }
 
-/// Mouse move action
+/// 鼠标移动动作
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct MouseMoveAction {
-    /// Target X coordinate
+    /// 目标 X 坐标
     pub x: i32,
-    /// Target Y coordinate
+    /// 目标 Y 坐标
     pub y: i32,
-    /// Optional duration to move (in milliseconds)
+    /// 可选的移动持续时间（毫秒）
     #[serde(default)]
     pub duration_ms: Option<u64>,
-    /// Override the default input backend for this action
+    /// 覆盖此动作的默认输入后端
     #[serde(default)]
     pub backend: Option<InputBackend>,
-    /// Dynamic variables for runtime parameter substitution
+    /// 用于运行时参数替换的动态变量
     #[serde(default)]
     pub variables: Vec<Variable>,
 }
 
-/// Mouse scroll action
+/// 鼠标滚动动作
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct MouseScrollAction {
-    /// Scroll direction
+    /// 滚动方向
     pub direction: ScrollDirection,
-    /// Scroll amount in "clicks" (default: 1, Windows default wheel delta is 120)
+    /// 滚动量（"点击"数，默认 1，Windows 默认滚轮增量是 120）
     #[serde(default = "default_scroll_amount")]
     pub amount: u32,
-    /// Override the default input backend for this action
+    /// 覆盖此动作的默认输入后端
     #[serde(default)]
     pub backend: Option<InputBackend>,
 }
@@ -166,61 +166,61 @@ fn default_scroll_amount() -> u32 {
     1
 }
 
-/// Delay/wait action - pauses execution for specified duration
+/// 延迟/等待动作 - 按指定时长暂停执行
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct DelayAction {
-    /// Duration to wait in milliseconds
+    /// 等待时长（毫秒）
     pub duration_ms: u64,
 }
 
-/// Text input action
+/// 文本输入动作
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct TextAction {
-    /// Text content to type
+    /// 要输入的文本内容
     pub content: String,
-    /// Override the default input backend for this action
+    /// 覆盖此动作的默认输入后端
     #[serde(default)]
     pub backend: Option<InputBackend>,
 }
 
-/// Action type enum - discriminated union for all action types
+/// 动作类型枚举 - 所有动作类型的可辨识联合
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Action {
-    /// Single key operation
+    /// 单键操作
     Key(KeyAction),
-    /// Multiple keys pressed in sequence
+    /// 按顺序按下多个按键
     KeySequence(KeySequenceAction),
-    /// Mouse click action
+    /// 鼠标点击动作
     MouseClick(MouseClickAction),
-    /// Mouse move action
+    /// 鼠标移动动作
     MouseMove(MouseMoveAction),
-    /// Mouse scroll action
+    /// 鼠标滚动动作
     MouseScroll(MouseScrollAction),
-    /// Delay/wait action
+    /// 延迟/等待动作
     Delay(DelayAction),
-    /// Text input action
+    /// 文本输入动作
     Text(TextAction),
 }
 
-/// A single action item with optional name and the action data
+/// 带可选名称和动作数据的单个动作项
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct ActionItem {
-    /// Optional action name (uses array index as name if not provided)
+    /// 可选的动作名称（如果未提供则使用数组索引作为名称）
     #[serde(default)]
     pub name: Option<String>,
-    /// The action data
+    /// 动作数据
     #[serde(flatten)]
     pub data: Action,
 }
 
 
-/// Action configuration as a list of action items
+/// 动作配置作为动作项列表
 pub type ActionConfigList = Vec<ActionItem>;
 
-/// Action configuration mapping action index (u32) to Action
-/// @deprecated Use ActionConfigList instead
+/// 动作配置，将动作索引（u32）映射到 Action
+/// @deprecated 请改用 ActionConfigList
 pub type ActionConfig = std::collections::HashMap<u32, Action>;

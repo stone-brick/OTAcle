@@ -1,6 +1,6 @@
-//! Action execution logic for OTAcle
+//! OTAcle 的动作执行逻辑
 //!
-//! Executes configured actions based on action IDs.
+//! 根据动作 ID 执行配置的动作。
 
 use super::config;
 use super::types::{Action, DelayAction, InputBackend, KeyAction, KeySequenceAction, MouseButton, MouseClickAction, MouseMoveAction, MouseScrollAction, ScrollDirection, TextAction};
@@ -8,15 +8,15 @@ use crate::input;
 use enigo::{Axis, Button, Coordinate, Direction, Enigo, Mouse, Settings};
 use std::collections::HashMap;
 
-/// Default interval between key events (milliseconds)
+/// 按键事件之间的默认间隔（毫秒）
 const DEFAULT_KEY_INTERVAL_MS: u64 = 2;
 
-/// A key event to be processed by the input inhibitor
+/// 要由输入抑制剂处理的按键事件
 #[derive(Debug, Clone)]
 struct KeyEvent<'a> {
     key: &'a str,
     direction: KeyDirection,
-    /// Delay before this event (milliseconds)
+    /// 此事件之前的延迟（毫秒）
     delay_ms: u64,
 }
 
@@ -35,7 +35,7 @@ impl KeyDirection {
     }
 }
 
-/// Execution context - backend and target window
+/// 执行上下文 - 后端和目标窗口
 struct ExecContext {
     backend: InputBackend,
     target_hwnd: Option<isize>,
@@ -47,8 +47,8 @@ impl ExecContext {
     }
 }
 
-/// Get the effective backend for an action
-/// Priority: action.backend > execution_backend > default_backend
+/// 获取动作的有效后端
+/// 优先级：action.backend > execution_backend > default_backend
 fn resolve_backend(action: &Action, default_backend: InputBackend, execution_backend: Option<InputBackend>) -> InputBackend {
     // First priority: action's own backend setting
     if let Some(backend) = get_action_backend(action) {
@@ -64,7 +64,7 @@ fn resolve_backend(action: &Action, default_backend: InputBackend, execution_bac
     default_backend
 }
 
-/// Get backend from action if specified
+/// 如果指定了则从动作获取后端
 fn get_action_backend(action: &Action) -> Option<InputBackend> {
     match action {
         Action::Key(a) => a.backend.clone(),
@@ -72,12 +72,12 @@ fn get_action_backend(action: &Action) -> Option<InputBackend> {
         Action::MouseClick(a) => a.backend.clone(),
         Action::MouseMove(a) => a.backend.clone(),
         Action::MouseScroll(a) => a.backend.clone(),
-        Action::Delay(_) => None, // Delay doesn't use backend
+        Action::Delay(_) => None, // 延迟不使用后端
         Action::Text(a) => a.backend.clone(),
     }
 }
 
-/// Execute a sequence of key events with proper timing using specified backend
+/// 使用指定后端按正确时序执行一系列按键事件
 fn execute_key_events(events: &[KeyEvent], ctx: &ExecContext) -> Result<(), String> {
     let mut first = true;
     for event in events {
@@ -90,11 +90,11 @@ fn execute_key_events(events: &[KeyEvent], ctx: &ExecContext) -> Result<(), Stri
     Ok(())
 }
 
-/// Send a key event using the configured backend
+/// 使用配置的后端发送按键事件
 fn send_key_event(key: &str, direction: &str, ctx: &ExecContext) -> Result<(), String> {
     match ctx.backend {
         InputBackend::Enigo => {
-            // Enigo mode: activate window first, then send
+            // Enigo 模式：先激活窗口，然后发送
             if let Some(hwnd) = ctx.target_hwnd {
                 input::activate_window(hwnd)?;
                 std::thread::sleep(std::time::Duration::from_millis(10));
@@ -102,7 +102,7 @@ fn send_key_event(key: &str, direction: &str, ctx: &ExecContext) -> Result<(), S
             input::enigo::send_key(key, direction)
         }
         InputBackend::Win32 => {
-            // Win32 mode: send directly to target window
+            // Win32 模式：直接发送到目标窗口
             let hwnd = ctx.target_hwnd
                 .ok_or("Win32 backend requires target window")?;
             input::send_key_to_window(hwnd, key, direction)
@@ -110,7 +110,7 @@ fn send_key_event(key: &str, direction: &str, ctx: &ExecContext) -> Result<(), S
     }
 }
 
-/// Send text using the configured backend
+/// 使用配置的后端发送文本
 fn send_text_event(text: &str, ctx: &ExecContext) -> Result<(), String> {
     match ctx.backend {
         InputBackend::Enigo => {
@@ -128,31 +128,31 @@ fn send_text_event(text: &str, ctx: &ExecContext) -> Result<(), String> {
     }
 }
 
-/// Execute an action by its ID
+/// 按 ID 执行动作
 ///
-/// # Arguments
-/// * `action_id` - The numeric ID of the action to execute
-/// * `default_backend` - The default backend from loaded config (used when action has no backend)
+/// # 参数
+/// * `action_id` - 要执行的动作的数字 ID
+/// * `default_backend` - 加载的配置中的默认后端（当动作没有后端时使用）
 ///
-/// Target window and execution backend are read from global config.
+/// 目标窗口和执行后端从全局配置读取。
 pub fn execute_action(
     action_id: u32,
     default_backend: InputBackend,
 ) -> Result<(), String> {
-    // Get config
+    // 获取配置
     let actions = config::get_config()?;
 
     let action = actions.get(&action_id)
         .ok_or_else(|| format!("Action {} not found in configuration", action_id))?;
 
-    // Get global execution backend (overrides default if set)
+    // 获取全局执行后端（如果设置则覆盖默认值）
     let execution_backend = config::get_execution_backend();
-    let resolved_backend = resolve_backend(action, default_backend, Some(execution_backend));
+    let resolved_backend = resolve_backend(action, default_backend, execution_backend);
 
-    // Get global target window (already resolved to HWND)
+    // 获取全局目标窗口（已经解析为 HWND）
     let target_hwnd = config::get_target_window();
 
-    // Activate window if using Enigo backend (Win32 doesn't need activation)
+    // 如果使用 Enigo 后端则激活窗口（Win32 不需要激活）
     if resolved_backend == InputBackend::Enigo {
         if let Some(hwnd) = target_hwnd {
             input::activate_window(hwnd)?;
@@ -162,44 +162,44 @@ pub fn execute_action(
 
     let ctx = ExecContext::new(resolved_backend, target_hwnd);
 
-    // Execute the action
+    // 执行动作
     execute_action_impl(action, &ctx)
 }
 
-/// Execute an action by its ID with optional params for variable substitution
+/// 使用可选参数按 ID 执行动作以进行变量替换
 ///
-/// # Arguments
-/// * `action_id` - The numeric ID of the action to execute
-/// * `params` - Optional parameters for dynamic field substitution
-/// * `default_backend` - The default backend from loaded config
+/// # 参数
+/// * `action_id` - 要执行的动作的数字 ID
+/// * `params` - 用于动态字段替换的可选参数
+/// * `default_backend` - 加载的配置中的默认后端
 ///
-/// Target window and execution backend are read from global config.
+/// 目标窗口和执行后端从全局配置读取。
 pub fn execute_action_with_params(
     action_id: u32,
     params: HashMap<String, serde_json::Value>,
     default_backend: InputBackend,
 ) -> Result<(), String> {
-    // Get config
+    // 获取配置
     let actions = config::get_config()?;
 
     let action = actions.get(&action_id)
         .ok_or_else(|| format!("Action {} not found in configuration", action_id))?;
 
-    // Apply dynamic parameters if provided
+    // 如果提供了则应用动态参数
     let resolved_action = if !params.is_empty() {
         apply_params(action, &params)?
     } else {
         action.clone()
     };
 
-    // Get global execution backend (overrides default if set)
+    // 获取全局执行后端（如果设置则覆盖默认值）
     let execution_backend = config::get_execution_backend();
-    let resolved_backend = resolve_backend(&resolved_action, default_backend, Some(execution_backend));
+    let resolved_backend = resolve_backend(&resolved_action, default_backend, execution_backend);
 
-    // Get global target window (already resolved to HWND)
+    // 获取全局目标窗口（已经解析为 HWND）
     let target_hwnd = config::get_target_window();
 
-    // Activate window if using Enigo backend (Win32 doesn't need activation)
+    // 如果使用 Enigo 后端则激活窗口（Win32 不需要激活）
     if resolved_backend == InputBackend::Enigo {
         if let Some(hwnd) = target_hwnd {
             input::activate_window(hwnd)?;
@@ -209,18 +209,18 @@ pub fn execute_action_with_params(
 
     let ctx = ExecContext::new(resolved_backend, target_hwnd);
 
-    // Execute the action
+    // 执行动作
     execute_action_impl(&resolved_action, &ctx)
 }
 
-/// Execute multiple actions based on the execute vector
+/// 根据执行向量执行多个动作
 ///
-/// # Arguments
-/// * `execute` - Vector of booleans where index corresponds to action index
-/// * `params` - Optional parameters for dynamic field substitution
-/// * `default_backend` - The default backend from loaded config
+/// # 参数
+/// * `execute` - 布尔向量，其中索引对应动作索引
+/// * `params` - 用于动态字段替换的可选参数
+/// * `default_backend` - 加载的配置中的默认后端
 ///
-/// Returns Ok(()) if all executed actions succeed, Err on first failure
+/// 如果所有执行的动作都成功则返回 Ok(()), 否则返回第一个错误
 pub fn execute_actions(
     execute: Vec<bool>,
     params: HashMap<String, serde_json::Value>,
@@ -228,10 +228,10 @@ pub fn execute_actions(
 ) -> Result<(), String> {
     let actions = config::get_config()?;
 
-    // Get global target window (already resolved to HWND)
+    // 获取全局目标窗口（已经解析为 HWND）
     let target_hwnd = config::get_target_window();
 
-    // Get global execution backend
+    // 获取全局执行后端
     let execution_backend = config::get_execution_backend();
 
     // 先收集所有需要执行的 action
@@ -246,30 +246,30 @@ pub fn execute_actions(
         .collect();
 
     for (_action_idx, action) in actions_to_execute {
-        // Apply dynamic parameters if provided
+        // 如果提供了则应用动态参数
         let resolved_action = if !params.is_empty() {
             apply_params(action, &params)?
         } else {
             action.clone()
         };
 
-        // Resolve backend: action > execution_backend > default_backend
-        let resolved_backend = resolve_backend(&resolved_action, default_backend.clone(), Some(execution_backend.clone()));
+        // 解析后端：action > execution_backend > default_backend
+        let resolved_backend = resolve_backend(&resolved_action, default_backend.clone(), execution_backend.clone());
 
-        // Create execution context with global target window
+        // 使用全局目标窗口创建执行上下文
         let ctx = ExecContext::new(resolved_backend, target_hwnd);
 
-        // Execute
+        // 执行
         execute_action_impl(&resolved_action, &ctx)?;
     }
 
     Ok(())
 }
 
-/// Apply dynamic parameters to an action based on its variables definition
+/// 根据变量的定义将动态参数应用到动作
 ///
-/// Each Variable entry maps a param_name (from ZMQ params) to a field_name (action struct field).
-/// Only fields explicitly listed in variables can be overridden at runtime.
+/// 每个 Variable 条目将 param_name（来自 ZMQ params）映射到 field_name（动作结构字段）。
+/// 只有在 variables 中明确列出的字段才能在运行时覆盖。
 fn apply_params(action: &Action, params: &HashMap<String, serde_json::Value>) -> Result<Action, String> {
     let mut resolved = action.clone();
 
@@ -288,7 +288,7 @@ fn apply_params(action: &Action, params: &HashMap<String, serde_json::Value>) ->
                         }
                     }
                 }
-                // If param not provided, use the default value from config (do nothing)
+                // 如果未提供参数，使用配置中的默认值（不执行任何操作）
             }
         }
         Action::MouseClick(a) => {
@@ -312,7 +312,7 @@ fn apply_params(action: &Action, params: &HashMap<String, serde_json::Value>) ->
     Ok(resolved)
 }
 
-/// Apply a parameter value to a field
+/// 将参数值应用到字段
 fn apply_field<T: serde::de::DeserializeOwned + Clone>(
     field: &mut T,
     field_name: &str,
@@ -332,7 +332,7 @@ fn apply_field<T: serde::de::DeserializeOwned + Clone>(
     }
 }
 
-/// Execute action implementation
+/// 执行动作实现
 fn execute_action_impl(action: &Action, ctx: &ExecContext) -> Result<(), String> {
     match action {
         Action::Key(key_action) => execute_key(key_action, ctx),
@@ -345,37 +345,37 @@ fn execute_action_impl(action: &Action, ctx: &ExecContext) -> Result<(), String>
     }
 }
 
-/// Execute a key action
+/// 执行按键动作
 ///
-/// Supports combination keys with `+` separator, e.g., "ctrl+c", "ctrl+shift+a"
-/// For combination keys:
-///   1. Press all modifier keys
-///   2. Press the main key
-///   3. Release all keys
+/// 支持以 `+` 分隔符组合键，例如 "ctrl+c"、"ctrl+shift+a"
+/// 对于组合键：
+///   1. 按下所有修饰符键
+///   2. 按下主键
+///   3. 释放所有键
 fn execute_key(action: &KeyAction, ctx: &ExecContext) -> Result<(), String> {
     let key = &action.key;
 
-    // Check if it's a combination key (contains '+')
+    // 检查是否是组合键（包含 '+'）
     if key.contains('+') {
         execute_combination_key(key, action.hold_time_ms, ctx)?;
     } else {
         if action.hold_time_ms > 0 {
-            // Press and hold
+            // 按住
             send_key_event(key, "press", ctx)?;
             std::thread::sleep(std::time::Duration::from_millis(action.hold_time_ms));
             send_key_event(key, "release", ctx)?;
         } else {
-            // Simple click
+            // 简单点击
             send_key_event(key, "click", ctx)?;
         }
     }
     Ok(())
 }
 
-/// Execute a combination key (e.g., "ctrl+c", "ctrl+shift+a")
+/// 执行组合键（例如 "ctrl+c"、"ctrl+shift+a"）
 ///
-/// For Win32 backend: uses SendInput to send all keys atomically
-/// For Enigo backend: builds an event queue with proper timing
+/// 对于 Win32 后端：使用 SendInput 原子地发送所有键
+/// 对于 Enigo 后端：构建具有正确时序的事件队列
 fn execute_combination_key(key: &str, hold_ms: u64, ctx: &ExecContext) -> Result<(), String> {
     let keys: Vec<&str> = key.split('+').map(|s| s.trim()).collect();
 
@@ -385,30 +385,30 @@ fn execute_combination_key(key: &str, hold_ms: u64, ctx: &ExecContext) -> Result
 
     match ctx.backend {
         InputBackend::Win32 => {
-            // Win32: use SendInput for atomic key sequence
+            // Win32：使用 SendInput 进行原子键序列
             let mut key_pairs: Vec<(&str, bool)> = Vec::new();
 
-            // Press all keys
+            // 按下所有键
             for k in &keys {
                 key_pairs.push((k, true));
             }
 
-            // Hold if specified
+            // 如果指定了则保持
             if hold_ms > 0 {
-                // Release main key first
+                // 首先释放主键
                 key_pairs.push((keys.last().unwrap(), false));
-                // Then release modifier keys in reverse order (skip main key)
+                // 然后按相反顺序释放修饰符键（跳过主键）
                 for k in keys.iter().rev().skip(1) {
                     key_pairs.push((k, false));
                 }
             } else {
-                // Release all keys in reverse order
+                // 按相反顺序释放所有键
                 for k in keys.iter().rev() {
                     key_pairs.push((k, false));
                 }
             }
 
-            // Activate window first
+            // 首先激活窗口
             if let Some(hwnd) = ctx.target_hwnd {
                 input::activate_window(hwnd)?;
                 std::thread::sleep(std::time::Duration::from_millis(10));
@@ -417,10 +417,10 @@ fn execute_combination_key(key: &str, hold_ms: u64, ctx: &ExecContext) -> Result
             input::send_key_sequence(&key_pairs)
         }
         InputBackend::Enigo => {
-            // Enigo: use existing event-based approach
+            // Enigo：使用现有的基于事件的方法
             let mut events: Vec<KeyEvent> = Vec::new();
 
-            // Press all keys with delay before each
+            // 按下每个键之前带有延迟
             for k in &keys {
                 events.push(KeyEvent {
                     key: k,
@@ -429,15 +429,15 @@ fn execute_combination_key(key: &str, hold_ms: u64, ctx: &ExecContext) -> Result
                 });
             }
 
-            // Hold if specified
+            // 如果指定了则保持
             if hold_ms > 0 {
-                // First release the main key after holding
+                // 保持后首先释放主键
                 events.push(KeyEvent {
-                    key: keys.last().unwrap(), // main key
+                    key: keys.last().unwrap(), // 主键
                     direction: KeyDirection::Release,
                     delay_ms: hold_ms,
                 });
-                // Then release all modifier keys in reverse order (skip the main key)
+                // 然后按相反顺序释放所有修饰符键（跳过主键）
                 for k in keys.iter().rev().skip(1) {
                     events.push(KeyEvent {
                         key: k,
@@ -446,7 +446,7 @@ fn execute_combination_key(key: &str, hold_ms: u64, ctx: &ExecContext) -> Result
                     });
                 }
             } else {
-                // Release all keys in reverse order
+                // 按相反顺序释放所有键
                 for k in keys.iter().rev() {
                     events.push(KeyEvent {
                         key: k,
@@ -461,23 +461,23 @@ fn execute_combination_key(key: &str, hold_ms: u64, ctx: &ExecContext) -> Result
     }
 }
 
-/// Execute a key sequence action
+/// 执行按键序列动作
 fn execute_key_sequence(action: &KeySequenceAction, ctx: &ExecContext) -> Result<(), String> {
     let default_interval = action.default_interval_ms;
 
     for (i, item) in action.keys.iter().enumerate() {
-        // Execute the key press
+        // 执行按键
         if item.hold_time_ms > 0 {
-            // Press and hold
+            // 按住
             send_key_event(&item.key, "press", ctx)?;
             std::thread::sleep(std::time::Duration::from_millis(item.hold_time_ms));
             send_key_event(&item.key, "release", ctx)?;
         } else {
-            // Simple click
+            // 简单点击
             send_key_event(&item.key, "click", ctx)?;
         }
 
-        // Sleep before next key (unless this is the last key)
+        // 在下一个键之前休眠（除非这是最后一个键）
         if i < action.keys.len() - 1 {
             let interval = item.interval_ms.unwrap_or(default_interval);
             if interval > 0 {
@@ -489,12 +489,12 @@ fn execute_key_sequence(action: &KeySequenceAction, ctx: &ExecContext) -> Result
     Ok(())
 }
 
-/// Execute a mouse click action
+/// 执行鼠标点击动作
 fn execute_mouse_click(action: &MouseClickAction, _ctx: &ExecContext) -> Result<(), String> {
     let count = action.count;
 
-    // Note: For now, mouse clicks always use Enigo as it's more reliable for absolute positioning
-    // This could be enhanced to support Win32 backend as well
+    // 注意：目前，鼠标点击始终使用 Enigo，因为它对于绝对定位更可靠
+    // 这可以增强为也支持 Win32 后端
     let mut enigo = Enigo::new(&Settings::default())
         .map_err(|e| format!("Failed to create Enigo: {:?}", e))?;
 
@@ -508,7 +508,7 @@ fn execute_mouse_click(action: &MouseClickAction, _ctx: &ExecContext) -> Result<
     let hold_time = action.hold_time_ms;
 
     for i in 0..count {
-        // Press, hold, then release
+        // 按下、保持，然后释放
         enigo.button(button, Direction::Press)
             .map_err(|e| format!("Failed to press mouse button: {:?}", e))?;
 
@@ -519,7 +519,7 @@ fn execute_mouse_click(action: &MouseClickAction, _ctx: &ExecContext) -> Result<
         enigo.button(button, Direction::Release)
             .map_err(|e| format!("Failed to release mouse button: {:?}", e))?;
 
-        // Don't sleep after the last click
+        // 不要在最后一次点击后休眠
         if i < count - 1 && interval > 0 {
             std::thread::sleep(std::time::Duration::from_millis(interval));
         }
@@ -528,7 +528,7 @@ fn execute_mouse_click(action: &MouseClickAction, _ctx: &ExecContext) -> Result<
     Ok(())
 }
 
-/// Execute a mouse move action
+/// 执行鼠标移动动作
 fn execute_mouse_move(action: &MouseMoveAction, ctx: &ExecContext) -> Result<(), String> {
     let x = action.x;
     let y = action.y;
@@ -537,19 +537,19 @@ fn execute_mouse_move(action: &MouseMoveAction, ctx: &ExecContext) -> Result<(),
 
     match ctx.backend {
         InputBackend::Win32 => {
-            // Win32: use SetCursorPos
+            // Win32：使用 SetCursorPos
             let start = input::get_mouse_position()?;
             input::smooth_move(start.0, start.1, x, y, duration)?;
         }
         InputBackend::Enigo => {
             if duration == 0 {
-                // Instant move using enigo
+                // 使用 enigo 瞬间移动
                 let mut enigo = Enigo::new(&Settings::default())
                     .map_err(|e| format!("Failed to create Enigo: {:?}", e))?;
                 enigo.move_mouse(x, y, Coordinate::Abs)
                     .map_err(|e| format!("Failed to move mouse: {:?}", e))?;
             } else {
-                // Smooth move: get current position then interpolate
+                // 平滑移动：获取当前位置然后插值
                 let start = input::get_mouse_position()?;
                 input::smooth_move(start.0, start.1, x, y, duration)?;
             }
@@ -559,9 +559,9 @@ fn execute_mouse_move(action: &MouseMoveAction, ctx: &ExecContext) -> Result<(),
     Ok(())
 }
 
-/// Execute a mouse scroll action
+/// 执行鼠标滚动动作
 fn execute_mouse_scroll(action: &MouseScrollAction, ctx: &ExecContext) -> Result<(), String> {
-    // Windows default wheel delta is 120 per "click"
+    // Windows 默认滚轮增量是每个"点击" 120
     let delta = (action.amount as i32) * 120;
 
     match ctx.backend {
@@ -574,7 +574,7 @@ fn execute_mouse_scroll(action: &MouseScrollAction, ctx: &ExecContext) -> Result
             let mut enigo = Enigo::new(&Settings::default())
                 .map_err(|e| format!("Failed to create Enigo: {:?}", e))?;
 
-            // Enigo scroll: length (positive=down/right, negative=up/left), axis
+            // Enigo 滚动：length（正=下/右，负=上/左），axis
             let (length, axis) = match action.direction {
                 ScrollDirection::Up => (-(action.amount as i32), Axis::Vertical),
                 ScrollDirection::Down => (action.amount as i32, Axis::Vertical),
@@ -590,13 +590,13 @@ fn execute_mouse_scroll(action: &MouseScrollAction, ctx: &ExecContext) -> Result
     Ok(())
 }
 
-/// Execute a delay action
+/// 执行延迟动作
 fn execute_delay(action: &DelayAction) -> Result<(), String> {
     std::thread::sleep(std::time::Duration::from_millis(action.duration_ms));
     Ok(())
 }
 
-/// Execute a text input action
+/// 执行文本输入动作
 fn execute_text(action: &TextAction, ctx: &ExecContext) -> Result<(), String> {
     send_text_event(&action.content, ctx)
 }

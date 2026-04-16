@@ -1,12 +1,12 @@
-//! Window finding functionality
+//! 窗口查找功能
 //!
-//! Supports the following window specification formats:
-//! - `(empty)` or `"A"` - Current foreground window
-//! - `"id:<hwnd>"` - Direct HWND specification
-//! - `"class:<classname>"` - Window class name
-//! - `"pid:<pid>"` - Process ID
-//! - `"exe:<process>"` - Process name (e.g., "notepad.exe")
-//! - `"<title>"` - Window title (with TitleMatchMode)
+//! 支持以下窗口规格格式：
+//! - `(空)` 或 `"A"` - 当前前台窗口
+//! - `"id:<hwnd>"` - 直接 HWND 规格
+//! - `"class:<classname>"` - 窗口类名
+//! - `"pid:<pid>"` - 进程 ID
+//! - `"exe:<process>"` - 进程名（例如 "notepad.exe"）
+//! - `"<title>"` - 窗口标题（带 TitleMatchMode）
 
 use windows::Win32::Foundation::{BOOL, HWND, LPARAM};
 use windows::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
@@ -15,7 +15,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
     IsWindowVisible,
 };
 
-/// Window information for frontend display
+/// 用于前端显示的窗口信息
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct WindowInfo {
     pub hwnd: i64,
@@ -26,11 +26,11 @@ pub struct WindowInfo {
     pub is_visible: bool,
 }
 
-/// Title match mode for window title search
+/// 窗口标题搜索的标题匹配模式
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TitleMatchMode {
-    Prefix = 1,  // Title starts with the specified text (default)
-    Contains = 2, // Title contains the specified text
+    Prefix = 1,  // 标题以指定文本开头（默认）
+    Contains = 2, // 标题包含指定文本
 }
 
 impl Default for TitleMatchMode {
@@ -39,24 +39,24 @@ impl Default for TitleMatchMode {
     }
 }
 
-/// Window search criteria
+/// 窗口搜索条件
 #[derive(Debug, Clone)]
 pub struct WindowSearch {
-    /// Window title to match
+    /// 要匹配的窗口标题
     pub title: Option<String>,
-    /// Window class name to match (class:)
+    /// 要匹配的窗口类名（class:）
     pub class_name: Option<String>,
-    /// Direct HWND to validate (id:)
+    /// 要验证的直接 HWND（id:）
     pub hwnd: Option<isize>,
-    /// Process ID to match (pid:)
+    /// 要匹配的进程 ID（pid:）
     pub pid: Option<u32>,
-    /// Process name to match (exe:), e.g., "notepad.exe"
+    /// 要匹配的进程名（exe:），例如 "notepad.exe"
     pub exe_name: Option<String>,
-    /// Window title to exclude
+    /// 要排除的窗口标题
     pub exclude_title: Option<String>,
-    /// Title match mode
+    /// 标题匹配模式
     pub match_mode: TitleMatchMode,
-    /// Whether to detect hidden windows
+    /// 是否检测隐藏窗口
     pub detect_hidden: bool,
 }
 
@@ -75,24 +75,24 @@ impl Default for WindowSearch {
     }
 }
 
-/// Parse a window specification string into WindowSearch
+/// 将窗口规格字符串解析为 WindowSearch
 ///
-/// Supported formats:
-/// - `"A"` - Current foreground window
-/// - `"id:0x12345"` or `"id:12345"` - Direct HWND
-/// - `"class:Notepad"` - Window class name
-/// - `"pid:1234"` - Process ID
-/// - `"exe:notepad.exe"` - Process name
-/// - `"Untitled - Notepad"` - Window title
+/// 支持的格式：
+/// - `"A"` - 当前前台窗口
+/// - `"id:0x12345"` 或 `"id:12345"` - 直接 HWND
+/// - `"class:Notepad"` - 窗口类名
+/// - `"pid:1234"` - 进程 ID
+/// - `"exe:notepad.exe"` - 进程名
+/// - `"Untitled - Notepad"` - 窗口标题
 pub fn parse_window_spec(spec: &str) -> WindowSearch {
     let spec = spec.trim();
 
-    // Handle "A" or empty - means foreground window
+    // 处理 "A" 或空 - 表示前台窗口
     if spec.is_empty() || spec.eq_ignore_ascii_case("A") {
         return WindowSearch::default();
     }
 
-    // Check for id:
+    // 检查 id:
     if spec.to_lowercase().starts_with("id:") {
         let value = spec[3..].trim();
         if let Ok(hwnd) = parse_hwnd(value) {
@@ -103,7 +103,7 @@ pub fn parse_window_spec(spec: &str) -> WindowSearch {
         }
     }
 
-    // Check for plain HWND (pure number, e.g., "395542" or "0x60916")
+    // 检查纯 HWND（纯数字，例如 "395542" 或 "0x60916"）
     if let Ok(hwnd) = parse_hwnd(spec) {
         return WindowSearch {
             hwnd: Some(hwnd),
@@ -111,7 +111,7 @@ pub fn parse_window_spec(spec: &str) -> WindowSearch {
         };
     }
 
-    // Check for class:
+    // 检查 class:
     if spec.to_lowercase().starts_with("class:") {
         let class_name = spec[6..].trim().to_string();
         return WindowSearch {
@@ -120,7 +120,7 @@ pub fn parse_window_spec(spec: &str) -> WindowSearch {
         };
     }
 
-    // Check for pid:
+    // 检查 pid:
     if spec.to_lowercase().starts_with("pid:") {
         let value = spec[4..].trim();
         if let Ok(pid) = value.parse::<u32>() {
@@ -131,7 +131,7 @@ pub fn parse_window_spec(spec: &str) -> WindowSearch {
         }
     }
 
-    // Check for exe:
+    // 检查 exe:
     if spec.to_lowercase().starts_with("exe:") {
         let exe_name = spec[4..].trim().to_string();
         return WindowSearch {
@@ -140,14 +140,14 @@ pub fn parse_window_spec(spec: &str) -> WindowSearch {
         };
     }
 
-    // Otherwise, treat as window title
+    // 否则，作为窗口标题处理
     WindowSearch {
         title: Some(spec.to_string()),
         ..Default::default()
     }
 }
 
-/// Parse a string to HWND (supports hex 0x12345 or decimal 12345)
+/// 将字符串解析为 HWND（支持十六进制 0x12345 或十进制 12345）
 fn parse_hwnd(s: &str) -> Result<isize, std::num::ParseIntError> {
     let s = s.trim();
     if s.starts_with("0x") || s.starts_with("0X") {
@@ -157,7 +157,7 @@ fn parse_hwnd(s: &str) -> Result<isize, std::num::ParseIntError> {
     }
 }
 
-/// Get window title as a String
+/// 获取窗口标题作为字符串
 pub fn get_window_title(hwnd: HWND) -> Option<String> {
     unsafe {
         let mut buffer = [0u16; 512];
@@ -170,7 +170,7 @@ pub fn get_window_title(hwnd: HWND) -> Option<String> {
     }
 }
 
-/// Get window class name as a String
+/// 获取窗口类名作为字符串
 pub fn get_window_class(hwnd: HWND) -> Option<String> {
     unsafe {
         let mut buffer = [0u16; 256];
@@ -183,20 +183,20 @@ pub fn get_window_class(hwnd: HWND) -> Option<String> {
     }
 }
 
-/// Get process name from HWND
+/// 从 HWND 获取进程名
 pub fn get_process_name(hwnd: HWND) -> Option<String> {
     unsafe {
-        // Get process ID from window
+        // 从窗口获取进程 ID
         let mut pid: u32 = 0;
         GetWindowThreadProcessId(hwnd, Some(&mut pid));
 
-        // Open the process
+        // 打开进程
         let process = match OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid) {
             Ok(handle) => handle,
             Err(_) => return None,
         };
 
-        // Get the executable path using QueryFullProcessImageNameW
+        // 使用 QueryFullProcessImageNameW 获取可执行文件路径
         let mut exe_name = [0u16; 260];
         let mut size = exe_name.len() as u32;
 
@@ -209,7 +209,7 @@ pub fn get_process_name(hwnd: HWND) -> Option<String> {
 
         if result.is_ok() && size > 0 {
             let path = String::from_utf16_lossy(&exe_name[..size as usize]);
-            // Extract just the filename (basename)
+            // 只提取文件名（basename）
             if let Some(name) = path.rsplit('\\').next() {
                 return Some(name.to_lowercase());
             }
@@ -219,7 +219,7 @@ pub fn get_process_name(hwnd: HWND) -> Option<String> {
     }
 }
 
-/// Check if title matches using the specified mode
+/// 使用指定模式检查标题是否匹配
 fn title_matches(window_title: &str, criteria: &str, mode: &TitleMatchMode) -> bool {
     match mode {
         TitleMatchMode::Prefix => window_title.starts_with(criteria),
@@ -227,9 +227,9 @@ fn title_matches(window_title: &str, criteria: &str, mode: &TitleMatchMode) -> b
     }
 }
 
-/// Check if a window matches the search criteria
+/// 检查窗口是否匹配搜索条件
 fn window_matches(hwnd: HWND, search: &WindowSearch) -> bool {
-    // Check if window exists and is valid
+    // 检查窗口是否存在且有效
     if !search.detect_hidden {
         unsafe {
             if !IsWindowVisible(hwnd).as_bool() {
@@ -238,7 +238,7 @@ fn window_matches(hwnd: HWND, search: &WindowSearch) -> bool {
         }
     }
 
-    // Check exclude_title
+    // 检查 exclude_title
     if let Some(ref exclude) = search.exclude_title {
         if let Some(title) = get_window_title(hwnd) {
             if title_matches(&title, exclude, &TitleMatchMode::Contains) {
@@ -247,12 +247,12 @@ fn window_matches(hwnd: HWND, search: &WindowSearch) -> bool {
         }
     }
 
-    // Check by HWND directly
+    // 直接通过 HWND 检查
     if let Some(target_hwnd) = search.hwnd {
         return HWND(target_hwnd as *mut std::ffi::c_void) == hwnd;
     }
 
-    // Check by PID
+    // 通过 PID 检查
     if let Some(target_pid) = search.pid {
         unsafe {
             let mut pid: u32 = 0;
@@ -263,10 +263,10 @@ fn window_matches(hwnd: HWND, search: &WindowSearch) -> bool {
         }
     }
 
-    // Check by process name (exe:)
+    // 通过进程名检查（exe:）
     if let Some(ref exe_name) = search.exe_name {
         if let Some(process_name) = get_process_name(hwnd) {
-            // exe_name might be "notepad.exe" or "notepad", handle both
+            // exe_name 可能是 "notepad.exe" 或 "notepad"，处理两种情况
             let exe_lower = exe_name.to_lowercase();
             let target = if exe_lower.ends_with(".exe") {
                 exe_lower
@@ -281,7 +281,7 @@ fn window_matches(hwnd: HWND, search: &WindowSearch) -> bool {
         }
     }
 
-    // Check by class name
+    // 通过类名检查
     if let Some(ref class) = search.class_name {
         if let Some(window_class) = get_window_class(hwnd) {
             if !window_class.eq_ignore_ascii_case(class) {
@@ -292,7 +292,7 @@ fn window_matches(hwnd: HWND, search: &WindowSearch) -> bool {
         }
     }
 
-    // Check by title
+    // 通过标题检查
     if let Some(ref title) = search.title {
         if let Some(window_title) = get_window_title(hwnd) {
             return title_matches(&window_title, title, &search.match_mode);
@@ -304,7 +304,7 @@ fn window_matches(hwnd: HWND, search: &WindowSearch) -> bool {
     true
 }
 
-// Callback context for enumeration
+// 用于枚举的回调上下文
 struct EnumContext {
     search: WindowSearch,
     result: isize,
@@ -316,11 +316,11 @@ impl EnumContext {
     }
 }
 
-/// Find the first window matching the search criteria
+/// 查找第一个匹配搜索条件的窗口
 pub fn find_window(search: &WindowSearch) -> Option<isize> {
-    // Handle special cases
+    // 处理特殊情况
 
-    // "A" or empty - return None, callers should use GetForegroundWindow directly
+    // "A" 或空 - 返回 None，调用者应直接使用 GetForegroundWindow
     if search.title.is_none()
         && search.class_name.is_none()
         && search.hwnd.is_none()
@@ -330,7 +330,7 @@ pub fn find_window(search: &WindowSearch) -> Option<isize> {
         return None;
     }
 
-    // Direct HWND specification
+    // 直接 HWND 规格
     if let Some(hwnd_val) = search.hwnd {
         let hwnd = HWND(hwnd_val as *mut std::ffi::c_void);
         if window_matches(hwnd, search) {
@@ -339,7 +339,7 @@ pub fn find_window(search: &WindowSearch) -> Option<isize> {
         return None;
     }
 
-    // Class name - use FindWindow for fast path
+    // 类名 - 使用 FindWindow 进行快速路径
     if let Some(ref class) = search.class_name {
         let wide_class: Vec<u16> = class.encode_utf16().chain(std::iter::once(0)).collect();
         unsafe {
@@ -359,11 +359,11 @@ pub fn find_window(search: &WindowSearch) -> Option<isize> {
         let ctx = &mut *ctx_ptr;
 
         if window_matches(hwnd, &ctx.search) {
-            // Found a match - store it and stop enumeration
+            // 找到匹配 - 存储它并停止枚举
             ctx.result = hwnd.0 as isize;
-            return BOOL(0); // Stop enumeration
+            return BOOL(0); // 停止枚举
         }
-        BOOL(1) // Continue enumeration
+        BOOL(1) // 继续枚举
     }
 
     unsafe {
@@ -379,10 +379,10 @@ pub fn find_window(search: &WindowSearch) -> Option<isize> {
 }
 
 // ============================================================================
-// Dedicated window search functions - each search type has its own explicit API
+// 专用窗口搜索函数 - 每种搜索类型都有自己明确的 API
 // ============================================================================
 
-/// Find all windows matching a title (prefix match)
+/// 查找所有匹配标题的窗口（前缀匹配）
 pub fn find_windows_by_title(title: &str) -> Vec<isize> {
     let search = WindowSearch {
         title: Some(title.to_string()),
@@ -392,7 +392,7 @@ pub fn find_windows_by_title(title: &str) -> Vec<isize> {
     find_all_matching_windows(&search)
 }
 
-/// Find all windows matching a title (contains match)
+/// 查找所有匹配标题的窗口（包含匹配）
 pub fn find_windows_by_title_contains(title: &str) -> Vec<isize> {
     let search = WindowSearch {
         title: Some(title.to_string()),
@@ -402,7 +402,7 @@ pub fn find_windows_by_title_contains(title: &str) -> Vec<isize> {
     find_all_matching_windows(&search)
 }
 
-/// Find window by exact class name
+/// 通过精确类名查找窗口
 pub fn find_window_by_class_name(class_name: &str) -> Option<isize> {
     let search = WindowSearch {
         class_name: Some(class_name.to_string()),
@@ -411,7 +411,7 @@ pub fn find_window_by_class_name(class_name: &str) -> Option<isize> {
     find_window(&search)
 }
 
-/// Find all windows belonging to a process ID
+/// 查找属于指定进程 ID 的所有窗口
 pub fn find_windows_by_pid(pid: u32) -> Vec<isize> {
     let search = WindowSearch {
         pid: Some(pid),
@@ -420,7 +420,7 @@ pub fn find_windows_by_pid(pid: u32) -> Vec<isize> {
     find_all_matching_windows(&search)
 }
 
-/// Find all windows for a process by executable name
+/// 通过可执行文件名查找进程的所有窗口
 pub fn find_windows_by_exe(exe_name: &str) -> Vec<isize> {
     let exe_name = if exe_name.to_lowercase().ends_with(".exe") {
         exe_name.to_string()
@@ -434,27 +434,27 @@ pub fn find_windows_by_exe(exe_name: &str) -> Vec<isize> {
     find_all_matching_windows(&search)
 }
 
-/// Find window by exact HWND
+/// 通过精确 HWND 查找窗口
 pub fn find_window_by_hwnd(hwnd: isize) -> Option<isize> {
     let hwnd_check = HWND(hwnd as *mut std::ffi::c_void);
-    // Verify the HWND is valid
+    // 验证 HWND 是否有效
     if hwnd_check.0.is_null() {
         return None;
     }
-    // Verify it's a valid window by checking if it has a title
+    // 通过检查是否有标题来验证是否是有效窗口
     if get_window_title(hwnd_check).is_none() {
         return None;
     }
     Some(hwnd)
 }
 
-// Context for finding all matching windows
+// 用于查找所有匹配窗口的上下文
 struct FindAllContext {
     search: WindowSearch,
     results: Vec<isize>,
 }
 
-/// Internal helper to find all windows matching a search criteria
+/// 内部辅助函数，查找所有匹配搜索条件的窗口
 fn find_all_matching_windows(search: &WindowSearch) -> Vec<isize> {
     let mut ctx = FindAllContext {
         search: search.clone(),
@@ -473,7 +473,7 @@ fn find_all_matching_windows(search: &WindowSearch) -> Vec<isize> {
             ctx.results.push(hwnd.0 as isize);
         }
 
-        BOOL(1) // Continue enumeration
+        BOOL(1) // 继续枚举
     }
 
     unsafe {
@@ -484,7 +484,7 @@ fn find_all_matching_windows(search: &WindowSearch) -> Vec<isize> {
     ctx.results
 }
 
-/// Get detailed information about a window
+/// 获取窗口的详细信息
 pub fn get_window_info(hwnd: isize) -> Option<WindowInfo> {
     let hwnd = HWND(hwnd as *mut std::ffi::c_void);
 
@@ -508,7 +508,7 @@ pub fn get_window_info(hwnd: isize) -> Option<WindowInfo> {
     }
 }
 
-/// List all top-level windows
+/// 列出所有顶级窗口
 pub fn list_windows() -> Vec<WindowInfo> {
     let mut windows = Vec::new();
 
@@ -516,12 +516,12 @@ pub fn list_windows() -> Vec<WindowInfo> {
         let windows_ptr = lparam.0 as *mut Vec<WindowInfo>;
         let windows = &mut *windows_ptr;
 
-        // Skip invisible windows
+        // 跳过不可见窗口
         if !IsWindowVisible(hwnd).as_bool() {
             return BOOL(1);
         }
 
-        // Skip windows without titles (typically hidden or system windows)
+        // 跳过没有标题的窗口（通常是隐藏或系统窗口）
         let title = get_window_title(hwnd);
         if title.is_none() || title.as_ref().map(|t| t.is_empty()).unwrap_or(true) {
             return BOOL(1);
@@ -543,7 +543,7 @@ pub fn list_windows() -> Vec<WindowInfo> {
             is_visible,
         });
 
-        BOOL(1) // Continue enumeration
+        BOOL(1) // 继续枚举
     }
 
     unsafe {
@@ -551,7 +551,7 @@ pub fn list_windows() -> Vec<WindowInfo> {
         let _ = EnumWindows(Some(enum_callback), lparam);
     }
 
-    // Sort by title for easier browsing
+    // 按标题排序以便浏览
     windows.sort_by(|a: &WindowInfo, b: &WindowInfo| a.title.to_lowercase().cmp(&b.title.to_lowercase()));
     windows
 }

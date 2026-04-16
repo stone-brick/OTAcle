@@ -1,26 +1,26 @@
-//! Image processing for Observe module
+//! Observe 模块的图像处理
 //!
-//! Provides scaling and cropping operations on captured frames.
+//! 提供捕获帧的缩放和裁剪操作。
 
 use base64::Engine;
 use image::{ImageBuffer, Rgba};
 use crate::observe::types::{CropBlock, CropRegion};
 
-/// Image processor for scaling and cropping operations
+/// 用于缩放和裁剪操作的图像处理器
 pub struct ImageProcessor;
 
 impl ImageProcessor {
-    /// Scale image data to target dimensions
+    /// 将图像数据缩放到目标尺寸
     ///
-    /// # Arguments
-    /// * `data` - Raw RGBA pixel data
-    /// * `src_width` - Source image width
-    /// * `src_height` - Source image height
-    /// * `target_width` - Target width
-    /// * `target_height` - Target height
+    /// # 参数
+    /// * `data` - 原始 RGBA 像素数据
+    /// * `src_width` - 源图像宽度
+    /// * `src_height` - 源图像高度
+    /// * `target_width` - 目标宽度
+    /// * `target_height` - 目标高度
     ///
-    /// # Returns
-    /// Scaled RGBA pixel data
+    /// # 返回
+    /// 缩放后的 RGBA 像素数据
     pub fn scale(
         &self,
         data: &[u8],
@@ -48,16 +48,16 @@ impl ImageProcessor {
         scaled.into_raw()
     }
 
-    /// Crop image into multiple regions and encode as base64
+    /// 将图像裁剪为多个区域并编码为 base64
     ///
-    /// # Arguments
-    /// * `data` - RGBA pixel data (after scaling)
-    /// * `width` - Image width
-    /// * `height` - Image height
-    /// * `regions` - List of crop regions
+    /// # 参数
+    /// * `data` - RGBA 像素数据（缩放后）
+    /// * `width` - 图像宽度
+    /// * `height` - 图像高度
+    /// * `regions` - 裁剪区域列表
     ///
-    /// # Returns
-    /// List of crop blocks with base64 encoded images
+    /// # 返回
+    /// 包含 base64 编码图像的裁剪块列表
     pub fn crop_regions(
         &self,
         data: &[u8],
@@ -76,7 +76,7 @@ impl ImageProcessor {
         regions
             .iter()
             .map(|region| {
-                // Skip invalid regions
+                // 跳过无效区域
                 if region.x >= width || region.y >= height {
                     return CropBlock {
                         x: region.x,
@@ -87,7 +87,7 @@ impl ImageProcessor {
                     };
                 }
 
-                // Clamp crop dimensions to fit within image bounds
+                // 限制裁剪尺寸以适应图像边界
                 let crop_x = region.x;
                 let crop_y = region.y;
                 let crop_w = region.w.min(width.saturating_sub(region.x));

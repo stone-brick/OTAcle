@@ -1,4 +1,4 @@
-//! Input simulation using enigo - global singleton implementation
+//! 使用 enigo 进行输入模拟 - 全局单例实现
 
 use enigo::{
     Direction::{Click, Press, Release},
@@ -7,7 +7,7 @@ use enigo::{
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
 
-/// Global Enigo instance - created once and reused
+/// 全局 Enigo 实例 - 创建一次并重复使用
 static ENIGO: Lazy<Mutex<Enigo>> = Lazy::new(|| {
     Mutex::new(
         Enigo::new(&Settings::default())
@@ -15,7 +15,7 @@ static ENIGO: Lazy<Mutex<Enigo>> = Lazy::new(|| {
     )
 });
 
-/// Sends a string of text using enigo's text() API
+/// 使用 enigo 的 text() API 发送字符串
 pub fn send_text(text: &str) -> Result<(), String> {
     let mut enigo = ENIGO.lock()
         .map_err(|_| "Failed to lock Enigo".to_string())?;
@@ -27,9 +27,9 @@ pub fn send_text(text: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Sends a single key with specified direction
+/// 发送具有指定方向的单个按键
 ///
-/// direction: "press", "release", or "click"
+/// direction: "press"、"release" 或 "click"
 pub fn send_key(key_str: &str, direction: &str) -> Result<(), String> {
     let mut enigo = ENIGO.lock()
         .map_err(|_| "Failed to lock Enigo".to_string())?;
@@ -44,10 +44,10 @@ pub fn send_key(key_str: &str, direction: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Parses a key string to enigo::Key
+/// 将按键字符串解析为 enigo::Key
 fn parse_key(key_str: &str) -> Result<Key, String> {
     match key_str.to_lowercase().as_str() {
-        // Special keys
+        // 特殊键
         "return" | "enter" => Ok(Key::Return),
         "space" => Ok(Key::Space),
         "tab" => Ok(Key::Tab),
@@ -63,7 +63,7 @@ fn parse_key(key_str: &str) -> Result<Key, String> {
         "pageup" => Ok(Key::PageUp),
         "pagedown" => Ok(Key::PageDown),
 
-        // Function keys
+        // 功能键
         "f1" => Ok(Key::F1),
         "f2" => Ok(Key::F2),
         "f3" => Ok(Key::F3),
@@ -77,16 +77,16 @@ fn parse_key(key_str: &str) -> Result<Key, String> {
         "f11" => Ok(Key::F11),
         "f12" => Ok(Key::F12),
 
-        // Modifier keys
+        // 修饰符键
         "shift" | "rshift" | "lshift" => Ok(Key::Shift),
         "control" | "ctrl" | "rcontrol" | "lcontrol" | "rctrl" | "lctrl" => Ok(Key::Control),
         "alt" | "ralt" | "lalt" => Ok(Key::Alt),
         "meta" | "super" | "win" => Ok(Key::Meta),
 
-        // Other
+        // 其他
         "capslock" => Ok(Key::CapsLock),
 
-        // Single character - use Unicode
+        // 单字符 - 使用 Unicode
         _ if key_str.len() == 1 => {
             let c = key_str.chars().next().unwrap();
             Ok(Key::Unicode(c))
@@ -96,7 +96,7 @@ fn parse_key(key_str: &str) -> Result<Key, String> {
     }
 }
 
-/// Parses a direction string to enigo::Direction
+/// 将方向字符串解析为 enigo::Direction
 fn parse_direction(dir_str: &str) -> Result<Direction, String> {
     match dir_str.to_lowercase().as_str() {
         "press" => Ok(Press),
@@ -106,5 +106,5 @@ fn parse_direction(dir_str: &str) -> Result<Direction, String> {
     }
 }
 
-// Re-export Direction so callers can use it
+// 重新导出 Direction 以便调用者可以使用
 pub use enigo::Direction;
