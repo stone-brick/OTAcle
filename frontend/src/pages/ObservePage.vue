@@ -1,45 +1,40 @@
 <script setup lang="ts">
-import { useWindows } from '../composables/useWindows'
-import ObservePanel from '../components/ObservePanel.vue'
+import { ref } from 'vue'
+import ObserveTabNav from '../components/nav/ObserveTabNav.vue'
+import CaptureTabPanel from './observe/CaptureTabPanel.vue'
+import CropTabPanel from './observe/CropTabPanel.vue'
+import TransportTabPanel from './observe/TransportTabPanel.vue'
 
-const { selectedWindow } = useWindows()
+const activeTab = ref<'capture' | 'crop' | 'transport'>('capture')
 </script>
 
 <template>
   <div class="observe-page">
-    <main class="observe-content">
-      <ObservePanel :window="selectedWindow" />
-    </main>
+    <ObserveTabNav v-model:activeTab="activeTab" />
+
+    <div class="observe-content">
+      <CaptureTabPanel v-if="activeTab === 'capture'" />
+      <CropTabPanel v-else-if="activeTab === 'crop'" />
+      <TransportTabPanel v-else-if="activeTab === 'transport'" />
+    </div>
   </div>
 </template>
 
 <style scoped>
 .observe-page {
   display: flex;
+  flex-direction: column;
   height: 100%;
   overflow: hidden;
 }
 
 .observe-content {
   flex: 1;
+  overflow: hidden;
+}
+
+.observe-content > :deep(*) {
+  height: 100%;
   overflow: auto;
-  background: var(--color-background);
-}
-
-.observe-content::-webkit-scrollbar {
-  width: 8px;
-}
-
-.observe-content::-webkit-scrollbar-track {
-  background: var(--color-background);
-}
-
-.observe-content::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 4px;
-}
-
-.observe-content::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-muted);
 }
 </style>

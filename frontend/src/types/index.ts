@@ -123,3 +123,52 @@ export type AppStatus = 'ready' | 'sending' | 'error';
 
 // Window search mode
 export type SearchMode = 'title' | 'titleContains' | 'class' | 'pid' | 'exe' | 'hwnd';
+
+// =============================================================================
+// Observe Module Types
+// =============================================================================
+
+// Capture configuration
+export interface CaptureConfig {
+  frame_rate: number;
+  target_width: number;
+  target_height: number;
+}
+
+// ZMQ configuration
+export interface ZmqConfig {
+  address: string;
+}
+
+// Crop region in captured frame
+export interface CropRegion {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+// Observe module configuration
+export interface ObserveConfig {
+  capture: CaptureConfig;
+  zmq: ZmqConfig;
+  crop_regions: CropRegion[];
+}
+
+// Single crop block within a frame
+export interface CropBlock {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  image: string;  // Base64 encoded
+}
+
+// Frame message sent via ZMQ and Tauri events
+export interface FrameMessage {
+  width: number;
+  height: number;
+  timestamp: number;
+  frame_id: number;
+  data: CropBlock[];
+}

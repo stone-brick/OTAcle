@@ -20,9 +20,6 @@ logs/
 *.temp
 .cache/
 
-# Additional Tools
-.claude/
-
 # Python
 __pycache__/
 *.py[cod]

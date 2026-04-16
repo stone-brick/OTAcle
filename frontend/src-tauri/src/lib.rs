@@ -1,5 +1,6 @@
 mod act;
 mod input;
+mod observe;
 mod zmq_pull;
 
 use windows::Win32::Foundation::POINT;
@@ -604,6 +605,12 @@ pub fn run() {
             zmq_start,
             zmq_stop,
             zmq_status,
+            // Observe commands
+            observe::start_observe,
+            observe::stop_observe,
+            observe::get_observe_status,
+            observe::save_observe_config,
+            observe::load_observe_config,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
