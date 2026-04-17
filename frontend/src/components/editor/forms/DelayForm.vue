@@ -20,11 +20,11 @@ function updateField<K extends keyof DelayActionItem>(field: K, value: DelayActi
       <label>延迟时间 (ms)</label>
       <input
         :value="modelValue.duration_ms"
-        @input="updateField('duration_ms', Number(($event.target as HTMLInputElement).value))"
         type="number"
         min="0"
         class="number-input"
-      />
+        @input="updateField('duration_ms', Number(($event.target as HTMLInputElement).value))"
+      >
     </div>
   </div>
 </template>

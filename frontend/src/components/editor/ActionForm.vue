@@ -78,21 +78,29 @@ const formComponent = computed(() => {
         type="text"
         placeholder="输入动作名称..."
         class="text-input"
-      />
+      >
     </div>
 
     <component
       :is="formComponent"
       v-if="formComponent"
-      :modelValue="(editedAction as any)"
-      @update:modelValue="handleFormUpdate"
+      :model-value="(editedAction as any)"
+      @update:model-value="handleFormUpdate"
     />
 
     <div class="form-actions">
-      <button class="btn-secondary" @click="handleCancel" :disabled="!hasChanges">
+      <button
+        class="btn-secondary"
+        :disabled="!hasChanges"
+        @click="handleCancel"
+      >
         取消
       </button>
-      <button class="btn-primary" @click="handleSave" :disabled="!hasChanges">
+      <button
+        class="btn-primary"
+        :disabled="!hasChanges"
+        @click="handleSave"
+      >
         确认
       </button>
     </div>

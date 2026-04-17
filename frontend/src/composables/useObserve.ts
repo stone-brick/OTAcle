@@ -37,10 +37,8 @@ export function useObserve() {
   async function stopObserve(): Promise<void> {
     try {
       await invoke('observe_stop')
-      isObserving.value = false
-    } catch (e) {
-      throw e
     } finally {
+      isObserving.value = false
       // 确保停止后清理监听器
       stopListening()
     }

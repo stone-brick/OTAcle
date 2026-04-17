@@ -71,12 +71,12 @@ function handleDeleteAction(index: number) {
 <template>
   <div class="config-panel">
     <EditorHeader
-      :configPath="configPath"
-      :isDirty="hasChanges"
-      :isLoaded="isLoaded"
+      :config-path="configPath"
+      :is-dirty="hasChanges"
+      :is-loaded="isLoaded"
       @load="emit('load', $event)"
       @save="emit('save')"
-      @saveAs="emit('saveAs')"
+      @save-as="emit('saveAs')"
     />
 
     <div class="editor-content">
@@ -85,16 +85,21 @@ function handleDeleteAction(index: number) {
         <ActionList
           v-if="isLoaded"
           :actions="actions"
-          :selectedIndex="selectedIndex"
-          :showDelete="true"
+          :selected-index="selectedIndex"
+          :show-delete="true"
           @select="handleSelectAction"
           @delete="handleDeleteAction"
         >
           <template #empty>
-            <div class="empty-state-custom">暂无动作，请点击上方「新建动作」创建</div>
+            <div class="empty-state-custom">
+              暂无动作，请点击上方「新建动作」创建
+            </div>
           </template>
         </ActionList>
-        <div v-else class="empty-state">
+        <div
+          v-else
+          class="empty-state"
+        >
           <p>请先加载配置文件</p>
         </div>
       </div>
@@ -102,13 +107,13 @@ function handleDeleteAction(index: number) {
       <!-- Right Panel: Config & Action Form -->
       <div class="right-panel">
         <EditorTopBar
-          :defaultBackend="defaultBackend"
-          :hasChanges="hasChanges"
-          :canUndo="canUndo"
-          :canRedo="canRedo"
-          @backendChange="handleBackendChange"
-          @openNewActionModal="openNewActionModal"
-          @discardAll="emit('discardChanges')"
+          :default-backend="defaultBackend"
+          :has-changes="hasChanges"
+          :can-undo="canUndo"
+          :can-redo="canRedo"
+          @backend-change="handleBackendChange"
+          @open-new-action-modal="openNewActionModal"
+          @discard-all="emit('discardChanges')"
           @undo="emit('undo')"
           @redo="emit('redo')"
         />
@@ -118,10 +123,13 @@ function handleDeleteAction(index: number) {
           <ActionForm
             v-if="selectedAction"
             :action="selectedAction"
-            :actionIndex="selectedIndex ?? 0"
+            :action-index="selectedIndex ?? 0"
             @update="handleUpdateAction"
           />
-          <div v-else class="empty-state">
+          <div
+            v-else
+            class="empty-state"
+          >
             <p>选择左侧列表中的动作进行编辑</p>
             <p>或点击「新建动作」创建新动作</p>
           </div>

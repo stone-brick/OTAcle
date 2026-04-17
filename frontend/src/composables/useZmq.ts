@@ -31,7 +31,7 @@ export function useZmq() {
 
   async function fetchStatus() {
     try {
-      const [connected, addr] = await invoke<[boolean, string]>('act_zmq_status')
+      const [connected, addr] = await invoke<[boolean, string]>('zmq_get_status')
       isConnected.value = connected
       address.value = addr
     } catch (e) {
@@ -41,7 +41,7 @@ export function useZmq() {
 
   async function start(address_: string) {
     try {
-      await invoke('act_zmq_start', { addr: address_ })
+      await invoke('zmq_start', { addr: address_ })
       address.value = address_
       addLog(`ZMQ 连接已启动: ${address_}`, 'success')
       await fetchStatus()
@@ -53,7 +53,7 @@ export function useZmq() {
 
   async function stop() {
     try {
-      await invoke('act_zmq_stop')
+      await invoke('zmq_stop')
       addLog('ZMQ 连接已停止', 'info')
       await fetchStatus()
     } catch (e) {

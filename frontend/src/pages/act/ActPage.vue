@@ -27,7 +27,7 @@ async function searchWindows(mode: SearchMode, value: string): Promise<number[]>
   switch (mode) {
     case 'title':
       return findWindowsByTitle(value);
-    case 'titleContains':
+    case 'title_contains':
       return findWindowsByTitleContains(value);
     case 'class': {
       const hwnd = await findWindowByClass(value);
@@ -108,14 +108,14 @@ async function handleSelectWindow(hwnd: number | null) {
   await actionExecutor.setTargetWindow(windowSpec);
 }
 
-async function handleExecuteAction(payload: { actionId: number; params: Record<string, any> }) {
-  await actionExecutor.executeActionWithParams(payload.actionId, payload.params);
+async function handleExecuteAction(payload: { actionIdx: number; params: Record<string, any> }) {
+  await actionExecutor.executeActionWithParams(payload.actionIdx, payload.params);
 }
 </script>
 
 <template>
   <div class="act-page">
-    <ActTabNav v-model:activeTab="activeTab" />
+    <ActTabNav v-model:active-tab="activeTab" />
 
     <div class="act-content">
       <ZmqMonitor v-if="activeTab === 'monitor'" />
@@ -123,40 +123,40 @@ async function handleExecuteAction(payload: { actionId: number; params: Record<s
       <ConfigPanel
         v-else-if="activeTab === 'config'"
         :actions="actionEditor.actions.value"
-        :defaultBackend="actionEditor.defaultBackend.value"
-        :configPath="actionEditor.configPath.value"
-        :selectedIndex="actionEditor.selectedIndex.value"
-        :isLoaded="actionEditor.isLoaded.value"
-        :selectedAction="actionEditor.selectedAction.value"
-        :hasChanges="actionEditor.hasChanges.value"
-        :canUndo="actionHistory.canUndo.value"
-        :canRedo="actionHistory.canRedo.value"
+        :default-backend="actionEditor.defaultBackend.value"
+        :config-path="actionEditor.configPath.value"
+        :selected-index="actionEditor.selectedIndex.value"
+        :is-loaded="actionEditor.isLoaded.value"
+        :selected-action="actionEditor.selectedAction.value"
+        :has-changes="actionEditor.hasChanges.value"
+        :can-undo="actionHistory.canUndo.value"
+        :can-redo="actionHistory.canRedo.value"
         @load="handleLoad"
         @save="handleSave"
-        @saveAs="handleSaveAs"
-        @selectAction="handleSelectAction"
-        @updateAction="handleUpdateAction"
-        @deleteAction="handleDeleteAction"
-        @discardChanges="handleDiscardChanges"
+        @save-as="handleSaveAs"
+        @select-action="handleSelectAction"
+        @update-action="handleUpdateAction"
+        @delete-action="handleDeleteAction"
+        @discard-changes="handleDiscardChanges"
         @undo="handleUndo"
         @redo="handleRedo"
-        @setDefaultBackend="handleSetDefaultBackend"
-        @setExecutionBackend="handleSetExecutionBackend"
-        @createAction="handleCreateAction"
+        @set-default-backend="handleSetDefaultBackend"
+        @set-execution-backend="handleSetExecutionBackend"
+        @create-action="handleCreateAction"
       />
 
       <WindowsTabPanel
         v-else-if="activeTab === 'windows'"
         :windows="windows"
-        :selectedWindow="selectedWindow"
-        :isLoading="isLoading"
+        :selected-window="selectedWindow"
+        :is-loading="isLoading"
         :actions="actionEditor.actions.value"
-        :isLoaded="actionEditor.isLoaded.value"
-        :searchWindows="searchWindows"
-        :getWindowsInfoByHwnds="getWindowsInfoByHwnds"
-        @selectWindow="handleSelectWindow"
-        @refreshWindows="refreshWindows"
-        @executeAction="handleExecuteAction"
+        :is-loaded="actionEditor.isLoaded.value"
+        :search-windows="searchWindows"
+        :get-windows-info-by-hwnds="getWindowsInfoByHwnds"
+        @select-window="handleSelectWindow"
+        @refresh-windows="refreshWindows"
+        @execute-action="handleExecuteAction"
       />
     </div>
   </div>

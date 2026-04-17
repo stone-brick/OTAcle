@@ -23,14 +23,17 @@ const emit = defineEmits<{
     <div class="top-bar-left">
       <span class="top-bar-label">执行后台</span>
       <BackendSelector
-        :modelValue="defaultBackend"
-        :hideDefault="true"
-        @update:modelValue="emit('backendChange', $event as InputBackend)"
+        :model-value="defaultBackend"
+        :hide-default="true"
+        @update:model-value="emit('backendChange', $event as InputBackend)"
       />
     </div>
 
     <div class="top-bar-right">
-      <button class="btn-primary" @click="emit('openNewActionModal')">
+      <button
+        class="btn-primary"
+        @click="emit('openNewActionModal')"
+      >
         + 新建动作
       </button>
       <button

@@ -74,16 +74,30 @@ onUnmounted(() => {
   <div class="capture-panel">
     <!-- Preview area (left side) -->
     <div class="preview-area">
-      <canvas ref="canvasRef" class="preview-canvas" />
+      <canvas
+        ref="canvasRef"
+        class="preview-canvas"
+      />
 
       <!-- Error banner -->
-      <div v-if="errorMessage" class="error-banner">
+      <div
+        v-if="errorMessage"
+        class="error-banner"
+      >
         <span>{{ errorMessage }}</span>
-        <button @click="clearError" class="error-close">×</button>
+        <button
+          class="error-close"
+          @click="clearError"
+        >
+          ×
+        </button>
       </div>
 
       <!-- Placeholder when not observing -->
-      <div v-if="!isObserving && !errorMessage" class="preview-placeholder">
+      <div
+        v-if="!isObserving && !errorMessage"
+        class="preview-placeholder"
+      >
         <p>选择窗口后点击"开始观察"启动预览</p>
       </div>
     </div>
@@ -96,13 +110,29 @@ onUnmounted(() => {
       <div class="config-group">
         <div class="label-row">
           <label>目标窗口</label>
-          <button class="refresh-btn" @click="refreshWindows" title="刷新窗口列表">
+          <button
+            class="refresh-btn"
+            title="刷新窗口列表"
+            @click="refreshWindows"
+          >
             ↻
           </button>
         </div>
-        <select v-model="selectedWindow" @change="handleWindowChange">
-          <option :value="null" disabled>选择窗口...</option>
-          <option v-for="win in windows" :key="win.hwnd" :value="win">
+        <select
+          v-model="selectedWindow"
+          @change="handleWindowChange"
+        >
+          <option
+            :value="null"
+            disabled
+          >
+            选择窗口...
+          </option>
+          <option
+            v-for="win in windows"
+            :key="win.hwnd"
+            :value="win"
+          >
             {{ win.title || 'Untitled' }}
           </option>
         </select>
@@ -112,11 +142,11 @@ onUnmounted(() => {
       <div class="config-group">
         <label>采集帧率</label>
         <input
-          type="number"
           v-model.number="config.capture.frame_rate"
+          type="number"
           min="1"
           max="60"
-        />
+        >
       </div>
 
       <!-- Target resolution -->
@@ -124,16 +154,16 @@ onUnmounted(() => {
         <label>目标分辨率</label>
         <div class="resolution-inputs">
           <input
-            type="number"
             v-model.number="config.capture.target_width"
+            type="number"
             placeholder="宽度"
-          />
+          >
           <span>×</span>
           <input
-            type="number"
             v-model.number="config.capture.target_height"
+            type="number"
             placeholder="高度"
-          />
+          >
         </div>
       </div>
 
@@ -158,10 +188,16 @@ onUnmounted(() => {
 
     <!-- Action bar -->
     <div class="action-bar">
-      <button @click="handleStart" :disabled="isObserving">
+      <button
+        :disabled="isObserving"
+        @click="handleStart"
+      >
         开始观察
       </button>
-      <button @click="handleStop" :disabled="!isObserving">
+      <button
+        :disabled="!isObserving"
+        @click="handleStop"
+      >
         停止观察
       </button>
     </div>

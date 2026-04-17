@@ -21,18 +21,18 @@ function updateField<K extends keyof TextActionItem>(field: K, value: TextAction
       <label>文本内容</label>
       <textarea
         :value="modelValue.content"
-        @input="updateField('content', ($event.target as HTMLTextAreaElement).value)"
         placeholder="输入要发送的文本..."
         class="textarea-input"
         rows="4"
-      ></textarea>
+        @input="updateField('content', ($event.target as HTMLTextAreaElement).value)"
+      />
       <span class="field-hint">支持通过 variables 动态参数覆盖</span>
     </div>
     <div class="form-field">
       <label>输入后端</label>
       <BackendSelector
-        :modelValue="modelValue.backend ?? 'default'"
-        @update:modelValue="updateField('backend', $event === 'default' ? null : $event)"
+        :model-value="modelValue.backend ?? 'default'"
+        @update:model-value="updateField('backend', $event === 'default' ? null : $event)"
       />
     </div>
   </div>

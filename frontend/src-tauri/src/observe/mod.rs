@@ -10,6 +10,7 @@ pub mod types;
 pub mod config;
 pub mod processor;
 pub mod capture;
+pub mod zmq_pub;
 
 use lazy_static::lazy_static;
 use std::sync::Mutex;

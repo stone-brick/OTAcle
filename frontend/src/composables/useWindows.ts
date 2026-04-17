@@ -16,7 +16,7 @@ async function refreshWindows(): Promise<void> {
   const { addLog } = useLog();
 
   try {
-    const result = await invoke<WindowInfo[]>('list_windows');
+    const result = await invoke<WindowInfo[]>('window_list');
     windows.value = result;
     addLog(`窗口列表已刷新，共 ${result.length} 个窗口`, 'success');
   } catch (e) {
@@ -30,7 +30,7 @@ async function selectWindow(hwnd: number): Promise<void> {
   const { addLog } = useLog();
 
   try {
-    const info = await invoke<WindowInfo>('get_window_info', { hwnd });
+    const info = await invoke<WindowInfo>('window_get_info', { hwnd });
     selectedWindow.value = info;
     addLog(`已选择窗口: ${info.title}`, 'info');
   } catch (e) {
@@ -48,7 +48,7 @@ async function selectWindow(hwnd: number): Promise<void> {
 async function findWindowsByTitle(title: string): Promise<number[]> {
   const { addLog } = useLog();
   try {
-    const results = await invoke<number[]>('find_windows_by_title', { title });
+    const results = await invoke<number[]>('window_find_by_title', { title });
     addLog(`按标题查找 "${title}"：找到 ${results.length} 个窗口`, 'info');
     return results;
   } catch (e) {
@@ -63,7 +63,7 @@ async function findWindowsByTitle(title: string): Promise<number[]> {
 async function findWindowsByTitleContains(title: string): Promise<number[]> {
   const { addLog } = useLog();
   try {
-    const results = await invoke<number[]>('find_windows_by_title_contains', { title });
+    const results = await invoke<number[]>('window_find_one_contains', { title });
     addLog(`按标题包含查找 "${title}"：找到 ${results.length} 个窗口`, 'info');
     return results;
   } catch (e) {
@@ -78,7 +78,7 @@ async function findWindowsByTitleContains(title: string): Promise<number[]> {
 async function findWindowByClass(className: string): Promise<number | null> {
   const { addLog } = useLog();
   try {
-    const result = await invoke<number | null>('find_window_by_class', { className });
+    const result = await invoke<number | null>('window_find_by_class', { className });
     if (result !== null) {
       addLog(`按类名查找 "${className}"：找到 HWND ${result}`, 'info');
     } else {
@@ -97,7 +97,7 @@ async function findWindowByClass(className: string): Promise<number | null> {
 async function findWindowsByPid(pid: number): Promise<number[]> {
   const { addLog } = useLog();
   try {
-    const results = await invoke<number[]>('find_windows_by_pid', { pid });
+    const results = await invoke<number[]>('window_find_by_pid', { pid });
     addLog(`按进程ID查找 ${pid}：找到 ${results.length} 个窗口`, 'info');
     return results;
   } catch (e) {
@@ -109,11 +109,11 @@ async function findWindowsByPid(pid: number): Promise<number[]> {
 /**
  * Find all windows for an executable name
  */
-async function findWindowsByExe(exeName: string): Promise<number[]> {
+async function findWindowsByExe(processName: string): Promise<number[]> {
   const { addLog } = useLog();
   try {
-    const results = await invoke<number[]>('find_windows_by_exe', { exeName });
-    addLog(`按进程名查找 "${exeName}"：找到 ${results.length} 个窗口`, 'info');
+    const results = await invoke<number[]>('window_find_by_exe', { processName });
+    addLog(`按进程名查找 "${processName}"：找到 ${results.length} 个窗口`, 'info');
     return results;
   } catch (e) {
     addLog(`按进程名查找失败: ${e}`, 'error');
@@ -127,7 +127,7 @@ async function findWindowsByExe(exeName: string): Promise<number[]> {
 async function findWindowByHwnd(hwnd: number): Promise<number | null> {
   const { addLog } = useLog();
   try {
-    const result = await invoke<number | null>('find_window_by_hwnd', { hwnd });
+    const result = await invoke<number | null>('window_find_by_hwnd', { hwnd });
     if (result !== null) {
       addLog(`按HWND查找 ${hwnd}：找到窗口`, 'info');
     } else {
@@ -145,7 +145,7 @@ async function findWindowByHwnd(hwnd: number): Promise<number | null> {
  */
 async function getWindowsInfoByHwnds(hwnds: number[]): Promise<WindowInfo[]> {
   const results = await Promise.all(
-    hwnds.map(hwnd => invoke<WindowInfo | null>('get_window_info', { hwnd }))
+    hwnds.map(hwnd => invoke<WindowInfo | null>('window_get_info', { hwnd }))
   );
   return results.filter((info): info is WindowInfo => info !== null);
 }

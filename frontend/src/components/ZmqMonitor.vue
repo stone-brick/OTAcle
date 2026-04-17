@@ -41,7 +41,10 @@ async function handleStop() {
       <div class="status-row">
         <div class="status-item">
           <span class="status-label">连接状态</span>
-          <span class="status-value" :class="{ connected: isConnected }">
+          <span
+            class="status-value"
+            :class="{ connected: isConnected }"
+          >
             {{ isConnected ? '已连接' : '未连接' }}
           </span>
         </div>
@@ -56,7 +59,7 @@ async function handleStop() {
             class="address-input"
             placeholder="tcp://127.0.0.1:5555"
             :disabled="isConnected"
-          />
+          >
           <button
             v-if="!isConnected"
             class="btn btn-connect"
@@ -71,7 +74,10 @@ async function handleStop() {
           >
             断开
           </button>
-          <button class="btn btn-refresh" @click="fetchStatus">
+          <button
+            class="btn btn-refresh"
+            @click="fetchStatus"
+          >
             刷新
           </button>
         </div>
@@ -82,7 +88,12 @@ async function handleStop() {
     <div class="log-section">
       <div class="log-header">
         <h4>消息日志</h4>
-        <button class="btn-clear" @click="clearMessages">清空</button>
+        <button
+          class="btn-clear"
+          @click="clearMessages"
+        >
+          清空
+        </button>
       </div>
       <div class="message-list">
         <div
@@ -94,7 +105,10 @@ async function handleStop() {
           <span class="msg-time">{{ msg.time }}</span>
           <span class="msg-content">{{ msg.content }}</span>
         </div>
-        <div v-if="messages.length === 0" class="empty-state">
+        <div
+          v-if="messages.length === 0"
+          class="empty-state"
+        >
           暂无消息
         </div>
       </div>

@@ -40,7 +40,11 @@ function truncateTitle(title: string, maxLen: number = 30): string {
   <div class="window-sidebar">
     <div class="sidebar-header">
       <h3>窗口列表</h3>
-      <button class="refresh-btn" @click="handleRefresh" :disabled="isLoading">
+      <button
+        class="refresh-btn"
+        :disabled="isLoading"
+        @click="handleRefresh"
+      >
         {{ isLoading ? '加载中...' : '刷新' }}
       </button>
     </div>
@@ -48,13 +52,28 @@ function truncateTitle(title: string, maxLen: number = 30): string {
     <!-- Search Mode Selector -->
     <div class="search-section">
       <div class="search-mode-select">
-        <select v-model="searchMode" class="mode-select">
-          <option value="title">标题(前缀)</option>
-          <option value="titleContains">标题(包含)</option>
-          <option value="class">类名</option>
-          <option value="pid">进程ID</option>
-          <option value="exe">进程名</option>
-          <option value="hwnd">HWND</option>
+        <select
+          v-model="searchMode"
+          class="mode-select"
+        >
+          <option value="title">
+            标题(前缀)
+          </option>
+          <option value="title_contains">
+            标题(包含)
+          </option>
+          <option value="class">
+            类名
+          </option>
+          <option value="pid">
+            进程ID
+          </option>
+          <option value="exe">
+            进程名
+          </option>
+          <option value="hwnd">
+            HWND
+          </option>
         </select>
       </div>
       <div class="search-input-row">
@@ -62,15 +81,20 @@ function truncateTitle(title: string, maxLen: number = 30): string {
           v-model="searchValue"
           :type="searchMode === 'pid' || searchMode === 'hwnd' ? 'number' : 'text'"
           :placeholder="searchMode === 'title' ? '窗口标题...' :
-                        searchMode === 'titleContains' ? '窗口标题(包含)...' :
-                        searchMode === 'class' ? '窗口类名...' :
-                        searchMode === 'pid' ? '进程ID...' :
-                        searchMode === 'exe' ? '进程名(如 notepad)...' :
-                        'HWND值...'"
+            searchMode === 'title_contains' ? '窗口标题(包含)...' :
+            searchMode === 'class' ? '窗口类名...' :
+            searchMode === 'pid' ? '进程ID...' :
+            searchMode === 'exe' ? '进程名(如 notepad)...' :
+            'HWND值...'"
           class="search-input"
           @keyup.enter="handleSearch"
-        />
-        <button class="search-btn" @click="handleSearch">查找</button>
+        >
+        <button
+          class="search-btn"
+          @click="handleSearch"
+        >
+          查找
+        </button>
       </div>
     </div>
 
@@ -83,21 +107,36 @@ function truncateTitle(title: string, maxLen: number = 30): string {
         :class="{ selected: win.hwnd === selectedHwnd }"
         @click="handleSelect(win.hwnd)"
       >
-        <div class="window-title" :title="win.title">
+        <div
+          class="window-title"
+          :title="win.title"
+        >
           {{ truncateTitle(win.title) }}
         </div>
         <div class="window-meta">
-          <span class="process-name">{{ win.processName }}</span>
-          <span class="visibility" :class="{ visible: win.isVisible }">
-            {{ win.isVisible ? '可见' : '隐藏' }}
+          <span class="process-name">{{ win.process_name }}</span>
+          <span
+            class="visibility"
+            :class="{ visible: win.is_visible }"
+          >
+            {{ win.is_visible ? '可见' : '隐藏' }}
           </span>
         </div>
-        <div class="window-hwnd">HWND: 0x{{ win.hwnd.toString(16) }}</div>
+        <div class="window-hwnd">
+          HWND: 0x{{ win.hwnd.toString(16) }}
+        </div>
       </div>
 
-      <div v-if="windows.length === 0" class="empty-state">
-        <template v-if="searchValue">未找到匹配的窗口</template>
-        <template v-else>暂无窗口</template>
+      <div
+        v-if="windows.length === 0"
+        class="empty-state"
+      >
+        <template v-if="searchValue">
+          未找到匹配的窗口
+        </template>
+        <template v-else>
+          暂无窗口
+        </template>
       </div>
     </div>
   </div>

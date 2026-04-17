@@ -1,16 +1,16 @@
 use crate::input;
-use crate::state::get_hwnd_from_spec;
+use crate::get_hwnd_from_spec;
 use crate::input::find_window::WindowInfo;
 use windows::Win32::Foundation::{HWND, LPARAM, POINT, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{GetCursorPos, GetForegroundWindow, WM_KEYDOWN, WM_KEYUP, WM_MOUSEMOVE, PostMessageW};
 
 #[tauri::command]
-pub fn activate_window(hwnd: i64) -> Result<bool, String> {
+pub fn window_activate(hwnd: i64) -> Result<bool, String> {
     input::activate_window(hwnd as isize)
 }
 
 #[tauri::command]
-pub fn get_foreground_window() -> Result<i64, String> {
+pub fn window_get_foreground() -> Result<i64, String> {
     let hwnd = unsafe { GetForegroundWindow() };
     if hwnd.0.is_null() {
         Err("No foreground window found".to_string())
@@ -20,18 +20,18 @@ pub fn get_foreground_window() -> Result<i64, String> {
 }
 
 #[tauri::command]
-pub fn get_window_info(hwnd: i64) -> Result<WindowInfo, String> {
+pub fn window_get_info(hwnd: i64) -> Result<WindowInfo, String> {
     input::get_window_info(hwnd as isize)
         .ok_or_else(|| "Window not found".to_string())
 }
 
 #[tauri::command]
-pub fn list_windows() -> Result<Vec<WindowInfo>, String> {
+pub fn window_list() -> Result<Vec<WindowInfo>, String> {
     Ok(input::list_windows())
 }
 
 #[tauri::command]
-pub fn send_key(key: String, direction: String, window: Option<String>) -> Result<(), String> {
+pub fn window_send_key(key: String, direction: String, window: Option<String>) -> Result<(), String> {
     if let Some(ref spec) = window {
         let hwnd = get_hwnd_from_spec(spec)?;
         input::activate_window(hwnd)?;
@@ -40,7 +40,7 @@ pub fn send_key(key: String, direction: String, window: Option<String>) -> Resul
 }
 
 #[tauri::command]
-pub fn send_text(text: String, window: Option<String>) -> Result<(), String> {
+pub fn window_send_text(text: String, window: Option<String>) -> Result<(), String> {
     if let Some(ref spec) = window {
         let hwnd = get_hwnd_from_spec(spec)?;
         input::activate_window(hwnd)?;
@@ -49,7 +49,7 @@ pub fn send_text(text: String, window: Option<String>) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn get_mouse_position() -> Result<(i32, i32), String> {
+pub fn window_get_mouse() -> Result<(i32, i32), String> {
     unsafe {
         let mut point = POINT { x: 0, y: 0 };
         GetCursorPos(&mut point).map_err(|e| format!("Failed to get mouse position: {}", e))?;
@@ -58,7 +58,7 @@ pub fn get_mouse_position() -> Result<(i32, i32), String> {
 }
 
 #[tauri::command]
-pub fn send_mouse_click(
+pub fn window_send_click(
     hwnd: i64,
     x: i32,
     y: i32,
@@ -66,9 +66,9 @@ pub fn send_mouse_click(
     backend: Option<String>,
 ) -> Result<(), String> {
     let btn = match button.to_lowercase().as_str() {
-        "left" => input::win32_input::MouseButton::Left,
-        "right" => input::win32_input::MouseButton::Right,
-        "middle" => input::win32_input::MouseButton::Middle,
+        "left" => crate::act::types::MouseButton::Left,
+        "right" => crate::act::types::MouseButton::Right,
+        "middle" => crate::act::types::MouseButton::Middle,
         _ => return Err(format!("Unknown mouse button: {}", button)),
     };
 
@@ -85,7 +85,7 @@ pub fn send_mouse_click(
 }
 
 #[tauri::command]
-pub fn send_mouse_move(hwnd: i64, x: i32, y: i32, backend: Option<String>) -> Result<(), String> {
+pub fn window_send_move(hwnd: i64, x: i32, y: i32, backend: Option<String>) -> Result<(), String> {
     match backend.as_deref() {
         Some("win32") => {
             let hwnd = HWND(hwnd as *mut std::ffi::c_void);
@@ -107,7 +107,7 @@ pub fn send_mouse_move(hwnd: i64, x: i32, y: i32, backend: Option<String>) -> Re
 }
 
 #[tauri::command]
-pub fn send_combination_key(
+pub fn window_send_combo(
     keys: Vec<String>,
     window: Option<String>,
     backend: Option<String>,
@@ -169,14 +169,14 @@ pub fn send_combination_key(
 }
 
 #[tauri::command]
-pub fn activate_window_by_title(title: String) -> Result<bool, String> {
+pub fn window_activate_by_title(title: String) -> Result<bool, String> {
     let search = input::parse_window_spec(&title);
 
     let hwnd = if search.title.is_none()
         && search.class_name.is_none()
         && search.hwnd.is_none()
         && search.pid.is_none()
-        && search.exe_name.is_none()
+        && search.process_name.is_none()
     {
         let hwnd = unsafe { windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow() };
         if hwnd.0.is_null() {

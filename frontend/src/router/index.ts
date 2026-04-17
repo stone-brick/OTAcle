@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import ObservePage from '../pages/ObservePage.vue'
+import ObservePage from '../pages/observe/ObservePage.vue'
 import ThinkPage from '../pages/ThinkPage.vue'
 import ActPage from '../pages/act/ActPage.vue'
 

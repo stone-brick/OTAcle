@@ -16,21 +16,18 @@ pub struct Variable {
 /// 输入后端类型 - 决定如何将输入发送到目标窗口
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum InputBackend {
     /// 使用 enigo 库 - 跨平台，依赖前台窗口
     Enigo,
     /// 使用 Windows API - 直接发送到目标窗口，无需前台
+    #[default]
     Win32,
 }
 
-impl Default for InputBackend {
-    fn default() -> Self {
-        InputBackend::Win32
-    }
-}
 
 /// 鼠标按钮变体
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum MouseButton {
     Left,
@@ -188,7 +185,7 @@ pub struct TextAction {
 /// 动作类型枚举 - 所有动作类型的可辨识联合
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
-pub enum Action {
+pub enum ActionData {
     /// 单键操作
     Key(KeyAction),
     /// 按顺序按下多个按键
@@ -208,19 +205,23 @@ pub enum Action {
 /// 带可选名称和动作数据的单个动作项
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub struct ActionItem {
+pub struct Action {
     /// 可选的动作名称（如果未提供则使用数组索引作为名称）
     #[serde(default)]
     pub name: Option<String>,
     /// 动作数据
     #[serde(flatten)]
-    pub data: Action,
+    pub data: ActionData,
 }
 
 
-/// 动作配置作为动作项列表
-pub type ActionConfigList = Vec<ActionItem>;
+/// 动作列表（动作配置项）
+pub type ActionList = Vec<Action>;
 
-/// 动作配置，将动作索引（u32）映射到 Action
-/// @deprecated 请改用 ActionConfigList
-pub type ActionConfig = std::collections::HashMap<u32, Action>;
+/// 撤销/重做的历史记录条目
+#[derive(Clone)]
+pub struct HistoryEntry {
+    pub actions: ActionList,
+    pub default_backend: InputBackend,
+}
+

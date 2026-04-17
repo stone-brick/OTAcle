@@ -51,20 +51,17 @@ pub fn activate_window(hwnd: isize) -> Result<bool, String> {
         // 三路 AttachThreadInput（AutoHotkey 风格）：
         // 1. 将当前线程附加到前台窗口的线程
         // 2. 将前台窗口的线程附加到目标窗口的线程
-        let attached_my_to_fore;
-        let attached_fore_to_target;
-
-        if fore_thread != 0 && fore_thread != current_thread {
-            attached_my_to_fore = AttachThreadInput(current_thread, fore_thread, true).as_bool();
+        let attached_my_to_fore = if fore_thread != 0 && fore_thread != current_thread {
+            AttachThreadInput(current_thread, fore_thread, true).as_bool()
         } else {
-            attached_my_to_fore = false;
-        }
+            false
+        };
 
-        if fore_thread != 0 && target_thread != 0 && fore_thread != target_thread {
-            attached_fore_to_target = AttachThreadInput(fore_thread, target_thread, true).as_bool();
+        let attached_fore_to_target = if fore_thread != 0 && target_thread != 0 && fore_thread != target_thread {
+            AttachThreadInput(fore_thread, target_thread, true).as_bool()
         } else {
-            attached_fore_to_target = false;
-        }
+            false
+        };
 
         // 重试循环 - 最多 5 次尝试，类似 AutoHotkey
         let mut attempted_alt_up = false;

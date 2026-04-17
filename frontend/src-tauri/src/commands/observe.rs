@@ -29,7 +29,7 @@ pub fn observe_start(
     let zmq_addr = config.zmq.address.clone();
     let running = Arc::new(AtomicBool::new(false));
     let running_for_pub = running.clone();
-    crate::zmq_pub::start_publisher(&zmq_addr, running_for_pub, zmq_rx)?;
+    observe::zmq_pub::start_publisher(&zmq_addr, running_for_pub, zmq_rx)?;
 
     // Start capture session, passing zmq_tx and running
     session.start(hwnd as isize, config, app, zmq_tx, running)

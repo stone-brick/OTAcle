@@ -87,8 +87,8 @@ impl GraphicsCaptureApiHandler for WgcFrameHandler {
         }
 
         // 2. 如有需要则缩放
-        let scaled = if self.data.config.capture.target_width != width as u32
-            || self.data.config.capture.target_height != height as u32
+        let scaled = if self.data.config.capture.target_width != width
+            || self.data.config.capture.target_height != height
         {
             let processor = ImageProcessor {};
             processor.scale(

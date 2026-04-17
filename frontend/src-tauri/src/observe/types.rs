@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 /// Observe module configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct ObserveConfig {
     pub capture: CaptureConfig,
     pub zmq: ZmqConfig,
@@ -15,15 +16,6 @@ pub struct ObserveConfig {
     pub crop_regions: Vec<CropRegion>,
 }
 
-impl Default for ObserveConfig {
-    fn default() -> Self {
-        Self {
-            capture: CaptureConfig::default(),
-            zmq: ZmqConfig::default(),
-            crop_regions: Vec::new(),
-        }
-    }
-}
 
 /// Capture configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]

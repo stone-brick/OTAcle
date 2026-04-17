@@ -19,10 +19,18 @@ const emit = defineEmits<{
     <div class="list-header">
       <h4>动作列表</h4>
     </div>
-    <div v-if="actions.length === 0" class="empty-state">
-      <slot name="empty">暂无动作</slot>
+    <div
+      v-if="actions.length === 0"
+      class="empty-state"
+    >
+      <slot name="empty">
+        暂无动作
+      </slot>
     </div>
-    <div v-else class="action-items">
+    <div
+      v-else
+      class="action-items"
+    >
       <div
         v-for="(item, idx) in actions"
         :key="idx"
@@ -33,18 +41,31 @@ const emit = defineEmits<{
         <div class="action-info">
           <div class="action-header">
             <span class="action-index">#{{ idx }}</span>
-            <span class="type-badge" :class="getTypeClass(item)">
+            <span
+              class="type-badge"
+              :class="getTypeClass(item)"
+            >
               {{ getActionTypeLabel(item) }}
             </span>
           </div>
-          <div class="action-name" v-if="item.name">{{ item.name }}</div>
-          <div class="action-detail">{{ formatActionDetail(item) }}</div>
+          <div
+            v-if="item.name"
+            class="action-name"
+          >
+            {{ item.name }}
+          </div>
+          <div class="action-detail">
+            {{ formatActionDetail(item) }}
+          </div>
         </div>
-        <div v-if="showDelete" class="action-buttons">
+        <div
+          v-if="showDelete"
+          class="action-buttons"
+        >
           <button
             class="delete-btn"
-            @click.stop="emit('delete', idx)"
             title="删除动作"
+            @click.stop="emit('delete', idx)"
           >
             ✕
           </button>

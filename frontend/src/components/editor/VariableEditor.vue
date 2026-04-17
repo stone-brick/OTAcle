@@ -37,25 +37,41 @@ function updateField(index: number, field: 'param_name' | 'field_name', value: s
       >
         <select
           :value="variable.field_name"
-          @change="updateField(index, 'field_name', ($event.target as HTMLSelectElement).value)"
           class="select-input"
+          @change="updateField(index, 'field_name', ($event.target as HTMLSelectElement).value)"
         >
-          <option value="">选择字段...</option>
-          <option v-for="field in availableFields" :key="field" :value="field">
+          <option value="">
+            选择字段...
+          </option>
+          <option
+            v-for="field in availableFields"
+            :key="field"
+            :value="field"
+          >
             {{ field }}
           </option>
         </select>
         <span class="arrow">→</span>
         <input
           :value="variable.param_name"
-          @input="updateField(index, 'param_name', ($event.target as HTMLInputElement).value)"
           type="text"
           placeholder="参数名"
           class="text-input param-input"
-        />
-        <button class="remove-var-btn" @click="removeVariable(index)">✕</button>
+          @input="updateField(index, 'param_name', ($event.target as HTMLInputElement).value)"
+        >
+        <button
+          class="remove-var-btn"
+          @click="removeVariable(index)"
+        >
+          ✕
+        </button>
       </div>
-      <button class="add-var-btn" @click="addVariable">+ 添加参数</button>
+      <button
+        class="add-var-btn"
+        @click="addVariable"
+      >
+        + 添加参数
+      </button>
     </div>
     <span class="field-hint">定义可动态覆盖的字段和参数名称，运行时通过 ZMQ params 传值</span>
   </div>

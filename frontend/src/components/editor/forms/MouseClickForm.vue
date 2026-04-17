@@ -24,57 +24,63 @@ const availableFields = ['count'];
       <label>鼠标按钮</label>
       <select
         :value="modelValue.button"
-        @change="updateField('button', ($event.target as HTMLSelectElement).value as 'left' | 'right' | 'middle')"
         class="select-input"
+        @change="updateField('button', ($event.target as HTMLSelectElement).value as 'left' | 'right' | 'middle')"
       >
-        <option value="left">左键</option>
-        <option value="right">右键</option>
-        <option value="middle">中键</option>
+        <option value="left">
+          左键
+        </option>
+        <option value="right">
+          右键
+        </option>
+        <option value="middle">
+          中键
+        </option>
       </select>
     </div>
     <div class="form-field">
       <label>点击次数</label>
       <input
         :value="modelValue.count"
-        @input="updateField('count', Number(($event.target as HTMLInputElement).value))"
         type="number"
         min="1"
         class="number-input"
-      />
+        @input="updateField('count', Number(($event.target as HTMLInputElement).value))"
+      >
     </div>
     <div class="form-field">
       <label>间隔 (ms，可选)</label>
       <input
         :value="modelValue.interval_ms"
-        @input="updateField('interval_ms', Number(($event.target as HTMLInputElement).value))"
         type="number"
         min="0"
         class="number-input"
-      />
+        @input="updateField('interval_ms', Number(($event.target as HTMLInputElement).value))"
+      >
     </div>
     <div class="form-field">
       <label>按住时间 (ms)</label>
       <input
         :value="modelValue.hold_time_ms"
-        @input="updateField('hold_time_ms', Number(($event.target as HTMLInputElement).value))"
         type="number"
         min="0"
         class="number-input"
-      />
+        @input="updateField('hold_time_ms', Number(($event.target as HTMLInputElement).value))"
+      >
     </div>
     <div class="form-field">
       <label>输入后端</label>
       <BackendSelector
-        :modelValue="modelValue.backend ?? 'default'"
-        @update:modelValue="updateField('backend', $event === 'default' ? null : $event)"
+        :model-value="modelValue.backend ?? 'default'"
+        @update:model-value="updateField('backend', $event === 'default' ? null : $event)"
       />
     </div>
     <div class="form-field">
       <label>动态参数 (variables)</label>
       <VariableEditor
-        :modelValue="modelValue.variables || []"
-        :availableFields="availableFields"
-        @update:modelValue="updateField('variables', $event.length > 0 ? $event : undefined)"
+        :model-value="modelValue.variables || []"
+        :available-fields="availableFields"
+        @update:model-value="updateField('variables', $event.length > 0 ? $event : undefined)"
       />
     </div>
   </div>

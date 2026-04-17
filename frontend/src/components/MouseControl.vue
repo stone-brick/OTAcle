@@ -43,43 +43,83 @@ function handleGetPosition() {
     <div class="mouse-inputs">
       <div class="input-group">
         <label>X</label>
-        <input type="number" v-model.number="x" class="coord-input" />
+        <input
+          v-model.number="x"
+          type="number"
+          class="coord-input"
+        >
       </div>
       <div class="input-group">
         <label>Y</label>
-        <input type="number" v-model.number="y" class="coord-input" />
+        <input
+          v-model.number="y"
+          type="number"
+          class="coord-input"
+        >
       </div>
-      <button class="get-pos-btn" @click="handleGetPosition">获取位置</button>
+      <button
+        class="get-pos-btn"
+        @click="handleGetPosition"
+      >
+        获取位置
+      </button>
     </div>
 
     <div class="button-select">
       <label class="radio-label">
-        <input type="radio" v-model="selectedButton" value="left" />
+        <input
+          v-model="selectedButton"
+          type="radio"
+          value="left"
+        >
         <span>左键</span>
       </label>
       <label class="radio-label">
-        <input type="radio" v-model="selectedButton" value="right" />
+        <input
+          v-model="selectedButton"
+          type="radio"
+          value="right"
+        >
         <span>右键</span>
       </label>
       <label class="radio-label">
-        <input type="radio" v-model="selectedButton" value="middle" />
+        <input
+          v-model="selectedButton"
+          type="radio"
+          value="middle"
+        >
         <span>中键</span>
       </label>
     </div>
 
     <div class="mouse-actions">
-      <button class="action-btn" @click="handleClick" :disabled="!selectedHwnd">
+      <button
+        class="action-btn"
+        :disabled="!selectedHwnd"
+        @click="handleClick"
+      >
         点击
       </button>
-      <button class="action-btn" @click="handleDoubleClick" :disabled="!selectedHwnd">
+      <button
+        class="action-btn"
+        :disabled="!selectedHwnd"
+        @click="handleDoubleClick"
+      >
         双击
       </button>
-      <button class="action-btn" @click="handleMove" :disabled="!selectedHwnd">
+      <button
+        class="action-btn"
+        :disabled="!selectedHwnd"
+        @click="handleMove"
+      >
         移动
       </button>
     </div>
 
-    <div v-if="!selectedHwnd" class="hint">
+    <div
+      v-if="!selectedHwnd"
+      class="hint"
+    >
       请先在侧边栏选择一个窗口
     </div>
   </div>

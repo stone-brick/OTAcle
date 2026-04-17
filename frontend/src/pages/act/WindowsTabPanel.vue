@@ -18,7 +18,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   selectWindow: [hwnd: number | null];
   refreshWindows: [];
-  executeAction: [payload: { actionId: number; params: Record<string, any> }];
+  executeAction: [payload: { actionIdx: number; params: Record<string, any> }];
 }>();
 
 const selectedTestActionIndex = ref<number | null>(null);
@@ -48,7 +48,7 @@ function handleSelectTestAction(index: number) {
   selectedTestActionIndex.value = index;
 }
 
-function handleExecute(payload: { actionId: number; params: Record<string, any> }) {
+function handleExecute(payload: { actionIdx: number; params: Record<string, any> }) {
   emit('executeAction', payload);
 }
 </script>
@@ -57,22 +57,22 @@ function handleExecute(payload: { actionId: number; params: Record<string, any> 
   <div class="windows-tab-panel">
     <WindowSidebar
       :windows="displayWindows"
-      :selectedHwnd="selectedWindow?.hwnd ?? null"
-      :isLoading="isLoading"
+      :selected-hwnd="selectedWindow?.hwnd ?? null"
+      :is-loading="isLoading"
       @select="handleSelectWindow"
       @refresh="emit('refreshWindows'); searchResults = null"
       @search="handleSearch"
     />
     <ActionList
       :actions="actions"
-      :selectedIndex="selectedTestActionIndex"
+      :selected-index="selectedTestActionIndex"
       @select="handleSelectTestAction"
     />
     <ActionTestPanel
-      :selectedWindow="selectedWindow"
+      :selected-window="selectedWindow"
       :actions="actions"
-      :isLoaded="isLoaded"
-      :selectedActionIndex="selectedTestActionIndex"
+      :is-loaded="isLoaded"
+      :selected-action-index="selectedTestActionIndex"
       @execute="handleExecute"
     />
   </div>

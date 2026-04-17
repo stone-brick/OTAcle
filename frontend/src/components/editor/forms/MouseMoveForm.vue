@@ -24,43 +24,43 @@ const availableFields = ['x', 'y'];
       <label>X 坐标</label>
       <input
         :value="modelValue.x"
-        @input="updateField('x', Number(($event.target as HTMLInputElement).value))"
         type="number"
         class="number-input"
-      />
+        @input="updateField('x', Number(($event.target as HTMLInputElement).value))"
+      >
     </div>
     <div class="form-field">
       <label>Y 坐标</label>
       <input
         :value="modelValue.y"
-        @input="updateField('y', Number(($event.target as HTMLInputElement).value))"
         type="number"
         class="number-input"
-      />
+        @input="updateField('y', Number(($event.target as HTMLInputElement).value))"
+      >
     </div>
     <div class="form-field">
       <label>移动时长 (ms，可选)</label>
       <input
         :value="modelValue.duration_ms"
-        @input="updateField('duration_ms', Number(($event.target as HTMLInputElement).value))"
         type="number"
         min="0"
         class="number-input"
-      />
+        @input="updateField('duration_ms', Number(($event.target as HTMLInputElement).value))"
+      >
     </div>
     <div class="form-field">
       <label>输入后端</label>
       <BackendSelector
-        :modelValue="modelValue.backend ?? 'default'"
-        @update:modelValue="updateField('backend', $event === 'default' ? null : $event)"
+        :model-value="modelValue.backend ?? 'default'"
+        @update:model-value="updateField('backend', $event === 'default' ? null : $event)"
       />
     </div>
     <div class="form-field">
       <label>动态参数 (variables)</label>
       <VariableEditor
-        :modelValue="modelValue.variables || []"
-        :availableFields="availableFields"
-        @update:modelValue="updateField('variables', $event.length > 0 ? $event : undefined)"
+        :model-value="modelValue.variables || []"
+        :available-fields="availableFields"
+        @update:model-value="updateField('variables', $event.length > 0 ? $event : undefined)"
       />
     </div>
   </div>

@@ -5,7 +5,9 @@
 <template>
   <div class="think-page">
     <div class="think-placeholder">
-      <div class="placeholder-icon">🧠</div>
+      <div class="placeholder-icon">
+        🧠
+      </div>
       <h2>Think 模块</h2>
       <p>模型训练数据展示（待实现）</p>
     </div>

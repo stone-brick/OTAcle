@@ -81,4 +81,3 @@ export function useLog() {
  * import { LogService } from '@/composables/useLog'
  * LogService.addLog('Direct call', 'info')
  */
-export { logService as LogService };

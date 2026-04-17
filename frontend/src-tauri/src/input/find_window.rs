@@ -28,16 +28,13 @@ pub struct WindowInfo {
 
 /// 窗口标题搜索的标题匹配模式
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Default)]
 pub enum TitleMatchMode {
+    #[default]
     Prefix = 1,  // 标题以指定文本开头（默认）
     Contains = 2, // 标题包含指定文本
 }
 
-impl Default for TitleMatchMode {
-    fn default() -> Self {
-        TitleMatchMode::Prefix
-    }
-}
 
 /// 窗口搜索条件
 #[derive(Debug, Clone)]
@@ -51,7 +48,7 @@ pub struct WindowSearch {
     /// 要匹配的进程 ID（pid:）
     pub pid: Option<u32>,
     /// 要匹配的进程名（exe:），例如 "notepad.exe"
-    pub exe_name: Option<String>,
+    pub process_name: Option<String>,
     /// 要排除的窗口标题
     pub exclude_title: Option<String>,
     /// 标题匹配模式
@@ -67,7 +64,7 @@ impl Default for WindowSearch {
             class_name: None,
             hwnd: None,
             pid: None,
-            exe_name: None,
+            process_name: None,
             exclude_title: None,
             match_mode: TitleMatchMode::Prefix,
             detect_hidden: true,
@@ -135,7 +132,7 @@ pub fn parse_window_spec(spec: &str) -> WindowSearch {
     if spec.to_lowercase().starts_with("exe:") {
         let exe_name = spec[4..].trim().to_string();
         return WindowSearch {
-            exe_name: Some(exe_name),
+            process_name: Some(exe_name),
             ..Default::default()
         };
     }
@@ -264,7 +261,7 @@ fn window_matches(hwnd: HWND, search: &WindowSearch) -> bool {
     }
 
     // 通过进程名检查（exe:）
-    if let Some(ref exe_name) = search.exe_name {
+    if let Some(ref exe_name) = search.process_name {
         if let Some(process_name) = get_process_name(hwnd) {
             // exe_name 可能是 "notepad.exe" 或 "notepad"，处理两种情况
             let exe_lower = exe_name.to_lowercase();
@@ -325,7 +322,7 @@ pub fn find_window(search: &WindowSearch) -> Option<isize> {
         && search.class_name.is_none()
         && search.hwnd.is_none()
         && search.pid.is_none()
-        && search.exe_name.is_none()
+        && search.process_name.is_none()
     {
         return None;
     }
@@ -421,14 +418,14 @@ pub fn find_windows_by_pid(pid: u32) -> Vec<isize> {
 }
 
 /// 通过可执行文件名查找进程的所有窗口
-pub fn find_windows_by_exe(exe_name: &str) -> Vec<isize> {
-    let exe_name = if exe_name.to_lowercase().ends_with(".exe") {
-        exe_name.to_string()
+pub fn find_windows_by_exe(process_name: &str) -> Vec<isize> {
+    let process_name = if process_name.to_lowercase().ends_with(".exe") {
+        process_name.to_string()
     } else {
-        format!("{}.exe", exe_name.to_lowercase())
+        format!("{}.exe", process_name.to_lowercase())
     };
     let search = WindowSearch {
-        exe_name: Some(exe_name),
+        process_name: Some(process_name),
         ..Default::default()
     };
     find_all_matching_windows(&search)
@@ -442,9 +439,7 @@ pub fn find_window_by_hwnd(hwnd: isize) -> Option<isize> {
         return None;
     }
     // 通过检查是否有标题来验证是否是有效窗口
-    if get_window_title(hwnd_check).is_none() {
-        return None;
-    }
+    get_window_title(hwnd_check)?;
     Some(hwnd)
 }
 

@@ -21,27 +21,27 @@ function updateField<K extends keyof KeyActionItem>(field: K, value: KeyActionIt
       <label>按键</label>
       <input
         :value="modelValue.key"
-        @input="updateField('key', ($event.target as HTMLInputElement).value)"
         type="text"
         placeholder="例如: space, ctrl, a"
         class="text-input"
-      />
+        @input="updateField('key', ($event.target as HTMLInputElement).value)"
+      >
     </div>
     <div class="form-field">
       <label>按住时间 (ms)</label>
       <input
         :value="modelValue.hold_time_ms"
-        @input="updateField('hold_time_ms', Number(($event.target as HTMLInputElement).value))"
         type="number"
         min="0"
         class="number-input"
-      />
+        @input="updateField('hold_time_ms', Number(($event.target as HTMLInputElement).value))"
+      >
     </div>
     <div class="form-field">
       <label>输入后端</label>
       <BackendSelector
-        :modelValue="modelValue.backend ?? 'default'"
-        @update:modelValue="updateField('backend', $event === 'default' ? null : $event)"
+        :model-value="modelValue.backend ?? 'default'"
+        @update:model-value="updateField('backend', $event === 'default' ? null : $event)"
       />
     </div>
   </div>

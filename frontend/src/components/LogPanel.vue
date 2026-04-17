@@ -18,7 +18,12 @@ function handleClear() {
   <div class="log-panel">
     <div class="log-header">
       <h3>操作日志</h3>
-      <button class="clear-btn" @click="handleClear">清空</button>
+      <button
+        class="clear-btn"
+        @click="handleClear"
+      >
+        清空
+      </button>
     </div>
 
     <div class="log-list">
@@ -32,7 +37,10 @@ function handleClear() {
         <span class="log-message">{{ log.message }}</span>
       </div>
 
-      <div v-if="logs.length === 0" class="empty-state">
+      <div
+        v-if="logs.length === 0"
+        class="empty-state"
+      >
         暂无日志
       </div>
     </div>

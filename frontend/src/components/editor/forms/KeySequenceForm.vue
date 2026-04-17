@@ -39,17 +39,17 @@ function updateKey(index: number, field: keyof KeySequenceItem, value: string | 
       <label>默认间隔 (ms)</label>
       <input
         :value="modelValue.default_interval_ms"
-        @input="updateField('default_interval_ms', Number(($event.target as HTMLInputElement).value))"
         type="number"
         min="0"
         class="number-input"
-      />
+        @input="updateField('default_interval_ms', Number(($event.target as HTMLInputElement).value))"
+      >
     </div>
     <div class="form-field">
       <label>输入后端</label>
       <BackendSelector
-        :modelValue="modelValue.backend ?? 'default'"
-        @update:modelValue="updateField('backend', $event === 'default' ? null : $event)"
+        :model-value="modelValue.backend ?? 'default'"
+        @update:model-value="updateField('backend', $event === 'default' ? null : $event)"
       />
     </div>
     <div class="form-field">
@@ -62,30 +62,40 @@ function updateKey(index: number, field: keyof KeySequenceItem, value: string | 
         >
           <input
             :value="keyItem.key"
-            @input="updateKey(index, 'key', ($event.target as HTMLInputElement).value)"
             type="text"
             placeholder="按键"
             class="text-input key-input"
-          />
+            @input="updateKey(index, 'key', ($event.target as HTMLInputElement).value)"
+          >
           <input
             :value="keyItem.hold_time_ms"
-            @input="updateKey(index, 'hold_time_ms', Number(($event.target as HTMLInputElement).value))"
             type="number"
             min="0"
             class="number-input hold-input"
-          />
+            @input="updateKey(index, 'hold_time_ms', Number(($event.target as HTMLInputElement).value))"
+          >
           <span class="unit-label">ms 按住</span>
           <input
             :value="keyItem.interval_ms"
-            @input="updateKey(index, 'interval_ms', Number(($event.target as HTMLInputElement).value))"
             type="number"
             min="0"
             class="number-input interval-input"
-          />
+            @input="updateKey(index, 'interval_ms', Number(($event.target as HTMLInputElement).value))"
+          >
           <span class="unit-label">ms 间隔</span>
-          <button class="remove-key-btn" @click="removeKey(index)">✕</button>
+          <button
+            class="remove-key-btn"
+            @click="removeKey(index)"
+          >
+            ✕
+          </button>
         </div>
-        <button class="add-key-btn" @click="addKey">+ 添加按键</button>
+        <button
+          class="add-key-btn"
+          @click="addKey"
+        >
+          + 添加按键
+        </button>
       </div>
       <span class="field-hint">间隔留空则使用默认间隔</span>
     </div>

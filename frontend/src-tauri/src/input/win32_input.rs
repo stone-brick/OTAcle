@@ -179,13 +179,8 @@ pub fn send_text(hwnd: isize, text: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// win32 模块的鼠标按钮枚举
-#[derive(Debug, Clone, Copy)]
-pub enum MouseButton {
-    Left,
-    Right,
-    Middle,
-}
+/// 从 act::types 导入 MouseButton（统一枚举定义）
+use crate::act::types::MouseButton;
 
 /// 向窗口发送指定坐标的鼠标点击
 pub fn send_mouse_click(hwnd: isize, x: i32, y: i32, button: MouseButton) -> Result<(), String> {

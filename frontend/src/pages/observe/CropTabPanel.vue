@@ -276,16 +276,19 @@ onUnmounted(() => {
       <canvas
         ref="canvasRef"
         class="preview-canvas"
+        :class="{ drawing: isDrawing }"
         @mousedown="handleMouseDown"
         @mousemove="handleMouseMove"
         @mouseup="handleMouseUp"
         @mouseleave="handleMouseUp"
         @click="handleCanvasClick"
-        :class="{ drawing: isDrawing }"
       />
 
       <!-- Hint when not observing -->
-      <div v-if="!isObserving" class="preview-placeholder">
+      <div
+        v-if="!isObserving"
+        class="preview-placeholder"
+      >
         <p>请先在"截图配置"中启动观察</p>
       </div>
     </div>
@@ -317,7 +320,10 @@ onUnmounted(() => {
             <span class="region-coords">{{ region.x }}, {{ region.y }}</span>
             <span class="region-size">{{ region.w }} × {{ region.h }}</span>
           </div>
-          <p v-if="config.crop_regions.length === 0" class="no-regions">
+          <p
+            v-if="config.crop_regions.length === 0"
+            class="no-regions"
+          >
             暂无裁切区域
           </p>
         </div>
@@ -326,8 +332,12 @@ onUnmounted(() => {
       <!-- Instructions -->
       <div class="config-group">
         <div class="instructions">
-          <p v-if="isObserving">在预览区拖拽绘制矩形添加裁切区域</p>
-          <p v-else>启动观察后可在预览区绘制裁切区域</p>
+          <p v-if="isObserving">
+            在预览区拖拽绘制矩形添加裁切区域
+          </p>
+          <p v-else>
+            启动观察后可在预览区绘制裁切区域
+          </p>
         </div>
       </div>
     </div>
@@ -337,7 +347,10 @@ onUnmounted(() => {
       <button @click="handleAddRegion">
         添加区域
       </button>
-      <button @click="handleDeleteRegion" :disabled="selectedRegionIndex === null">
+      <button
+        :disabled="selectedRegionIndex === null"
+        @click="handleDeleteRegion"
+      >
         删除选中
       </button>
     </div>

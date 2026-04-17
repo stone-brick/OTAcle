@@ -2,10 +2,10 @@
 export interface WindowInfo {
   hwnd: number;
   title: string;
-  className: string;
-  processName: string;
+  class_name: string;
+  process_name: string;
   pid: number;
-  isVisible: boolean;
+  is_visible: boolean;
 }
 
 // Input backend type
@@ -122,7 +122,7 @@ export interface LogEntry {
 export type AppStatus = 'ready' | 'sending' | 'error';
 
 // Window search mode
-export type SearchMode = 'title' | 'titleContains' | 'class' | 'pid' | 'exe' | 'hwnd';
+export type SearchMode = 'title' | 'title_contains' | 'class' | 'pid' | 'exe' | 'hwnd';
 
 // =============================================================================
 // Observe Module Types

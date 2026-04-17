@@ -5,8 +5,8 @@ import { useLog } from '../useLog';
 import { useActionHistory } from './useActionHistory';
 
 const actions = ref<ActionItem[]>([]);
-const originalActions = ref<ActionItem[]>([]);  // 原始数据快照
-const originalDefaultBackend = ref<InputBackend>('win32');
+const baselineActions = ref<ActionItem[]>([]);  // 基准线快照
+const baselineDefaultBackend = ref<InputBackend>('win32');
 const defaultBackend = ref<InputBackend>('win32');
 const configPath = ref<string>('');
 const selectedIndex = ref<number | null>(null);
@@ -17,8 +17,8 @@ const { refreshHistoryCount } = useActionHistory();
 
 // Refresh action list from backend (exported for use by undo/redo)
 async function refreshActionList(): Promise<void> {
-  const actionList = await invoke<ActionItem[]>('get_action_list');
-  const backend = await invoke<InputBackend>('get_default_backend');
+  const actionList = await invoke<ActionItem[]>('act_get_list');
+  const backend = await invoke<InputBackend>('act_get_default_backend');
   actions.value = actionList;
   defaultBackend.value = backend;
 }
@@ -27,26 +27,26 @@ async function loadConfig(path: string): Promise<void> {
   const { addLog } = useLog();
 
   try {
-    await invoke('load_action_config', {
+    await invoke('act_load_config', {
       path,
       backend: defaultBackend.value,
     });
     configPath.value = path;
 
     // Fetch the action list with names
-    const actionList = await invoke<ActionItem[]>('get_action_list');
+    const actionList = await invoke<ActionItem[]>('act_get_list');
     actions.value = actionList;
-    originalActions.value = JSON.parse(JSON.stringify(actionList));
+    baselineActions.value = JSON.parse(JSON.stringify(actionList));
 
     // Get default backend
-    const backend = await invoke<InputBackend>('get_default_backend');
+    const backend = await invoke<InputBackend>('act_get_default_backend');
     defaultBackend.value = backend;
-    originalDefaultBackend.value = backend;
+    baselineDefaultBackend.value = backend;
 
     isLoaded.value = true;
 
     // Clear backend history on load
-    await invoke('clear_action_history');
+    await invoke('act_clear_history');
     await refreshHistoryCount();
 
     addLog(`已加载配置文件: ${path}`, 'success');
@@ -65,7 +65,7 @@ async function saveConfig(path?: string): Promise<void> {
   }
 
   try {
-    await invoke('save_action_config', {
+    await invoke('act_save_config', {
       path: savePath,
       defaultBackend: defaultBackend.value,
       actions: actions.value,
@@ -74,8 +74,8 @@ async function saveConfig(path?: string): Promise<void> {
 
     // Save successful - update original snapshot
     // Note: do NOT clear history here - saving should not destroy undo/redo capability
-    originalActions.value = JSON.parse(JSON.stringify(actions.value));
-    originalDefaultBackend.value = defaultBackend.value;
+    baselineActions.value = JSON.parse(JSON.stringify(actions.value));
+    baselineDefaultBackend.value = defaultBackend.value;
     // History is NOT cleared - user can still undo/redo after save
 
     addLog(`已保存配置文件: ${savePath}`, 'success');
@@ -93,7 +93,7 @@ async function createAction(type: string, name?: string): Promise<number> {
 
   try {
     // Call backend to create action (which saves to history)
-    const index = await invoke<number>('create_action', {
+    const index = await invoke<number>('act_create', {
       action,
       name: name || null,
     });
@@ -115,7 +115,7 @@ async function updateAction(index: number, action: ActionItem, name?: string): P
 
   try {
     // Call backend to update action (which saves to history)
-    await invoke('update_action', {
+    await invoke('act_update', {
       index,
       action,
       name: name || null,
@@ -137,7 +137,7 @@ async function deleteAction(index: number): Promise<void> {
 
   try {
     // Call backend to delete action (which saves to history)
-    await invoke('delete_action', { index });
+    await invoke('act_delete', { index });
 
     // Refresh state from backend (indices are rebuilt by backend)
     await refreshActionList();
@@ -156,7 +156,7 @@ async function deleteAction(index: number): Promise<void> {
 }
 
 async function getNextIndex(): Promise<number> {
-  return await invoke<number>('get_next_action_index');
+  return await invoke<number>('act_get_next_index');
 }
 
 function selectAction(index: number | null): void {
@@ -168,7 +168,7 @@ async function setDefaultBackend(backend: InputBackend): Promise<void> {
 
   try {
     // Call backend to set default backend (which saves to history)
-    await invoke('set_default_backend', { backend });
+    await invoke('act_set_default_backend', { backend });
     defaultBackend.value = backend;
     await refreshHistoryCount();
   } catch (e) {
@@ -178,21 +178,21 @@ async function setDefaultBackend(backend: InputBackend): Promise<void> {
 
 function clearEditor(): void {
   actions.value = [];
-  originalActions.value = [];
-  originalDefaultBackend.value = 'win32';
+  baselineActions.value = [];
+  baselineDefaultBackend.value = 'win32';
   defaultBackend.value = 'win32';
   configPath.value = '';
   selectedIndex.value = null;
   isLoaded.value = false;
 }
 
-// Check if a specific action has changed from original (by array position)
+// Check if a specific action has changed from baseline (by array position)
 function hasActionChanged(index: number): boolean {
-  const original = originalActions.value[index];
+  const baseline = baselineActions.value[index];
   const current = actions.value[index];
-  if (!original && !current) return false;
-  if (!original || !current) return true;
-  return JSON.stringify(original) !== JSON.stringify(current);
+  if (!baseline && !current) return false;
+  if (!baseline || !current) return true;
+  return JSON.stringify(baseline) !== JSON.stringify(current);
 }
 
 // Get list of changed action indices (array positions)
@@ -202,26 +202,18 @@ function getChangedIndices(): number[] {
     .filter(idx => hasActionChanged(idx));
 }
 
-// Sync originalActions snapshot to current state (call after undo/redo)
-function syncOriginalActions(): void {
-  originalActions.value = JSON.parse(JSON.stringify(actions.value));
-  originalDefaultBackend.value = defaultBackend.value;
+// Sync baselineActions snapshot to current state (call after undo/redo)
+function syncBaselineActions(): void {
+  baselineActions.value = JSON.parse(JSON.stringify(actions.value));
+  baselineDefaultBackend.value = defaultBackend.value;
 }
 
 // Discard all changes - restore to original state (calls backend for undo/redo support)
 async function discardChanges(): Promise<void> {
-  await invoke('discard_changes');
+  await invoke('act_discard_all');
   await refreshActionList();
   await refreshHistoryCount();
-  syncOriginalActions();
-}
-
-// Discard changes for a specific action (by array position) - calls backend for undo/redo support
-async function discardAction(index: number): Promise<void> {
-  await invoke('discard_action', { index });
-  await refreshActionList();
-  await refreshHistoryCount();
-  syncOriginalActions();
+  syncBaselineActions();
 }
 
 // Helper to create default action based on type
@@ -253,9 +245,9 @@ export function useActionEditor() {
   });
 
   const hasChanges = computed(() => {
-    const backendChanged = defaultBackend.value !== originalDefaultBackend.value;
+    const backendChanged = defaultBackend.value !== baselineDefaultBackend.value;
     // Check length changes (deletions)
-    if (actions.value.length !== originalActions.value.length) return true;
+    if (actions.value.length !== baselineActions.value.length) return true;
     // Check each action for modifications
     const actionsChanged = actions.value.some((_, idx) => hasActionChanged(idx));
     return backendChanged || actionsChanged;
@@ -264,7 +256,7 @@ export function useActionEditor() {
   return {
     // State
     actions,
-    originalActions,
+    baselineActions,
     defaultBackend,
     configPath,
     selectedIndex,
@@ -290,7 +282,6 @@ export function useActionEditor() {
     hasActionChanged,
     getChangedIndices,
     discardChanges,
-    discardAction,
-    syncOriginalActions,
+    syncBaselineActions,
   };
 }

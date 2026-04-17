@@ -1,16 +1,40 @@
 <script setup lang="ts">
-// Observe module - 待实现
+import { ref } from 'vue'
+import ObserveTabNav from '../../components/nav/ObserveTabNav.vue'
+import CaptureTabPanel from './CaptureTabPanel.vue'
+import CropTabPanel from './CropTabPanel.vue'
+import TransportTabPanel from './TransportTabPanel.vue'
+
+const activeTab = ref<'capture' | 'crop' | 'transport'>('capture')
 </script>
 
 <template>
   <div class="observe-page">
-    <h1>Observe 模块</h1>
-    <p>功能开发中...</p>
+    <ObserveTabNav v-model:active-tab="activeTab" />
+
+    <div class="observe-content">
+      <CaptureTabPanel v-if="activeTab === 'capture'" />
+      <CropTabPanel v-else-if="activeTab === 'crop'" />
+      <TransportTabPanel v-else-if="activeTab === 'transport'" />
+    </div>
   </div>
 </template>
 
 <style scoped>
 .observe-page {
-  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.observe-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.observe-content > :deep(*) {
+  height: 100%;
+  overflow: auto;
 }
 </style>

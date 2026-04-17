@@ -18,7 +18,10 @@ const { logs, clearLogs } = useLog()
       </main>
     </div>
 
-    <LogPanel :logs="logs" @clear="clearLogs" />
+    <LogPanel
+      :logs="logs"
+      @clear="clearLogs"
+    />
   </div>
 </template>
 

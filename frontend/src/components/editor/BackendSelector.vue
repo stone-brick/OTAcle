@@ -35,7 +35,7 @@ const visibleOptions = computed(() =>
         type="radio"
         :checked="modelValue === opt.value"
         @change="emit('update:modelValue', opt.value)"
-      />
+      >
       <span>{{ opt.label }}</span>
     </label>
   </div>

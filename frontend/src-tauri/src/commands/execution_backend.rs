@@ -2,7 +2,7 @@ use crate::act;
 use act::types::InputBackend;
 
 #[tauri::command]
-pub fn set_execution_backend(backend: String) -> Result<(), String> {
+pub fn act_set_execution_backend(backend: String) -> Result<(), String> {
     let backend = match backend.as_str() {
         "win32" => InputBackend::Win32,
         "enigo" => InputBackend::Enigo,
@@ -12,6 +12,6 @@ pub fn set_execution_backend(backend: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn get_execution_backend() -> Result<Option<InputBackend>, String> {
+pub fn act_get_execution_backend() -> Result<Option<InputBackend>, String> {
     Ok(act::config::get_execution_backend())
 }

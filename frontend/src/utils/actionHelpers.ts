@@ -43,9 +43,10 @@ export function formatActionDetail(item: ActionItem | undefined): string {
       return `${item.direction} ${item.amount}`;
     case 'delay':
       return `${item.duration_ms}ms`;
-    case 'text':
+    case 'text': {
       const content = item.content.length > 15 ? item.content.substring(0, 15) + '...' : item.content;
       return `"${content}"`;
+    }
     default:
       return '';
   }

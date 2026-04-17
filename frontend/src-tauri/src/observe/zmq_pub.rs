@@ -1,4 +1,6 @@
-//! ZMQ 发布者实现
+//! ZMQ PUB 模块
+//!
+//! 向 Python 端通过 ZeroMQ PUB 发送图像帧数据
 
 use std::thread;
 use std::sync::mpsc::Receiver;

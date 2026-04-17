@@ -1,11 +1,11 @@
 use crate::act;
 
 #[tauri::command]
-pub fn set_target_window(window: Option<String>) -> Result<(), String> {
+pub fn window_set_target(window: Option<String>) -> Result<(), String> {
     act::config::set_target_window(window)
 }
 
 #[tauri::command]
-pub fn get_target_window() -> Result<Option<i64>, String> {
+pub fn window_get_target() -> Result<Option<i64>, String> {
     Ok(act::config::get_target_window().map(|hwnd| hwnd as i64))
 }

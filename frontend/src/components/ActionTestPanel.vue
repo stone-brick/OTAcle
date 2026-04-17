@@ -10,7 +10,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  execute: [payload: { actionId: number; params: Record<string, any> }];
+  execute: [payload: { actionIdx: number; params: Record<string, any> }];
 }>();
 
 // Runtime params - key is param_name, value is the override value
@@ -112,7 +112,7 @@ function handleExecute() {
 
   const params = buildParams();
   emit('execute', {
-    actionId: props.selectedActionIndex,
+    actionIdx: props.selectedActionIndex,
     params,
   });
 }
@@ -135,31 +135,52 @@ function formatFieldName(fieldName: string): string {
     </div>
 
     <!-- No config loaded state -->
-    <div v-if="!isLoaded" class="empty-state">
+    <div
+      v-if="!isLoaded"
+      class="empty-state"
+    >
       <p>请先在「配置」标签页加载动作配置文件</p>
     </div>
 
     <template v-else>
       <!-- Target Window Info -->
       <div class="section">
-        <div class="section-title">目标窗口</div>
-        <div v-if="selectedWindow" class="window-info">
-          <div class="window-title">{{ selectedWindow.title }}</div>
+        <div class="section-title">
+          目标窗口
+        </div>
+        <div
+          v-if="selectedWindow"
+          class="window-info"
+        >
+          <div class="window-title">
+            {{ selectedWindow.title }}
+          </div>
           <div class="window-meta">
             <span class="hwnd">HWND: 0x{{ selectedWindow.hwnd.toString(16) }}</span>
-            <span class="process">{{ selectedWindow.processName }}</span>
+            <span class="process">{{ selectedWindow.process_name }}</span>
           </div>
         </div>
-        <div v-else class="no-window">
+        <div
+          v-else
+          class="no-window"
+        >
           未选择窗口（将使用前台窗口）
         </div>
       </div>
 
       <!-- Selected Action Info -->
-      <div v-if="selectedAction" class="section">
-        <div class="section-title">当前动作</div>
+      <div
+        v-if="selectedAction"
+        class="section"
+      >
+        <div class="section-title">
+          当前动作
+        </div>
         <div class="selected-action-info">
-          <span class="action-badge" :class="selectedAction.type">
+          <span
+            class="action-badge"
+            :class="selectedAction.type"
+          >
             {{ selectedAction.type }}
           </span>
           <span class="action-name">{{ selectedAction.name || '(无名称)' }}</span>
@@ -167,14 +188,22 @@ function formatFieldName(fieldName: string): string {
       </div>
 
       <!-- Variable Params Form -->
-      <div v-else class="section">
+      <div
+        v-else
+        class="section"
+      >
         <div class="no-selection">
           请在中间列表选择一个动作
         </div>
       </div>
 
-      <div v-if="selectedAction && variables.length > 0" class="section">
-        <div class="section-title">可调参数</div>
+      <div
+        v-if="selectedAction && variables.length > 0"
+        class="section"
+      >
+        <div class="section-title">
+          可调参数
+        </div>
         <div class="param-hint">
           以下参数可在运行时动态调整
         </div>
@@ -193,13 +222,16 @@ function formatFieldName(fieldName: string): string {
               :type="getFieldType(variable.field_name)"
               class="param-input"
               :placeholder="`默认值: ${getFieldValue(variable.field_name)}`"
-            />
+            >
           </div>
         </div>
       </div>
 
       <!-- No variables hint -->
-      <div v-else-if="selectedAction && variables.length === 0" class="section">
+      <div
+        v-else-if="selectedAction && variables.length === 0"
+        class="section"
+      >
         <div class="no-variables">
           此动作未配置可调参数
         </div>

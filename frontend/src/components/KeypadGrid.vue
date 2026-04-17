@@ -48,12 +48,32 @@ function handleComboClick(keys: string[]) {
       <h4>方向键</h4>
       <div class="arrow-keys">
         <div class="arrow-row">
-          <button class="key-btn" @click="handleKeyClick('up')">{{ arrowKeys[0].label }}</button>
+          <button
+            class="key-btn"
+            @click="handleKeyClick('up')"
+          >
+            {{ arrowKeys[0].label }}
+          </button>
         </div>
         <div class="arrow-row">
-          <button class="key-btn" @click="handleKeyClick('left')">{{ arrowKeys[1].label }}</button>
-          <button class="key-btn" @click="handleKeyClick('down')">{{ arrowKeys[2].label }}</button>
-          <button class="key-btn" @click="handleKeyClick('right')">{{ arrowKeys[3].label }}</button>
+          <button
+            class="key-btn"
+            @click="handleKeyClick('left')"
+          >
+            {{ arrowKeys[1].label }}
+          </button>
+          <button
+            class="key-btn"
+            @click="handleKeyClick('down')"
+          >
+            {{ arrowKeys[2].label }}
+          </button>
+          <button
+            class="key-btn"
+            @click="handleKeyClick('right')"
+          >
+            {{ arrowKeys[3].label }}
+          </button>
         </div>
       </div>
     </div>

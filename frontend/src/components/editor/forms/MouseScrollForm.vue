@@ -22,31 +22,39 @@ function updateField<K extends keyof MouseScrollActionItem>(field: K, value: Mou
       <label>滚动方向</label>
       <select
         :value="modelValue.direction"
-        @change="updateField('direction', ($event.target as HTMLSelectElement).value as ScrollDirection)"
         class="select-input"
+        @change="updateField('direction', ($event.target as HTMLSelectElement).value as ScrollDirection)"
       >
-        <option value="up">向上</option>
-        <option value="down">向下</option>
-        <option value="left">向左</option>
-        <option value="right">向右</option>
+        <option value="up">
+          向上
+        </option>
+        <option value="down">
+          向下
+        </option>
+        <option value="left">
+          向左
+        </option>
+        <option value="right">
+          向右
+        </option>
       </select>
     </div>
     <div class="form-field">
       <label>滚动量</label>
       <input
         :value="modelValue.amount"
-        @input="updateField('amount', Number(($event.target as HTMLInputElement).value))"
         type="number"
         min="1"
         class="number-input"
-      />
+        @input="updateField('amount', Number(($event.target as HTMLInputElement).value))"
+      >
       <span class="field-hint">Windows 默认滚轮 delta 为 120</span>
     </div>
     <div class="form-field">
       <label>输入后端</label>
       <BackendSelector
-        :modelValue="modelValue.backend ?? 'default'"
-        @update:modelValue="updateField('backend', $event === 'default' ? null : $event)"
+        :model-value="modelValue.backend ?? 'default'"
+        @update:model-value="updateField('backend', $event === 'default' ? null : $event)"
       />
     </div>
   </div>

@@ -33,27 +33,92 @@ async function handleClose() {
 
 <template>
   <div class="title-bar">
-    <div class="title-content" @mousedown="handleDrag">
+    <div
+      class="title-content"
+      @mousedown="handleDrag"
+    >
       <span class="title-text">OTAcle</span>
     </div>
     <div class="window-controls">
-      <button class="control-btn minimize" @click="handleMinimize" title="最小化">
-        <svg width="12" height="12" viewBox="0 0 12 12">
-          <rect x="1" y="5.5" width="10" height="1" fill="currentColor"/>
+      <button
+        class="control-btn minimize"
+        title="最小化"
+        @click="handleMinimize"
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+        >
+          <rect
+            x="1"
+            y="5.5"
+            width="10"
+            height="1"
+            fill="currentColor"
+          />
         </svg>
       </button>
-      <button class="control-btn maximize" @click="handleToggleMaximize" :title="isMaximized ? '还原' : '最大化'">
-        <svg v-if="isMaximized" width="12" height="12" viewBox="0 0 12 12">
-          <rect x="2" y="4" width="6" height="6" fill="none" stroke="currentColor" stroke-width="1"/>
-          <path d="M4 4V2h6v6h-2" fill="none" stroke="currentColor" stroke-width="1"/>
+      <button
+        class="control-btn maximize"
+        :title="isMaximized ? '还原' : '最大化'"
+        @click="handleToggleMaximize"
+      >
+        <svg
+          v-if="isMaximized"
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+        >
+          <rect
+            x="2"
+            y="4"
+            width="6"
+            height="6"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1"
+          />
+          <path
+            d="M4 4V2h6v6h-2"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1"
+          />
         </svg>
-        <svg v-else width="12" height="12" viewBox="0 0 12 12">
-          <rect x="1.5" y="1.5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1"/>
+        <svg
+          v-else
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+        >
+          <rect
+            x="1.5"
+            y="1.5"
+            width="9"
+            height="9"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1"
+          />
         </svg>
       </button>
-      <button class="control-btn close" @click="handleClose" title="关闭">
-        <svg width="12" height="12" viewBox="0 0 12 12">
-          <path d="M1 1L11 11M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      <button
+        class="control-btn close"
+        title="关闭"
+        @click="handleClose"
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+        >
+          <path
+            d="M1 1L11 11M11 1L1 11"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
         </svg>
       </button>
     </div>

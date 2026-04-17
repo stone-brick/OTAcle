@@ -47,7 +47,11 @@ function handleKeydown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <div v-if="show" class="modal-overlay" @click.self="handleCancel">
+  <div
+    v-if="show"
+    class="modal-overlay"
+    @click.self="handleCancel"
+  >
     <div class="modal">
       <h4>新建动作</h4>
       <div class="modal-form">
@@ -73,12 +77,23 @@ function handleKeydown(e: KeyboardEvent) {
             class="text-input"
             placeholder="输入动作名称..."
             @keydown="handleKeydown"
-          />
+          >
         </div>
       </div>
       <div class="modal-actions">
-        <button class="btn-secondary" @click="handleCancel">取消</button>
-        <button class="btn-primary" :disabled="!selectedType" @click="handleConfirm">创建</button>
+        <button
+          class="btn-secondary"
+          @click="handleCancel"
+        >
+          取消
+        </button>
+        <button
+          class="btn-primary"
+          :disabled="!selectedType"
+          @click="handleConfirm"
+        >
+          创建
+        </button>
       </div>
     </div>
   </div>

@@ -64,15 +64,31 @@ function handleKeydown(e: KeyboardEvent) {
           @focus="handleFocus"
           @blur="handleBlur"
           @keydown="handleKeydown"
-        />
-        <span v-if="isDirty" class="dirty-indicator">● 已修改</span>
+        >
+        <span
+          v-if="isDirty"
+          class="dirty-indicator"
+        >● 已修改</span>
       </div>
       <div class="header-actions-right">
-        <button class="btn-primary" @click="handleLoad">加载</button>
-        <button class="btn-secondary" :disabled="!isLoaded || !isDirty" @click="emit('save')">
+        <button
+          class="btn-primary"
+          @click="handleLoad"
+        >
+          加载
+        </button>
+        <button
+          class="btn-secondary"
+          :disabled="!isLoaded || !isDirty"
+          @click="emit('save')"
+        >
           保存
         </button>
-        <button class="btn-secondary" :disabled="!isLoaded" @click="emit('saveAs')">
+        <button
+          class="btn-secondary"
+          :disabled="!isLoaded"
+          @click="emit('saveAs')"
+        >
           另存为
         </button>
       </div>

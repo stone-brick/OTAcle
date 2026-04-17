@@ -1,4 +1,6 @@
-//! ZMQ PULL 模块 - 接收 Python 发送的控制命令
+//! ZMQ PULL 模块
+//!
+//! 接收 Python 通过 ZeroMQ PUSH 发送的控制命令
 
 use serde::Deserialize;
 use std::collections::HashMap;

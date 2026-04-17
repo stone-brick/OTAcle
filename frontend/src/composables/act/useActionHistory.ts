@@ -7,7 +7,7 @@ const historyCount = ref({ undo: 0, redo: 0 });
 // Refresh history count from backend
 async function refreshHistoryCount(): Promise<void> {
   try {
-    const [undo, redo] = await invoke<[number, number]>('get_history_status');
+    const [undo, redo] = await invoke<[number, number]>('act_get_history_status');
     historyCount.value = { undo, redo };
   } catch {
     historyCount.value = { undo: 0, redo: 0 };
@@ -20,7 +20,7 @@ export function useActionHistory(onMutated?: () => Promise<void>) {
     const { addLog } = useLog();
 
     try {
-      await invoke('undo_action');
+      await invoke('act_undo');
       await refreshHistoryCount();
       addLog(`撤销 (${historyCount.value.undo} 步可用)`, 'info');
       await onMutated?.();
@@ -34,7 +34,7 @@ export function useActionHistory(onMutated?: () => Promise<void>) {
     const { addLog } = useLog();
 
     try {
-      await invoke('redo_action');
+      await invoke('act_redo');
       await refreshHistoryCount();
       addLog(`重做 (${historyCount.value.redo} 步可用)`, 'info');
       await onMutated?.();

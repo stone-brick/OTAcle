@@ -3,7 +3,7 @@
 //! 根据动作 ID 执行配置的动作。
 
 use super::config;
-use super::types::{Action, DelayAction, InputBackend, KeyAction, KeySequenceAction, MouseButton, MouseClickAction, MouseMoveAction, MouseScrollAction, ScrollDirection, TextAction};
+use super::types::{ActionData, DelayAction, InputBackend, KeyAction, KeySequenceAction, MouseButton, MouseClickAction, MouseMoveAction, MouseScrollAction, ScrollDirection, TextAction};
 use crate::input;
 use enigo::{Axis, Button, Coordinate, Direction, Enigo, Mouse, Settings};
 use std::collections::HashMap;
@@ -49,7 +49,7 @@ impl ExecContext {
 
 /// 获取动作的有效后端
 /// 优先级：action.backend > execution_backend > default_backend
-fn resolve_backend(action: &Action, default_backend: InputBackend, execution_backend: Option<InputBackend>) -> InputBackend {
+fn resolve_backend(action: &ActionData, default_backend: InputBackend, execution_backend: Option<InputBackend>) -> InputBackend {
     // First priority: action's own backend setting
     if let Some(backend) = get_action_backend(action) {
         return backend;
@@ -65,15 +65,15 @@ fn resolve_backend(action: &Action, default_backend: InputBackend, execution_bac
 }
 
 /// 如果指定了则从动作获取后端
-fn get_action_backend(action: &Action) -> Option<InputBackend> {
+fn get_action_backend(action: &ActionData) -> Option<InputBackend> {
     match action {
-        Action::Key(a) => a.backend.clone(),
-        Action::KeySequence(a) => a.backend.clone(),
-        Action::MouseClick(a) => a.backend.clone(),
-        Action::MouseMove(a) => a.backend.clone(),
-        Action::MouseScroll(a) => a.backend.clone(),
-        Action::Delay(_) => None, // 延迟不使用后端
-        Action::Text(a) => a.backend.clone(),
+        ActionData::Key(a) => a.backend.clone(),
+        ActionData::KeySequence(a) => a.backend.clone(),
+        ActionData::MouseClick(a) => a.backend.clone(),
+        ActionData::MouseMove(a) => a.backend.clone(),
+        ActionData::MouseScroll(a) => a.backend.clone(),
+        ActionData::Delay(_) => None, // 延迟不使用后端
+        ActionData::Text(a) => a.backend.clone(),
     }
 }
 
@@ -128,22 +128,23 @@ fn send_text_event(text: &str, ctx: &ExecContext) -> Result<(), String> {
     }
 }
 
-/// 按 ID 执行动作
+/// 按索引执行动作
 ///
 /// # 参数
-/// * `action_id` - 要执行的动作的数字 ID
+/// * `action_idx` - 要执行的动作的数组索引
 /// * `default_backend` - 加载的配置中的默认后端（当动作没有后端时使用）
 ///
 /// 目标窗口和执行后端从全局配置读取。
 pub fn execute_action(
-    action_id: u32,
+    action_idx: u32,
     default_backend: InputBackend,
 ) -> Result<(), String> {
     // 获取配置
-    let actions = config::get_config()?;
+    let actions = config::get_action_list()?;
 
-    let action = actions.get(&action_id)
-        .ok_or_else(|| format!("Action {} not found in configuration", action_id))?;
+    let action_item = actions.get(action_idx as usize)
+        .ok_or_else(|| format!("Action {} not found in configuration", action_idx))?;
+    let action = &action_item.data;
 
     // 获取全局执行后端（如果设置则覆盖默认值）
     let execution_backend = config::get_execution_backend();
@@ -166,30 +167,30 @@ pub fn execute_action(
     execute_action_impl(action, &ctx)
 }
 
-/// 使用可选参数按 ID 执行动作以进行变量替换
+/// 使用可选参数按索引执行动作以进行变量替换
 ///
 /// # 参数
-/// * `action_id` - 要执行的动作的数字 ID
+/// * `action_idx` - 要执行的动作的数组索引
 /// * `params` - 用于动态字段替换的可选参数
 /// * `default_backend` - 加载的配置中的默认后端
 ///
 /// 目标窗口和执行后端从全局配置读取。
 pub fn execute_action_with_params(
-    action_id: u32,
+    action_idx: u32,
     params: HashMap<String, serde_json::Value>,
     default_backend: InputBackend,
 ) -> Result<(), String> {
     // 获取配置
-    let actions = config::get_config()?;
+    let actions = config::get_action_list()?;
 
-    let action = actions.get(&action_id)
-        .ok_or_else(|| format!("Action {} not found in configuration", action_id))?;
+    let action_item = actions.get(action_idx as usize)
+        .ok_or_else(|| format!("Action {} not found in configuration", action_idx))?;
 
     // 如果提供了则应用动态参数
     let resolved_action = if !params.is_empty() {
-        apply_params(action, &params)?
+        apply_params(&action_item.data, &params)?
     } else {
-        action.clone()
+        action_item.data.clone()
     };
 
     // 获取全局执行后端（如果设置则覆盖默认值）
@@ -226,7 +227,7 @@ pub fn execute_actions(
     params: HashMap<String, serde_json::Value>,
     default_backend: InputBackend,
 ) -> Result<(), String> {
-    let actions = config::get_config()?;
+    let actions = config::get_action_list()?;
 
     // 获取全局目标窗口（已经解析为 HWND）
     let target_hwnd = config::get_target_window();
@@ -235,13 +236,12 @@ pub fn execute_actions(
     let execution_backend = config::get_execution_backend();
 
     // 先收集所有需要执行的 action
-    let actions_to_execute: Vec<(u32, &Action)> = execute
+    let actions_to_execute: Vec<(u32, &ActionData)> = execute
         .iter()
         .enumerate()
         .filter(|(_, &should_exec)| should_exec)
         .filter_map(|(idx, _)| {
-            let action_idx = idx as u32;
-            actions.get(&action_idx).map(|a| (action_idx, a))
+            actions.get(idx).map(|item| (idx as u32, &item.data))
         })
         .collect();
 
@@ -270,11 +270,11 @@ pub fn execute_actions(
 ///
 /// 每个 Variable 条目将 param_name（来自 ZMQ params）映射到 field_name（动作结构字段）。
 /// 只有在 variables 中明确列出的字段才能在运行时覆盖。
-fn apply_params(action: &Action, params: &HashMap<String, serde_json::Value>) -> Result<Action, String> {
+fn apply_params(action: &ActionData, params: &HashMap<String, serde_json::Value>) -> Result<ActionData, String> {
     let mut resolved = action.clone();
 
     match &mut resolved {
-        Action::MouseMove(a) => {
+        ActionData::MouseMove(a) => {
             for var in &a.variables {
                 if let Some(value) = params.get(&var.param_name) {
                     match var.field_name.as_str() {
@@ -291,7 +291,7 @@ fn apply_params(action: &Action, params: &HashMap<String, serde_json::Value>) ->
                 // 如果未提供参数，使用配置中的默认值（不执行任何操作）
             }
         }
-        Action::MouseClick(a) => {
+        ActionData::MouseClick(a) => {
             for var in &a.variables {
                 if let Some(value) = params.get(&var.param_name) {
                     match var.field_name.as_str() {
@@ -333,15 +333,15 @@ fn apply_field<T: serde::de::DeserializeOwned + Clone>(
 }
 
 /// 执行动作实现
-fn execute_action_impl(action: &Action, ctx: &ExecContext) -> Result<(), String> {
+fn execute_action_impl(action: &ActionData, ctx: &ExecContext) -> Result<(), String> {
     match action {
-        Action::Key(key_action) => execute_key(key_action, ctx),
-        Action::KeySequence(seq_action) => execute_key_sequence(seq_action, ctx),
-        Action::MouseClick(click_action) => execute_mouse_click(click_action, ctx),
-        Action::MouseMove(move_action) => execute_mouse_move(move_action, ctx),
-        Action::MouseScroll(scroll_action) => execute_mouse_scroll(scroll_action, ctx),
-        Action::Delay(delay_action) => execute_delay(delay_action),
-        Action::Text(text_action) => execute_text(text_action, ctx),
+        ActionData::Key(key_action) => execute_key(key_action, ctx),
+        ActionData::KeySequence(seq_action) => execute_key_sequence(seq_action, ctx),
+        ActionData::MouseClick(click_action) => execute_mouse_click(click_action, ctx),
+        ActionData::MouseMove(move_action) => execute_mouse_move(move_action, ctx),
+        ActionData::MouseScroll(scroll_action) => execute_mouse_scroll(scroll_action, ctx),
+        ActionData::Delay(delay_action) => execute_delay(delay_action),
+        ActionData::Text(text_action) => execute_text(text_action, ctx),
     }
 }
 

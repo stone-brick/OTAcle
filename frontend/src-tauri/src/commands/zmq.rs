@@ -1,28 +1,31 @@
-use crate::state::ZmqState;
+use crate::act::zmq_state::ZMQ_STATE;
 use crate::act;
-use crate::zmq_pull::{ZmqCommand, ZmqPuller};
+use crate::act::zmq_pull::{ZmqCommand, ZmqPuller};
 use tauri::Emitter;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use tauri::State;
 
 #[tauri::command]
-pub fn act_zmq_start(
+pub fn zmq_start(
     addr: String,
-    state: State<'_, ZmqState>,
     app: tauri::AppHandle,
 ) -> Result<(), String> {
     // 停止现有的接收者（如果有）
     {
-        let mut running_guard = state.running.lock().map_err(|_| "Lock failed")?;
-        if let Some(running) = running_guard.take() {
-            running.store(false, Ordering::SeqCst);
+        let mut state_guard = ZMQ_STATE.lock().map_err(|_| "Lock failed")?;
+        if let Some(zmq_state) = state_guard.as_mut() {
+            let mut running_guard = zmq_state.running.lock().map_err(|_| "Lock failed")?;
+            if let Some(running) = running_guard.take() {
+                running.store(false, Ordering::SeqCst);
+            }
         }
     }
 
     // 保存新地址
     {
-        let mut addr_guard = state.address.lock().map_err(|_| "Lock failed")?;
+        let mut state_guard = ZMQ_STATE.lock().map_err(|_| "Lock failed")?;
+        let zmq_state = state_guard.get_or_insert_with(crate::act::zmq_state::ZmqState::default);
+        let mut addr_guard = zmq_state.address.lock().map_err(|_| "Lock failed")?;
         *addr_guard = addr.clone();
     }
 
@@ -38,7 +41,9 @@ pub fn act_zmq_start(
 
     // 保存运行标志
     {
-        let mut running_guard = state.running.lock().map_err(|_| "Lock failed")?;
+        let mut state_guard = ZMQ_STATE.lock().map_err(|_| "Lock failed")?;
+        let zmq_state = state_guard.as_mut().unwrap();
+        let mut running_guard = zmq_state.running.lock().map_err(|_| "Lock failed")?;
         *running_guard = Some(running_for_state);
     }
 
@@ -72,21 +77,28 @@ pub fn act_zmq_start(
 }
 
 #[tauri::command]
-pub fn act_zmq_stop(state: State<'_, ZmqState>) -> Result<(), String> {
-    let mut running_guard = state.running.lock().map_err(|_| "Lock failed")?;
-    if let Some(running) = running_guard.take() {
-        running.store(false, Ordering::SeqCst);
+pub fn zmq_stop() -> Result<(), String> {
+    let mut state_guard = ZMQ_STATE.lock().map_err(|_| "Lock failed")?;
+    if let Some(zmq_state) = state_guard.as_mut() {
+        let mut running_guard = zmq_state.running.lock().map_err(|_| "Lock failed")?;
+        if let Some(running) = running_guard.take() {
+            running.store(false, Ordering::SeqCst);
+        }
     }
     Ok(())
 }
 
 #[tauri::command]
-pub fn act_zmq_status(state: State<'_, ZmqState>) -> Result<(bool, String), String> {
-    let running_guard = state.running.lock().map_err(|_| "Lock failed")?;
-    let addr_guard = state.address.lock().map_err(|_| "Lock failed")?;
+pub fn zmq_get_status() -> Result<(bool, String), String> {
+    let state_guard = ZMQ_STATE.lock().map_err(|_| "Lock failed")?;
 
-    let connected = running_guard.is_some();
-    let address = addr_guard.clone();
+    let (connected, address) = if let Some(zmq_state) = state_guard.as_ref() {
+        let running_guard = zmq_state.running.lock().map_err(|_| "Lock failed")?;
+        let addr_guard = zmq_state.address.lock().map_err(|_| "Lock failed")?;
+        (running_guard.is_some(), addr_guard.clone())
+    } else {
+        (false, "tcp://127.0.0.1:5555".to_string())
+    };
 
     Ok((connected, address))
 }

@@ -160,10 +160,16 @@ onUnmounted(() => {
   <div class="transport-panel">
     <!-- Preview area (left side) -->
     <div class="preview-area">
-      <canvas ref="canvasRef" class="preview-canvas" />
+      <canvas
+        ref="canvasRef"
+        class="preview-canvas"
+      />
 
       <!-- Hint when not observing -->
-      <div v-if="!isObserving" class="preview-placeholder">
+      <div
+        v-if="!isObserving"
+        class="preview-placeholder"
+      >
         <p>请先在"截图配置"中启动观察</p>
       </div>
     </div>
@@ -176,10 +182,10 @@ onUnmounted(() => {
       <div class="config-group">
         <label>ZMQ 地址</label>
         <input
-          type="text"
           v-model="config.zmq.address"
+          type="text"
           placeholder="tcp://127.0.0.1:5556"
-        />
+        >
       </div>
 
       <!-- FPS indicator -->
@@ -195,7 +201,10 @@ onUnmounted(() => {
         <label>裁切区域</label>
         <div class="crop-info">
           <span>{{ config.crop_regions.length }} 个区域</span>
-          <span v-if="config.crop_regions.length > 0" class="crop-hint">
+          <span
+            v-if="config.crop_regions.length > 0"
+            class="crop-hint"
+          >
             （在"裁切配置"中编辑）
           </span>
         </div>
@@ -205,9 +214,24 @@ onUnmounted(() => {
       <div class="config-group">
         <label>配置文件</label>
         <div class="config-actions">
-          <button class="config-btn" @click="handleLoad">加载</button>
-          <button class="config-btn" @click="handleSave">保存</button>
-          <button class="config-btn" @click="handleSaveAs">另存为</button>
+          <button
+            class="config-btn"
+            @click="handleLoad"
+          >
+            加载
+          </button>
+          <button
+            class="config-btn"
+            @click="handleSave"
+          >
+            保存
+          </button>
+          <button
+            class="config-btn"
+            @click="handleSaveAs"
+          >
+            另存为
+          </button>
         </div>
       </div>
 
