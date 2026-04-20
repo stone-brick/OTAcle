@@ -2,6 +2,9 @@ import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import type { ObserveConfig, CropRegion, FrameMessage, ObserveStatus, SessionStatus, ObserveGlobalStats } from '../types'
+import { useLog } from './useLog'
+import { useProjectEvents, type ProjectEvent } from './useProjectEvents'
+import { useProject } from './useProject'
 
 // 状态
 const isObserving = ref(false)
@@ -15,13 +18,20 @@ const fullStatus = ref<ObserveStatus | null>(null)
 // 用于事件监听的清理函数
 let unlistenFrame: UnlistenFn | null = null
 let unlistenError: UnlistenFn | null = null
+let unlistenPubStarted: UnlistenFn | null = null
+let unlistenPubError: UnlistenFn | null = null
 // 标记是否正在监听
 let isListeningActive = false
+
+// 项目事件监听器
+let unsubscribeProject: (() => void) | null = null
 
 // 状态轮询
 let statusPollInterval: ReturnType<typeof setInterval> | null = null
 
 export function useObserve() {
+  const { addLog } = useLog()
+
   // 开始状态轮询
   function startStatusPolling() {
     if (statusPollInterval) return
@@ -76,8 +86,10 @@ export function useObserve() {
       isObserving.value = true
       await fetchStatus()
       startStatusPolling()
+      addLog(`观察已启动，窗口: ${windowId}`, 'success', 'observe')
     } catch (e) {
       isObserving.value = false
+      addLog(`启动观察失败: ${e}`, 'error', 'observe')
       throw e
     }
   }
@@ -86,11 +98,12 @@ export function useObserve() {
   async function stopObserve(): Promise<void> {
     try {
       await invoke('observe_stop')
+    } catch (e) {
+      addLog(`停止观察失败: ${e}`, 'error', 'observe')
     } finally {
       isObserving.value = false
       stopStatusPolling()
       await fetchStatus()
-      // 确保停止后清理监听器
       stopListening()
     }
   }
@@ -104,7 +117,7 @@ export function useObserve() {
       isObserving.value = Object.values(status.sessions).some(s => s.running)
       return status
     } catch (e) {
-      console.error('Failed to get observe status:', e)
+      addLog('获取观察状态失败', 'error', 'observe')
       return null
     }
   }
@@ -124,9 +137,14 @@ export function useObserve() {
     try {
       const loaded = await invoke<ObserveConfig>('observe_load_config', { path })
       config.value = loaded
+      addLog(`已加载观察配置: ${path}`, 'success', 'observe')
     } catch (e) {
-      console.error('Failed to load observe config:', e)
-      throw e
+      // 配置文件不存在时使用默认配置（自动加载场景下不抛出错误）
+      config.value = {
+        capture: { frame_rate: 20, target_width: 640, target_height: 480 },
+        crop_regions: []
+      }
+      addLog('观察配置文件不存在，使用默认配置', 'info', 'observe')
     }
   }
 
@@ -134,8 +152,9 @@ export function useObserve() {
   async function saveConfig(path: string): Promise<void> {
     try {
       await invoke('observe_save_config', { path, config: config.value })
+      addLog(`已保存观察配置: ${path}`, 'success', 'observe')
     } catch (e) {
-      console.error('Failed to save observe config:', e)
+      addLog(`保存观察配置失败: ${e}`, 'error', 'observe')
       throw e
     }
   }
@@ -168,8 +187,18 @@ export function useObserve() {
     })
 
     // 监听错误事件
-    unlistenError = await listen<{ error: string }>('observe:error', (event) => {
-      console.error('Observe error:', event.payload.error)
+    unlistenError = await listen<{ error: string }>('observe:error', () => {
+      addLog('观察捕获发生错误', 'error', 'observe')
+    })
+
+    // 监听帧传输启动事件
+    unlistenPubStarted = await listen('observe:pub_started', () => {
+      addLog('图像帧传输已启动', 'success', 'observe')
+    })
+
+    // 监听帧传输错误事件
+    unlistenPubError = await listen('observe:pub_error', () => {
+      addLog('图像帧传输发生错误', 'error', 'observe')
     })
 
     isListeningActive = true
@@ -180,9 +209,41 @@ export function useObserve() {
     if (!isListeningActive) return
     unlistenFrame?.()
     unlistenError?.()
+    unlistenPubStarted?.()
+    unlistenPubError?.()
     unlistenFrame = null
     unlistenError = null
+    unlistenPubStarted = null
+    unlistenPubError = null
     isListeningActive = false
+  }
+
+  // 初始化项目事件监听（项目打开时自动加载配置）
+  function initProjectEventListener(): void {
+    if (unsubscribeProject) {
+      unsubscribeProject()
+    }
+
+    const { onProjectEvent } = useProjectEvents()
+    const { getProjectObserveConfigPath } = useProject()
+
+    unsubscribeProject = onProjectEvent(async (event: ProjectEvent) => {
+      if (event.type === 'opened' && event.project) {
+        const cfgPath = await getProjectObserveConfigPath()
+        if (cfgPath) {
+          try {
+            await loadConfig(cfgPath)
+          } catch {
+            // 静默忽略（loadConfig 内部已处理）
+          }
+        }
+      } else if (event.type === 'closed') {
+        config.value = {
+          capture: { frame_rate: 20, target_width: 640, target_height: 480 },
+          crop_regions: []
+        }
+      }
+    })
   }
 
   return {
@@ -208,5 +269,6 @@ export function useObserve() {
     removeCropRegion,
     startListening,
     stopListening,
+    initProjectEventListener,
   }
 }

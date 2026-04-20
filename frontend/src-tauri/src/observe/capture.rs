@@ -8,6 +8,7 @@ use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
+use log::error;
 use base64::Engine;
 use tauri::{AppHandle, Emitter};
 
@@ -71,11 +72,18 @@ impl GraphicsCaptureApiHandler for WgcFrameHandler {
         }
 
         // 2. 处理帧（使用 process_frame 消除重复代码）
-        let frame_msg = process_frame(
+        let frame_msg = match process_frame(
             frame,
             &self.data.config,
             &self.data.frame_id,
-        )?;
+        ) {
+            Ok(msg) => msg,
+            Err(e) => {
+                error!("Frame processing failed: {}", e);
+                let _ = self.data.app.emit("observe:error", &serde_json::json!({ "error": e }));
+                return Ok(());
+            }
+        };
 
         // 5. 更新统计
         self.data.stats.add_frames_captured(1);
@@ -92,9 +100,10 @@ impl GraphicsCaptureApiHandler for WgcFrameHandler {
         let elapsed = now.duration_since(*last_time).as_millis() as u64;
         if elapsed >= PREVIEW_THROTTLE_MS {
             *last_time = now;
-            drop(last_time); // 在发送前释放锁
+            drop(last_time);
             if let Err(e) = self.data.app.emit("observe:frame", &frame_msg) {
-                eprintln!("Tauri emit error: {}", e);
+                error!("Tauri emit error: {}", e);
+                let _ = self.data.app.emit("observe:error", &serde_json::json!({ "error": format!("Frame emit failed: {}", e) }));
             }
         }
 

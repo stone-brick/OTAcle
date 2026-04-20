@@ -111,11 +111,15 @@ export interface ActionConfigData {
   actions: ActionItem[];
 }
 
+// 日志来源
+export type LogSource = 'system' | 'comm' | 'observe' | 'action' | 'window';
+
 // 日志条目
 export interface LogEntry {
   time: string;
   message: string;
-  type: 'info' | 'success' | 'error';
+  type: 'info' | 'warn' | 'success' | 'error';
+  source: LogSource;
 }
 
 // 应用状态
@@ -158,7 +162,7 @@ export interface CropBlock {
   image: string;  // Base64 编码
 }
 
-// 通过 ZMQ 和 Tauri 事件发送的帧消息
+// 通过通信和 Tauri 事件发送的帧消息
 export interface FrameMessage {
   width: number;
   height: number;
@@ -176,8 +180,8 @@ export interface SessionStatus {
   frames_captured: number;
   bytes_sent: number;
   errors_count: number;
-  zmq_connected: boolean;
-  zmq_messages_sent: number;
+  sender_connected: boolean;
+  messages_sent: number;
 }
 
 // Observe 全局统计

@@ -73,7 +73,7 @@ function updateField(index: number, field: 'param_name' | 'field_name', value: s
         + 添加参数
       </button>
     </div>
-    <span class="field-hint">定义可动态覆盖的字段和参数名称，运行时通过 ZMQ params 传值</span>
+    <span class="field-hint">定义可动态覆盖的字段和参数名称，运行时通过通信参数传值</span>
   </div>
 </template>
 

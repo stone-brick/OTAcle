@@ -3,6 +3,8 @@ import { invoke } from '@tauri-apps/api/core';
 import type { ActionItem, InputBackend } from '../../types';
 import { useLog } from '../useLog';
 import { useActionHistory } from './useActionHistory';
+import { useProjectEvents, type ProjectEvent } from '../useProjectEvents';
+import { useProject } from '../useProject';
 
 const actions = ref<ActionItem[]>([]);
 const baselineActions = ref<ActionItem[]>([]);  // 基准线快照
@@ -14,6 +16,9 @@ const isLoaded = ref(false);
 
 // 组合 useActionHistory
 const { refreshHistoryCount } = useActionHistory();
+
+// 项目事件监听器清理函数
+let unsubscribeProject: (() => void) | null = null;
 
 // 从后端刷新动作列表（导出供 undo/redo 使用）
 async function refreshActionList(): Promise<void> {
@@ -49,10 +54,13 @@ async function loadConfig(path: string): Promise<void> {
     await invoke('act_clear_history');
     await refreshHistoryCount();
 
-    addLog(`已加载配置文件: ${path}`, 'success');
-  } catch (e) {
-    addLog(`加载配置文件失败: ${e}`, 'error');
-    throw e;
+    addLog(`已加载配置文件: ${path}`, 'success', 'action');
+  } catch {
+    // 配置文件不存在时使用默认配置（自动加载场景下不抛出错误）
+    actions.value = [];
+    baselineActions.value = [];
+    isLoaded.value = false;
+    configPath.value = path;
   }
 }
 
@@ -78,9 +86,9 @@ async function saveConfig(path?: string): Promise<void> {
     baselineDefaultBackend.value = defaultBackend.value;
     // 历史不会被清除 - 用户保存后仍可以撤销/重做
 
-    addLog(`已保存配置文件: ${savePath}`, 'success');
+    addLog(`已保存配置文件: ${savePath}`, 'success', 'action');
   } catch (e) {
-    addLog(`保存配置文件失败: ${e}`, 'error');
+    addLog(`保存配置文件失败: ${e}`, 'error', 'action');
     throw e;
   }
 }
@@ -102,10 +110,10 @@ async function createAction(type: string, name?: string): Promise<number> {
     await refreshActionList();
     await refreshHistoryCount();
 
-    addLog(`已创建动作 #${index}: ${name || type}`, 'success');
+    addLog(`已创建动作 #${index}: ${name || type}`, 'success', 'action');
     return index;
   } catch (e) {
-    addLog(`创建动作失败: ${e}`, 'error');
+    addLog(`创建动作失败: ${e}`, 'error', 'action');
     throw e;
   }
 }
@@ -125,9 +133,9 @@ async function updateAction(index: number, action: ActionItem, name?: string): P
     await refreshActionList();
     await refreshHistoryCount();
 
-    addLog(`已更新动作 #${index}`, 'success');
+    addLog(`已更新动作 #${index}`, 'success', 'action');
   } catch (e) {
-    addLog(`更新动作失败: ${e}`, 'error');
+    addLog(`更新动作失败: ${e}`, 'error', 'action');
     throw e;
   }
 }
@@ -148,9 +156,9 @@ async function deleteAction(index: number): Promise<void> {
       selectedIndex.value = actions.value.length > 0 ? actions.value.length - 1 : null;
     }
 
-    addLog(`已删除动作`, 'success');
+    addLog(`已删除动作`, 'success', 'action');
   } catch (e) {
-    addLog(`删除动作失败: ${e}`, 'error');
+    addLog(`删除动作失败: ${e}`, 'error', 'action');
     throw e;
   }
 }
@@ -172,7 +180,7 @@ async function setDefaultBackend(backend: InputBackend): Promise<void> {
     defaultBackend.value = backend;
     await refreshHistoryCount();
   } catch (e) {
-    addLog(`设置默认后端失败: ${e}`, 'error');
+    addLog(`设置默认后端失败: ${e}`, 'error', 'action');
   }
 }
 
@@ -210,10 +218,37 @@ function syncBaselineActions(): void {
 
 // 丢弃所有更改 - 恢复到原始状态（调用后端以支持撤销/重做）
 async function discardChanges(): Promise<void> {
+  const { addLog } = useLog()
   await invoke('act_discard_all');
   await refreshActionList();
   await refreshHistoryCount();
   syncBaselineActions();
+  addLog('已丢弃所有未保存的更改', 'info', 'action')
+}
+
+// 初始化项目事件监听（项目打开时自动加载配置）
+function initProjectEventListener(): void {
+  if (unsubscribeProject) {
+    unsubscribeProject();
+  }
+
+  const { onProjectEvent } = useProjectEvents();
+  const { getProjectActionsConfigPath } = useProject();
+
+  unsubscribeProject = onProjectEvent(async (event: ProjectEvent) => {
+    if (event.type === 'opened' && event.project) {
+      const configPath = await getProjectActionsConfigPath();
+      if (configPath) {
+        try {
+          await loadConfig(configPath);
+        } catch {
+          // 静默忽略（loadConfig 内部已处理）
+        }
+      }
+    } else if (event.type === 'closed') {
+      clearEditor();
+    }
+  });
 }
 
 // 根据类型创建默认动作的帮助函数
@@ -277,6 +312,7 @@ export function useActionEditor() {
     setDefaultBackend,
     clearEditor,
     refreshActionList,
+    initProjectEventListener,
 
     // Change tracking
     hasActionChanged,

@@ -1,5 +1,5 @@
 use crate::communication;
-use crate::communication::types::ZmqPubState;
+use crate::communication::types::PubState;
 use crate::input;
 use crate::observe;
 use crate::observe::state::{GLOBAL_STATS, SessionHandle};
@@ -32,18 +32,19 @@ pub fn observe_start(
     let running_for_pub = running.clone();
     let running_for_capture = running.clone();
 
-    // Create ZMQ state
-    let zmq_state = Arc::new(Mutex::new(ZmqPubState::new()));
-    let zmq_state_clone = zmq_state.clone();
+    // Create PUB state
+    let pub_state = Arc::new(Mutex::new(PubState::new()));
+    let pub_state_clone = pub_state.clone();
 
-    // Create ZMQ channel and publisher
-    let (zmq_tx, zmq_rx) = std::sync::mpsc::channel();
-    let zmq_addr = communication::get_pub_address()?;
-    let zmq_handle = communication::start_publisher(
-        &zmq_addr,
+    // 创建帧通道和发布线程
+    let (frame_tx, frame_rx) = std::sync::mpsc::channel();
+    let pub_addr = communication::get_pub_address()?;
+    let publisher_handle = communication::start_publisher(
+        &pub_addr,
         running_for_pub,
-        zmq_rx,
-        zmq_state_clone,
+        frame_rx,
+        pub_state_clone,
+        app.clone(),
     )?;
 
     // Create session stats
@@ -54,7 +55,7 @@ pub fn observe_start(
         hwnd,
         config.clone(),
         app,
-        zmq_tx,
+        frame_tx,
         running_for_capture,
         stats,
     )?;
@@ -65,7 +66,7 @@ pub fn observe_start(
         config,
         running,
         Some(capture_handle),
-        Some(zmq_handle),
+        Some(publisher_handle),
     );
 
     // Register session
@@ -97,8 +98,8 @@ pub fn observe_stop() -> Result<(), String> {
         .drain()
         .map(|(_hwnd, mut handle)| {
             let capture = handle.capture_handle.take();
-            let zmq = handle.zmq_handle.take();
-            (capture, zmq)
+            let publisher = handle.publisher_handle.take();
+            (capture, publisher)
         })
         .collect();
 
@@ -110,13 +111,13 @@ pub fn observe_stop() -> Result<(), String> {
     // 锁在这里自动释放
 
     // 3. 等待所有线程结束
-    //    - zmq_pub 线程会在收到 Disconnected 后退出（channel 被 drop）
+    //    - publisher 线程会在收到 Disconnected 后退出（channel 被 drop）
     //    - capture 线程会在下一帧到达时检查 running == false 并退出
-    for (capture_handle, zmq_handle) in handles {
+    for (capture_handle, publisher_handle) in handles {
         if let Some(h) = capture_handle {
             let _ = h.join();
         }
-        if let Some(h) = zmq_handle {
+        if let Some(h) = publisher_handle {
             let _ = h.join();
         }
     }

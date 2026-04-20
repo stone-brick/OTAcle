@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import ActTabNav from '../../components/nav/ActTabNav.vue';
-import ZmqMonitor from '../../components/ZmqMonitor.vue';
+import CommPanel from '../../components/CommPanel.vue';
 import ConfigPanel from './ConfigPanel.vue';
 import WindowsTabPanel from './WindowsTabPanel.vue';
 import { useWindows } from '../../composables/useWindows';
@@ -114,7 +114,7 @@ async function handleExecuteAction(payload: { actionIdx: number; params: Record<
     <ActTabNav v-model:active-tab="activeTab" />
 
     <div class="act-content">
-      <ZmqMonitor v-if="activeTab === 'monitor'" />
+      <CommPanel v-if="activeTab === 'monitor'" />
 
       <ConfigPanel
         v-else-if="activeTab === 'config'"

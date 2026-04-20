@@ -2,6 +2,7 @@
 //!
 //! 提供捕获帧的缩放和裁剪操作。
 
+use log::error;
 use base64::Engine;
 use image::{ImageBuffer, Rgba};
 use crate::observe::types::CropRegion;
@@ -33,7 +34,7 @@ impl ImageProcessor {
         let img: ImageBuffer<Rgba<u8>, _> = match ImageBuffer::from_raw(src_width, src_height, data.to_vec()) {
             Some(img) => img,
             None => {
-                eprintln!("Failed to create image buffer from raw data: expected {} bytes ({}x{}x4), got {} bytes",
+                error!("Failed to create image buffer from raw data: expected {} bytes ({}x{}x4), got {} bytes",
                     src_width as usize * src_height as usize * 4, src_width, src_height, data.len());
                 return Vec::new();
             }
@@ -69,7 +70,7 @@ impl ImageProcessor {
         let img: ImageBuffer<Rgba<u8>, _> = match ImageBuffer::from_raw(width, height, data.to_vec()) {
             Some(img) => img,
             None => {
-                eprintln!("Failed to create image buffer for cropping");
+                error!("Failed to create image buffer for cropping");
                 return Vec::new();
             }
         };

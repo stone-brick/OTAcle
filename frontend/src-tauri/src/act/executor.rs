@@ -7,6 +7,7 @@ use super::types::{ActionData, DelayAction, InputBackend, KeyAction, KeySequence
 use crate::input;
 use enigo::{Axis, Button, Coordinate, Direction, Enigo, Mouse, Settings};
 use std::collections::HashMap;
+use log::{info, error};
 
 /// 按键事件之间的默认间隔（毫秒）
 const DEFAULT_KEY_INTERVAL_MS: u64 = 2;
@@ -158,7 +159,16 @@ pub fn execute_action(
     let ctx = ExecContext::new(resolved_backend, target_hwnd);
 
     // 执行动作
-    execute_action_impl(action, &ctx)
+    match execute_action_impl(action, &ctx) {
+        Ok(()) => {
+            info!("Action {} executed successfully", action_idx);
+            Ok(())
+        }
+        Err(e) => {
+            error!("Action {} failed: {}", action_idx, e);
+            Err(e)
+        }
+    }
 }
 
 /// 使用可选参数按索引执行动作以进行变量替换
@@ -225,17 +235,23 @@ pub fn execute_actions(
     // 获取全局目标窗口（已经解析为 HWND）
     let target_hwnd = config::get_target_window();
 
-    // 先收集所有需要执行的 action
-    let actions_to_execute: Vec<(u32, &ActionData)> = execute
+    // 先收集所有需要执行的 action 索引
+    let actions_to_execute: Vec<u32> = execute
         .iter()
         .enumerate()
         .filter(|(_, &should_exec)| should_exec)
         .filter_map(|(idx, _)| {
-            actions.get(idx).map(|item| (idx as u32, &item.data))
+            if idx < actions.len() {
+                Some(idx as u32)
+            } else {
+                None
+            }
         })
         .collect();
 
-    for (_action_idx, action) in actions_to_execute {
+    let total = actions_to_execute.len();
+    for &action_idx in &actions_to_execute {
+        let action = &actions.get(action_idx as usize).expect("action not found").data;
         // 如果提供了则应用动态参数
         let resolved_action = if !params.is_empty() {
             apply_params(action, &params)?
@@ -250,9 +266,13 @@ pub fn execute_actions(
         let ctx = ExecContext::new(resolved_backend, target_hwnd);
 
         // 执行
-        execute_action_impl(&resolved_action, &ctx)?;
+        if let Err(e) = execute_action_impl(&resolved_action, &ctx) {
+            error!("Batch action failed: {}", e);
+            return Err(e);
+        }
     }
 
+    info!("Batch actions executed: {} actions", total);
     Ok(())
 }
 

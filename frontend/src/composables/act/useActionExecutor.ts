@@ -12,9 +12,9 @@ async function executeActionWithParams(
       actionIdx,
       params,
     });
-    addLog(`执行动作 #${actionIdx} 成功`, 'success');
+    addLog(`执行动作 #${actionIdx} 成功`, 'success', 'action');
   } catch (e) {
-    addLog(`执行动作 #${actionIdx} 失败: ${e}`, 'error');
+    addLog(`执行动作 #${actionIdx} 失败: ${e}`, 'error', 'action');
     throw e;
   }
 }
@@ -24,9 +24,9 @@ async function setTargetWindow(window: string | null): Promise<void> {
 
   try {
     await invoke('window_set_target', { window });
-    addLog(`目标窗口已设置为: ${window ?? '(空)'}`, 'success');
+    addLog(`目标窗口已设置为: ${window ?? '(空)'}`, 'success', 'action');
   } catch (e) {
-    addLog(`设置目标窗口失败: ${e}`, 'error');
+    addLog(`设置目标窗口失败: ${e}`, 'error', 'action');
   }
 }
 

@@ -22,10 +22,10 @@ export function useActionHistory(onMutated?: () => Promise<void>) {
     try {
       await invoke('act_undo');
       await refreshHistoryCount();
-      addLog(`撤销 (${historyCount.value.undo} 步可用)`, 'info');
+      addLog(`撤销 (${historyCount.value.undo} 步可用)`, 'info', 'action');
       await onMutated?.();
     } catch (e) {
-      addLog(`撤销失败: ${e}`, 'error');
+      addLog(`撤销失败: ${e}`, 'error', 'action');
     }
   }
 
@@ -36,10 +36,10 @@ export function useActionHistory(onMutated?: () => Promise<void>) {
     try {
       await invoke('act_redo');
       await refreshHistoryCount();
-      addLog(`重做 (${historyCount.value.redo} 步可用)`, 'info');
+      addLog(`重做 (${historyCount.value.redo} 步可用)`, 'info', 'action');
       await onMutated?.();
     } catch (e) {
-      addLog(`重做失败: ${e}`, 'error');
+      addLog(`重做失败: ${e}`, 'error', 'action');
     }
   }
 

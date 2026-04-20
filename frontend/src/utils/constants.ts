@@ -3,8 +3,11 @@
  * 集中管理硬编码的"魔法值"
  */
 
-// ZMQ 消息限制
-export const MAX_ZMQ_MESSAGES = 100;
+// 通信消息限制
+export const MAX_COMM_MESSAGES = 100;
+
+// 操作日志条数上限
+export const MAX_LOG_ENTRIES = 200;
 
 // 动画过渡时长
 export const TRANSITION_DURATION = '0.15s';

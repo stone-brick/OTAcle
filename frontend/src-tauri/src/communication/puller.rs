@@ -1,22 +1,22 @@
-//! ZMQ PULL 模块
+//! PULL 模块
 //!
-//! 从 Python 端接收 ZeroMQ PUSH 发送的控制命令
+//! 从 Python 端接收控制命令
 
-use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 use zmq::{Context, Socket};
+use log::{debug, info};
 
-use crate::communication::types::ZmqCommand;
+use crate::communication::types::Command;
 
-/// ZMQ 接收者
-pub struct ZmqPuller {
+/// PULL 接收者
+pub struct Puller {
     socket: Socket,
 }
 
-impl ZmqPuller {
-    /// 创建新的 ZMQ 接收者
+impl Puller {
+    /// 创建新的 PULL 接收者
     pub fn new(addr: &str) -> Result<Self, String> {
         let ctx = Context::new();
         let socket = ctx
@@ -35,9 +35,10 @@ impl ZmqPuller {
     /// on_message: 收到消息时的回调
     pub fn start<F>(self, running: Arc<AtomicBool>, on_message: F) -> Result<(), String>
     where
-        F: Fn(ZmqCommand) + Send + 'static,
+        F: Fn(Command) + Send + 'static,
     {
         running.store(true, Ordering::SeqCst);
+        info!("PULL listener started");
 
         let socket = self.socket;
         let running_clone = running.clone();
@@ -47,20 +48,24 @@ impl ZmqPuller {
                 // 尝试接收消息
                 match socket.recv_string(zmq::DONTWAIT) {
                     Ok(Ok(data)) => {
-                        if let Ok(cmd) = serde_json::from_str::<ZmqCommand>(&data) {
+                        if let Ok(cmd) = serde_json::from_str::<Command>(&data) {
+                            debug!("PULL received command: {} actions", cmd.execute.len());
                             on_message(cmd);
                         }
                     }
                     Ok(Err(_)) => {
                         // 空消息，忽略
+                        debug!("Empty message received, ignored");
                     }
-                    Err(_e) => {
-                        // 没有消息，忽略
+                    Err(e) => {
+                        // 没有消息，忽略（EAGAIN 是正常情况）
+                        debug!("ZMQ receive would block: {}", e);
                     }
                 }
 
                 thread::sleep(std::time::Duration::from_millis(10));
             }
+            info!("PULL listener stopped");
         });
 
         Ok(())

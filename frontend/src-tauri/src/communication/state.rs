@@ -5,7 +5,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use super::types::{CommConfig, ZmqConnectionState, ZmqPubState};
+use super::types::{CommConfig, ConnectionState, PubState};
 
 lazy_static! {
     /// 通信配置
@@ -15,23 +15,23 @@ lazy_static! {
     pub static ref COMM_PULL_RUNNING: Mutex<Option<Arc<AtomicBool>>> = Mutex::new(None);
 
     /// PULL 状态（地址和运行标志）
-    pub static ref ZMQ_PULL_STATE: Mutex<Option<ZmqPullState>> = Mutex::new(None);
+    pub static ref PULL_STATE: Mutex<Option<PullState>> = Mutex::new(None);
 
     /// PUB 发布者运行标志
     pub static ref COMM_PUB_RUNNING: Mutex<Option<Arc<AtomicBool>>> = Mutex::new(None);
 
     /// PUB 发布者状态
-    pub static ref COMM_PUB_STATE: Mutex<Option<ZmqPubState>> = Mutex::new(None);
+    pub static ref COMM_PUB_STATE: Mutex<Option<PubState>> = Mutex::new(None);
 }
 
-/// PULL 状态（替代 act/zmq_state::ZmqState）
+/// PULL 状态
 #[derive(Clone)]
-pub struct ZmqPullState {
+pub struct PullState {
     pub running: Arc<AtomicBool>,
     pub address: String,
 }
 
-impl ZmqPullState {
+impl PullState {
     pub fn new(address: String) -> Self {
         Self {
             running: Arc::new(AtomicBool::new(false)),
@@ -43,7 +43,7 @@ impl ZmqPullState {
 /// PUB 状态的只读视图
 #[derive(Debug, Clone)]
 pub struct PubStateView {
-    pub connected: ZmqConnectionState,
+    pub connected: ConnectionState,
     pub messages_sent: u64,
     pub bytes_sent: u64,
     pub last_error: Option<String>,
@@ -107,38 +107,38 @@ pub fn get_pub_state_view() -> Result<PubStateView, String> {
 }
 
 /// 设置 PUB 状态
-pub fn set_pub_state(state: ZmqPubState) -> Result<(), String> {
+pub fn set_pub_state(state: PubState) -> Result<(), String> {
     let mut guard = COMM_PUB_STATE.lock().map_err(|_| "Lock failed")?;
     *guard = Some(state);
     Ok(())
 }
 
 /// 获取 PULL 状态
-pub fn get_pull_state() -> Result<ZmqPullState, String> {
-    let guard = ZMQ_PULL_STATE.lock().map_err(|_| "Lock failed")?;
+pub fn get_pull_state() -> Result<PullState, String> {
+    let guard = PULL_STATE.lock().map_err(|_| "Lock failed")?;
     guard.clone().ok_or_else(|| "PULL state not initialized".to_string())
 }
 
 /// 设置 PULL 状态
-pub fn set_pull_state(state: ZmqPullState) -> Result<(), String> {
-    let mut guard = ZMQ_PULL_STATE.lock().map_err(|_| "Lock failed")?;
+pub fn set_pull_state(state: PullState) -> Result<(), String> {
+    let mut guard = PULL_STATE.lock().map_err(|_| "Lock failed")?;
     *guard = Some(state);
     Ok(())
 }
 
 /// 获取 PULL 地址
 pub fn get_pull_address() -> Result<String, String> {
-    let guard = ZMQ_PULL_STATE.lock().map_err(|_| "Lock failed")?;
+    let guard = PULL_STATE.lock().map_err(|_| "Lock failed")?;
     guard.as_ref().map(|s| s.address.clone()).ok_or_else(|| "PULL state not initialized".to_string())
 }
 
 /// 设置 PULL 地址
 pub fn set_pull_address(addr: String) -> Result<(), String> {
-    let mut guard = ZMQ_PULL_STATE.lock().map_err(|_| "Lock failed")?;
+    let mut guard = PULL_STATE.lock().map_err(|_| "Lock failed")?;
     if let Some(ref mut state) = *guard {
         state.address = addr;
     } else {
-        *guard = Some(ZmqPullState::new(addr));
+        *guard = Some(PullState::new(addr));
     }
     Ok(())
 }

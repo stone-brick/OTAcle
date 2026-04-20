@@ -2,6 +2,7 @@ import { ref, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useLog } from './useLog';
+import { useProjectEvents } from './useProjectEvents';
 
 export interface ProjectInfo {
   path: string;
@@ -28,6 +29,7 @@ const isLoading = ref(false);
 
 export function useProject() {
   const { addLog } = useLog();
+  const projectEvents = useProjectEvents();
 
   const isProjectLoaded = computed(() => currentProject.value !== null);
 
@@ -35,7 +37,7 @@ export function useProject() {
     try {
       recentProjects.value = await invoke<RecentProject[]>('project_get_recent');
     } catch (e) {
-      addLog(`获取最近项目失败: ${e}`, 'error');
+      addLog(`获取最近项目失败: ${e}`, 'error', 'system');
     }
   }
 
@@ -43,7 +45,7 @@ export function useProject() {
     try {
       templates.value = await invoke<TemplateConfig[]>('project_list_templates');
     } catch (e) {
-      addLog(`获取模板列表失败: ${e}`, 'error');
+      addLog(`获取模板列表失败: ${e}`, 'error', 'system');
     }
   }
 
@@ -59,7 +61,7 @@ export function useProject() {
         await openProject(selected as string);
       }
     } catch (e) {
-      addLog(`打开项目失败: ${e}`, 'error');
+      addLog(`打开项目失败: ${e}`, 'error', 'system');
     }
   }
 
@@ -68,10 +70,11 @@ export function useProject() {
     try {
       const project = await invoke<ProjectInfo>('project_open', { path });
       currentProject.value = project;
+      projectEvents._emit({ type: 'opened', project });
       await refreshRecentProjects();
-      addLog(`已打开项目: ${project.name}`, 'success');
+      addLog(`已打开项目: ${project.name}`, 'success', 'system');
     } catch (e) {
-      addLog(`打开项目失败: ${e}`, 'error');
+      addLog(`打开项目失败: ${e}`, 'error', 'system');
       throw e;
     } finally {
       isLoading.value = false;
@@ -93,7 +96,7 @@ export function useProject() {
         }
       }
     } catch (e) {
-      addLog(`创建项目失败: ${e}`, 'error');
+      addLog(`创建项目失败: ${e}`, 'error', 'system');
     }
   }
 
@@ -106,10 +109,11 @@ export function useProject() {
         template,
       });
       currentProject.value = project;
+      projectEvents._emit({ type: 'opened', project });
       await refreshRecentProjects();
-      addLog(`已创建项目: ${project.name}`, 'success');
+      addLog(`已创建项目: ${project.name}`, 'success', 'system');
     } catch (e) {
-      addLog(`创建项目失败: ${e}`, 'error');
+      addLog(`创建项目失败: ${e}`, 'error', 'system');
       throw e;
     } finally {
       isLoading.value = false;
@@ -120,9 +124,9 @@ export function useProject() {
     try {
       await invoke('project_close');
       currentProject.value = null;
-      addLog('已关闭项目', 'info');
+      projectEvents._emit({ type: 'closed', project: null });
     } catch (e) {
-      addLog(`关闭项目失败: ${e}`, 'error');
+      addLog(`关闭项目失败: ${e}`, 'error', 'system');
     }
   }
 
@@ -131,7 +135,7 @@ export function useProject() {
       await invoke('project_remove_recent', { path });
       await refreshRecentProjects();
     } catch (e) {
-      addLog(`移除最近项目失败: ${e}`, 'error');
+      addLog(`移除最近项目失败: ${e}`, 'error', 'system');
     }
   }
 
@@ -140,7 +144,7 @@ export function useProject() {
       await invoke('project_toggle_pin', { path });
       await refreshRecentProjects();
     } catch (e) {
-      addLog(`切换固定状态失败: ${e}`, 'error');
+      addLog(`切换固定状态失败: ${e}`, 'error', 'system');
     }
   }
 
@@ -180,8 +184,13 @@ export function useProject() {
     try {
       const project = await invoke<ProjectInfo | null>('project_get_current');
       currentProject.value = project;
+      if (project) {
+        projectEvents._emit({ type: 'opened', project });
+        addLog(`已恢复项目: ${project.name}`, 'info', 'system')
+      }
     } catch (e) {
       currentProject.value = null;
+      addLog(`检查当前项目失败: ${e}`, 'error', 'system')
     }
   }
 

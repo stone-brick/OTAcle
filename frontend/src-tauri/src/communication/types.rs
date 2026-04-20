@@ -39,9 +39,9 @@ fn default_backend() -> String {
     "win32".to_string()
 }
 
-/// ZMQ 命令消息格式（Act 模块使用）
+/// 命令消息格式（Act 模块使用）
 #[derive(Debug, Clone, Deserialize)]
-pub struct ZmqCommand {
+pub struct Command {
     /// 执行列表，按顺序对应配置文件中 action 的 index
     /// 例如 [true, false, true] 表示执行 index=0 和 index=2 的动作
     pub execute: Vec<bool>,
@@ -51,39 +51,39 @@ pub struct ZmqCommand {
     pub params: HashMap<String, serde_json::Value>,
 }
 
-/// ZMQ 连接状态
+/// 连接状态
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub enum ZmqConnectionState {
+pub enum ConnectionState {
     Disconnected,
     Connected,
     Error,
 }
 
-impl Default for ZmqConnectionState {
+impl Default for ConnectionState {
     fn default() -> Self {
-        ZmqConnectionState::Disconnected
+        ConnectionState::Disconnected
     }
 }
 
-/// ZMQ 发布者状态（每个会话一个）
+/// PUB 发布者状态（每个会话一个）
 #[derive(Debug)]
-pub struct ZmqPubState {
-    pub connection_state: std::sync::Arc<std::sync::Mutex<ZmqConnectionState>>,
+pub struct PubState {
+    pub connection_state: std::sync::Arc<std::sync::Mutex<ConnectionState>>,
     pub messages_sent: std::sync::atomic::AtomicU64,
     pub bytes_sent: std::sync::atomic::AtomicU64,
     pub last_error: std::sync::Arc<std::sync::Mutex<Option<String>>>,
 }
 
-impl Default for ZmqPubState {
+impl Default for PubState {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl ZmqPubState {
+impl PubState {
     pub fn new() -> Self {
         Self {
-            connection_state: std::sync::Arc::new(std::sync::Mutex::new(ZmqConnectionState::Disconnected)),
+            connection_state: std::sync::Arc::new(std::sync::Mutex::new(ConnectionState::Disconnected)),
             messages_sent: std::sync::atomic::AtomicU64::new(0),
             bytes_sent: std::sync::atomic::AtomicU64::new(0),
             last_error: std::sync::Arc::new(std::sync::Mutex::new(None)),
@@ -92,7 +92,7 @@ impl ZmqPubState {
 
     pub fn set_connected(&self) {
         if let Ok(mut state) = self.connection_state.lock() {
-            *state = ZmqConnectionState::Connected;
+            *state = ConnectionState::Connected;
         }
         if let Ok(mut err) = self.last_error.lock() {
             *err = None;
@@ -101,23 +101,23 @@ impl ZmqPubState {
 
     pub fn set_disconnected(&self) {
         if let Ok(mut state) = self.connection_state.lock() {
-            *state = ZmqConnectionState::Disconnected;
+            *state = ConnectionState::Disconnected;
         }
     }
 
     pub fn set_error(&self, error: String) {
         if let Ok(mut state) = self.connection_state.lock() {
-            *state = ZmqConnectionState::Error;
+            *state = ConnectionState::Error;
         }
         if let Ok(mut err) = self.last_error.lock() {
             *err = Some(error);
         }
     }
 
-    pub fn get_connection_state(&self) -> ZmqConnectionState {
+    pub fn get_connection_state(&self) -> ConnectionState {
         self.connection_state.lock().ok()
             .map(|s| *s)
-            .unwrap_or(ZmqConnectionState::Disconnected)
+            .unwrap_or(ConnectionState::Disconnected)
     }
 
     pub fn messages_sent(&self) -> u64 {

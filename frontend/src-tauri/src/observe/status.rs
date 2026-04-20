@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
-use crate::communication::types::ZmqConnectionState;
+use crate::communication::types::ConnectionState;
 use super::state::{GLOBAL_STATS, SESSIONS, ObserveGlobalStats, SessionHandle};
 use super::types::ObserveConfig;
 
@@ -19,8 +19,8 @@ pub struct SessionStatus {
     pub frames_captured: u64,
     pub bytes_sent: u64,
     pub errors_count: u64,
-    pub zmq_connected: bool,
-    pub zmq_messages_sent: u64,
+    pub sender_connected: bool,
+    pub messages_sent: u64,
 }
 
 impl SessionStatus {
@@ -33,8 +33,8 @@ impl SessionStatus {
             frames_captured: handle.stats.frames_captured(),
             bytes_sent: handle.stats.bytes_sent(),
             errors_count: handle.stats.errors_count(),
-            zmq_connected: handle.zmq_state.get_connection_state() == ZmqConnectionState::Connected,
-            zmq_messages_sent: handle.zmq_state.messages_sent(),
+            sender_connected: handle.pub_state.get_connection_state() == ConnectionState::Connected,
+            messages_sent: handle.pub_state.messages_sent(),
         }
     }
 }

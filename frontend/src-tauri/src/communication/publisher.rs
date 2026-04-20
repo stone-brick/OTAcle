@@ -1,6 +1,6 @@
-//! ZMQ PUB 模块
+//! PUB 模块
 //!
-//! 向 Python 端通过 ZeroMQ PUB 发送图像帧数据
+//! 向 Python 端发送图像帧数据
 
 use std::sync::mpsc::Receiver;
 use std::sync::Arc;
@@ -8,15 +8,18 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::thread::{self, JoinHandle};
 
-use crate::communication::types::{FrameMessage, ZmqPubState};
+use log::error;
+use tauri::Emitter;
+use crate::communication::types::{FrameMessage, PubState};
 
-/// 创建 ZMQ PUB 发布线程
+/// 创建 PUB 发布线程
 ///
 /// # Arguments
-/// * `addr` - ZMQ 地址 (如 "tcp://127.0.0.1:5556")
+/// * `addr` - 地址 (如 "tcp://127.0.0.1:5556")
 /// * `running` - 运行标志，用于控制线程停止
 /// * `receiver` - 帧消息接收器
-/// * `zmq_state` - ZMQ 状态，用于更新连接状态和发送统计
+/// * `pub_state` - PUB 状态，用于更新连接状态和发送统计
+/// * `app_handle` - Tauri AppHandle，用于向前端发送状态事件
 ///
 /// # Returns
 /// * `JoinHandle<()>` - 用于等待线程结束
@@ -24,7 +27,8 @@ pub fn start_publisher(
     addr: &str,
     running: Arc<AtomicBool>,
     receiver: Receiver<FrameMessage>,
-    zmq_state: Arc<Mutex<ZmqPubState>>,
+    pub_state: Arc<Mutex<PubState>>,
+    app_handle: tauri::AppHandle,
 ) -> Result<JoinHandle<()>, String> {
     let addr = addr.to_string();
 
@@ -33,8 +37,8 @@ pub fn start_publisher(
         let socket = match ctx.socket(zmq::PUB) {
             Ok(s) => s,
             Err(e) => {
-                eprintln!("ZMQ socket creation failed: {}", e);
-                if let Ok(mut state) = zmq_state.lock() {
+                error!("Socket creation failed: {}", e);
+                if let Ok(mut state) = pub_state.lock() {
                     state.set_error(format!("Socket creation failed: {}", e));
                 }
                 return;
@@ -42,17 +46,18 @@ pub fn start_publisher(
         };
 
         if let Err(e) = socket.bind(&addr) {
-            eprintln!("ZMQ bind failed for {}: {}", addr, e);
-            if let Ok(mut state) = zmq_state.lock() {
+            error!("Bind failed for {}: {}", addr, e);
+            if let Ok(mut state) = pub_state.lock() {
                 state.set_error(format!("Bind failed: {}", e));
             }
             return;
         }
 
         // 连接成功
-        if let Ok(mut state) = zmq_state.lock() {
+        if let Ok(mut state) = pub_state.lock() {
             state.set_connected();
         }
+        let _ = app_handle.emit("observe:pub_started", &addr);
 
         let _ = socket.set_conflate(true);
 
@@ -64,10 +69,16 @@ pub fn start_publisher(
                         Err(_) => continue,
                     };
                     let bytes = json.len() as u64;
-                    if socket.send(json.as_bytes(), 0).is_ok() {
-                        if let Ok(mut state) = zmq_state.lock() {
-                            state.add_messages_sent(1);
-                            state.add_bytes_sent(bytes);
+                    match socket.send(json.as_bytes(), 0) {
+                        Ok(_) => {
+                            if let Ok(mut state) = pub_state.lock() {
+                                state.add_messages_sent(1);
+                                state.add_bytes_sent(bytes);
+                            }
+                        }
+                        Err(e) => {
+                            error!("Send failed: {}", e);
+                            let _ = app_handle.emit("observe:pub_error", "帧传输发生错误");
                         }
                     }
                 }
@@ -81,7 +92,7 @@ pub fn start_publisher(
         }
 
         // 线程结束，设置断开状态
-        if let Ok(mut state) = zmq_state.lock() {
+        if let Ok(mut state) = pub_state.lock() {
             state.set_disconnected();
         }
     });

@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useObserve } from '../../composables/useObserve'
+import { useLog } from '../../composables/useLog'
 
 const {
   isObserving,
@@ -15,8 +16,10 @@ const {
   formatBytes,
 } = useObserve()
 
-// ZMQ 地址（来自 communication 模块）
-const zmqAddress = ref('tcp://127.0.0.1:5556')
+const { addLog } = useLog()
+
+// PUB 发布地址
+const pubAddress = ref('tcp://127.0.0.1:5556')
 
 // 当前会话统计
 const sessionStats = computed(() => getFirstSessionStats())
@@ -32,22 +35,22 @@ let fpsUpdateTime = 0
 const lastUpdateTime = ref(0)
 const PREVIEW_INTERVAL_MS = 100
 
-// 加载 ZMQ 地址
-async function loadZmqAddress() {
+// 加载发布地址
+async function loadPubAddress() {
   try {
     const addr = await invoke<string>('comm_get_pub_address')
-    zmqAddress.value = addr
-  } catch (e) {
-    console.error('Failed to load ZMQ address:', e)
+    pubAddress.value = addr
+  } catch {
+    addLog('加载发布地址失败', 'error', 'comm')
   }
 }
 
-// 保存 ZMQ 地址
-async function saveZmqAddress() {
+// 保存发布地址
+async function savePubAddress() {
   try {
-    await invoke('comm_set_pub_address', { addr: zmqAddress.value })
+    await invoke('comm_set_pub_address', { addr: pubAddress.value })
   } catch (e) {
-    console.error('Failed to save ZMQ address:', e)
+    addLog('保存发布地址失败', 'error', 'comm')
     throw e
   }
 }
@@ -115,7 +118,10 @@ function renderFrame(frame: typeof previewFrame.value) {
     }
 
     const expectedLen = block.w * block.h * 4
-    if (bytes.length !== expectedLen) continue
+    if (bytes.length !== expectedLen) {
+      addLog(`裁切块尺寸不匹配: 期望 ${expectedLen} 字节，实际 ${bytes.length} 字节`, 'error', 'observe')
+      continue
+    }
 
     const offscreen = new OffscreenCanvas(block.w, block.h)
     const offCtx = offscreen.getContext('2d')
@@ -177,7 +183,7 @@ async function handleSaveAs() {
 }
 
 onMounted(async () => {
-  await loadZmqAddress()
+  await loadPubAddress()
   await startListening()
 })
 
@@ -208,14 +214,14 @@ onUnmounted(() => {
     <div class="config-panel">
       <h3>传输配置</h3>
 
-      <!-- ZMQ 地址 -->
+      <!-- PUB 地址 -->
       <div class="config-group">
-        <label>ZMQ 地址</label>
+        <label>发布地址</label>
         <input
-          v-model="zmqAddress"
+          v-model="pubAddress"
           type="text"
           placeholder="tcp://127.0.0.1:5556"
-          @change="saveZmqAddress"
+          @change="savePubAddress"
         >
       </div>
 
@@ -276,19 +282,19 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- ZMQ 统计 -->
+      <!-- 传输统计 -->
       <div class="config-group">
-        <label>ZMQ 传输</label>
+        <label>传输统计</label>
         <div class="stats-grid">
           <div class="stat-item">
             <span class="stat-label">连接状态</span>
-            <span :class="['stat-value', sessionStats?.zmq_connected ? 'success' : 'error']">
-              {{ sessionStats?.zmq_connected ? '已连接' : '未连接' }}
+            <span :class="['stat-value', sessionStats?.sender_connected ? 'success' : 'error']">
+              {{ sessionStats?.sender_connected ? '已连接' : '未连接' }}
             </span>
           </div>
           <div class="stat-item">
             <span class="stat-label">发送消息</span>
-            <span class="stat-value">{{ sessionStats?.zmq_messages_sent ?? 0 }}</span>
+            <span class="stat-value">{{ sessionStats?.messages_sent ?? 0 }}</span>
           </div>
           <div class="stat-item">
             <span class="stat-label">发送数据</span>
@@ -305,8 +311,8 @@ onUnmounted(() => {
     <!-- 操作栏 -->
     <div class="action-bar">
       <div class="action-info">
-        <span class="info-label">ZMQ PUB → Python SUB</span>
-        <span class="info-hint">图像帧通过 ZMQ 实时传输到下游处理程序</span>
+        <span class="info-label">发送端 → 接收端</span>
+        <span class="info-hint">图像帧实时传输到下游处理程序</span>
       </div>
     </div>
   </div>

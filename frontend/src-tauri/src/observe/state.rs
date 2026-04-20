@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::Instant;
 
-use crate::communication::types::ZmqPubState;
+use crate::communication::types::PubState;
 use super::types::ObserveConfig;
 
 lazy_static! {
@@ -84,12 +84,12 @@ pub struct SessionHandle {
     pub running: Arc<std::sync::atomic::AtomicBool>,
     /// 捕获线程句柄
     pub capture_handle: Option<JoinHandle<()>>,
-    /// ZMQ 发布线程句柄
-    pub zmq_handle: Option<JoinHandle<()>>,
+    /// 发布线程句柄
+    pub publisher_handle: Option<JoinHandle<()>>,
     /// 会话级统计
     pub stats: SessionStats,
-    /// ZMQ 连接状态
-    pub zmq_state: ZmqPubState,
+    /// PUB 连接状态
+    pub pub_state: PubState,
 }
 
 impl SessionHandle {
@@ -98,7 +98,7 @@ impl SessionHandle {
         config: ObserveConfig,
         running: Arc<std::sync::atomic::AtomicBool>,
         capture_handle: Option<JoinHandle<()>>,
-        zmq_handle: Option<JoinHandle<()>>,
+        publisher_handle: Option<JoinHandle<()>>,
     ) -> Self {
         Self {
             hwnd,
@@ -106,9 +106,9 @@ impl SessionHandle {
             start_time: Instant::now(),
             running,
             capture_handle,
-            zmq_handle,
+            publisher_handle,
             stats: SessionStats::new(),
-            zmq_state: ZmqPubState::new(),
+            pub_state: PubState::new(),
         }
     }
 

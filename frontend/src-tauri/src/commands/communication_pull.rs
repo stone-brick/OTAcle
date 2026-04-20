@@ -1,10 +1,10 @@
 //! Communication 模块的 PULL 控制命令
 //!
-//! 提供给前端控制 ZMQ PULL 连接
+//! 提供给前端控制 PULL 连接
 
 use crate::act;
-use crate::communication::types::ZmqCommand;
-use crate::communication::{ZmqPuller, ZmqPullState, state as comm_state};
+use crate::communication::types::Command;
+use crate::communication::{Puller, PullState, state as comm_state};
 use tauri::Emitter;
 use std::sync::atomic::Ordering;
 
@@ -19,14 +19,14 @@ pub fn comm_start_pull(app: tauri::AppHandle) -> Result<(), String> {
 
     // 停止现有的接收者（如果有）
     {
-        let mut state_guard = comm_state::ZMQ_PULL_STATE.lock().map_err(|_| "Lock failed")?;
-        if let Some(ref mut zmq_state) = *state_guard {
-            zmq_state.running.store(false, Ordering::SeqCst);
+        let mut state_guard = comm_state::PULL_STATE.lock().map_err(|_| "Lock failed")?;
+        if let Some(ref mut pull_state) = *state_guard {
+            pull_state.running.store(false, Ordering::SeqCst);
         }
     }
 
     // 创建新的 PULL 状态
-    let pull_state = ZmqPullState::new(addr.clone());
+    let pull_state = PullState::new(addr.clone());
     let running = pull_state.running.clone();
     let running_for_thread = running.clone();
 
@@ -37,10 +37,10 @@ pub fn comm_start_pull(app: tauri::AppHandle) -> Result<(), String> {
     let app_for_callback = app.clone();
 
     // 创建接收者
-    let puller = ZmqPuller::new(&addr)?;
+    let puller = Puller::new(&addr)?;
 
     // 在独立线程中开始监听
-    puller.start(running_for_thread, move |cmd: ZmqCommand| {
+    puller.start(running_for_thread, move |cmd: Command| {
         let default_backend = act::config::get_default_backend()
             .unwrap_or(act::types::InputBackend::Win32);
 
@@ -52,12 +52,12 @@ pub fn comm_start_pull(app: tauri::AppHandle) -> Result<(), String> {
 
         match result {
             Ok(()) => {
-                let msg = "[ZMQ] Actions executed successfully".to_string();
-                let _ = app_for_callback.emit("zmq:log", msg);
+                let msg = "[COMM] Actions executed successfully".to_string();
+                let _ = app_for_callback.emit("comm:log", msg);
             }
             Err(e) => {
-                let msg = format!("[ZMQ] Error: {}", e);
-                let _ = app_for_callback.emit("zmq:error", msg);
+                let msg = format!("[COMM] Error: {}", e);
+                let _ = app_for_callback.emit("comm:error", msg);
             }
         }
     })?;
@@ -69,9 +69,9 @@ pub fn comm_start_pull(app: tauri::AppHandle) -> Result<(), String> {
 pub fn comm_stop_pull() -> Result<(), String> {
     // 停止现有的接收者
     {
-        let mut state_guard = comm_state::ZMQ_PULL_STATE.lock().map_err(|_| "Lock failed")?;
-        if let Some(ref mut zmq_state) = *state_guard {
-            zmq_state.running.store(false, Ordering::SeqCst);
+        let mut state_guard = comm_state::PULL_STATE.lock().map_err(|_| "Lock failed")?;
+        if let Some(ref mut pull_state) = *state_guard {
+            pull_state.running.store(false, Ordering::SeqCst);
         }
     }
 

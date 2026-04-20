@@ -1,22 +1,26 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useZmq } from '../composables/useZmq'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useComm } from '../composables/useComm'
+import { useLog } from '../composables/useLog'
 
 const {
   isConnected,
   address,
-  messages,
   fetchStatus,
   start,
   stop,
-  clearMessages,
   startListening,
   cleanup,
-} = useZmq()
+} = useComm()
+
+const { logs } = useLog()
+
+const commLogs = computed(() =>
+  logs.value.filter(log => log.source === 'comm')
+)
 
 const inputAddress = ref('tcp://127.0.0.1:5555')
 
-// 正确管理 ZMQ 监听器生命周期
 onMounted(async () => {
   await startListening()
 })
@@ -35,7 +39,7 @@ async function handleStop() {
 </script>
 
 <template>
-  <div class="zmq-monitor">
+  <div class="comm-panel">
     <!-- Connection Status -->
     <div class="status-section">
       <div class="status-row">
@@ -88,25 +92,19 @@ async function handleStop() {
     <div class="log-section">
       <div class="log-header">
         <h4>消息日志</h4>
-        <button
-          class="btn-clear"
-          @click="clearMessages"
-        >
-          清空
-        </button>
       </div>
       <div class="message-list">
         <div
-          v-for="(msg, index) in messages"
+          v-for="(msg, index) in commLogs"
           :key="index"
           class="message-item"
           :class="msg.type"
         >
           <span class="msg-time">{{ msg.time }}</span>
-          <span class="msg-content">{{ msg.content }}</span>
+          <span class="msg-content">{{ msg.message }}</span>
         </div>
         <div
-          v-if="messages.length === 0"
+          v-if="commLogs.length === 0"
           class="empty-state"
         >
           暂无消息
@@ -117,7 +115,7 @@ async function handleStop() {
 </template>
 
 <style scoped>
-.zmq-monitor {
+.comm-panel {
   display: flex;
   flex-direction: column;
   height: 100%;

@@ -5,6 +5,8 @@ mod observe;
 pub mod commands;
 mod project;
 
+use tauri_plugin_log::{Target, TargetKind, Builder as LogBuilder};
+
 use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
 
 /// 从窗口规格字符串获取 HWND
@@ -33,10 +35,20 @@ pub fn run() {
     // 初始化加载最近项目
     let _ = project::load_recent_projects();
 
+    // 初始化通信模块的默认配置
+    let _ = communication::state::set_config(communication::types::CommConfig::default());
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(LogBuilder::default()
+            .targets([
+                Target::new(TargetKind::Stdout),
+                Target::new(TargetKind::LogDir { file_name: None }),
+                Target::new(TargetKind::Webview),
+            ])
+            .build())
         .invoke_handler(tauri::generate_handler![
             // Action commands
             commands::action::act_load_config,
@@ -80,11 +92,6 @@ pub fn run() {
             commands::window_search::window_find_by_pid,
             commands::window_search::window_find_by_exe,
             commands::window_search::window_find_by_hwnd,
-            // ZMQ commands
-            commands::zmq::zmq_set_address,
-            commands::zmq::zmq_start,
-            commands::zmq::zmq_stop,
-            commands::zmq::zmq_get_status,
             // Communication commands
             commands::communication::comm_load_config,
             commands::communication::comm_save_config,

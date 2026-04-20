@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import type { LogEntry } from '../types';
+import { MAX_LOG_ENTRIES } from '../utils/constants';
 
 // ============================================================================
 // 模块级单例状态
@@ -11,12 +12,16 @@ function formatTime(): string {
   return now.toLocaleTimeString('zh-CN', { hour12: false });
 }
 
-function addLog(message: string, type: LogEntry['type'] = 'info'): void {
+function addLog(message: string, type: LogEntry['type'] = 'info', source: LogEntry['source'] = 'system'): void {
   logs.value.push({
     time: formatTime(),
     message,
     type,
+    source,
   });
+  if (logs.value.length > MAX_LOG_ENTRIES) {
+    logs.value.shift();
+  }
 }
 
 function clearLogs(): void {
@@ -81,3 +86,4 @@ export function useLog() {
  * import { LogService } from '@/composables/useLog'
  * LogService.addLog('直接调用', 'info')
  */
+export const LogService = logService;

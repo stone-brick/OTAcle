@@ -57,11 +57,11 @@ pub fn comm_get_status() -> Result<CommStatus, String> {
     let (pub_connected, pub_messages_sent, pub_bytes_sent, pub_last_error) =
         match comm::state::get_pub_state_view() {
             Ok(state) => {
-                use crate::communication::types::ZmqConnectionState;
+                use crate::communication::types::ConnectionState;
                 let connected_str = match state.connected {
-                    ZmqConnectionState::Connected => "connected",
-                    ZmqConnectionState::Disconnected => "disconnected",
-                    ZmqConnectionState::Error => "error",
+                    ConnectionState::Connected => "connected",
+                    ConnectionState::Disconnected => "disconnected",
+                    ConnectionState::Error => "error",
                 };
                 (connected_str.to_string(), state.messages_sent, state.bytes_sent, state.last_error)
             }
