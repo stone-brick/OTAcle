@@ -4,7 +4,7 @@ import { useLog } from '../useLog';
 
 const historyCount = ref({ undo: 0, redo: 0 });
 
-// Refresh history count from backend
+// 从后端刷新历史计数
 async function refreshHistoryCount(): Promise<void> {
   try {
     const [undo, redo] = await invoke<[number, number]>('act_get_history_status');
@@ -15,7 +15,7 @@ async function refreshHistoryCount(): Promise<void> {
 }
 
 export function useActionHistory(onMutated?: () => Promise<void>) {
-  // Undo - restore previous state (calls backend)
+  // 撤销 - 恢复之前的状态（调用后端）
   async function undo(): Promise<void> {
     const { addLog } = useLog();
 
@@ -29,7 +29,7 @@ export function useActionHistory(onMutated?: () => Promise<void>) {
     }
   }
 
-  // Redo - restore next state (calls backend)
+  // 重做 - 恢复下一个状态（调用后端）
   async function redo(): Promise<void> {
     const { addLog } = useLog();
 
@@ -43,10 +43,10 @@ export function useActionHistory(onMutated?: () => Promise<void>) {
     }
   }
 
-  // Check if undo is available
+  // 检查撤销是否可用
   const canUndo = computed(() => historyCount.value.undo > 0);
 
-  // Check if redo is available
+  // 检查重做是否可用
   const canRedo = computed(() => historyCount.value.redo > 0);
 
   return {

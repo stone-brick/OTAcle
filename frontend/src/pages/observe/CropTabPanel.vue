@@ -16,13 +16,13 @@ const {
 // Canvas ref
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 
-// ROI drawing state
+// ROI 绘制状态
 const isDrawing = ref(false)
 const drawStart = ref({ x: 0, y: 0 })
 const currentRect = ref({ x: 0, y: 0, w: 0, h: 0 })
 const selectedRegionIndex = ref<number | null>(null)
 
-// FPS tracking
+// FPS 追踪
 const actualFps = ref(0)
 let lastFrameTime = 0
 let frameCount = 0
@@ -30,7 +30,7 @@ let fpsUpdateTime = 0
 const lastUpdateTime = ref(0)
 const PREVIEW_INTERVAL_MS = 100
 
-// Watch preview frames
+// 监听预览帧
 watch(previewFrame, (frame) => {
   if (!frame) return
 
@@ -38,7 +38,7 @@ watch(previewFrame, (frame) => {
   if (now - lastUpdateTime.value < PREVIEW_INTERVAL_MS) return
   lastUpdateTime.value = now
 
-  // Calculate actual FPS
+  // 计算实际 FPS
   if (lastFrameTime > 0) {
     const elapsed = now - lastFrameTime
     if (elapsed > 0) {
@@ -80,7 +80,7 @@ function renderFrame(frame: typeof previewFrame.value) {
   ctx.fillStyle = '#000000'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-  // Draw frame data
+  // 绘制帧数据
   for (const block of frame.data) {
     if (!block || !block.image) continue
 
@@ -111,7 +111,7 @@ function renderFrame(frame: typeof previewFrame.value) {
     )
   }
 
-  // Draw existing crop regions
+  // 绘制现有裁切区域
   ctx.strokeStyle = '#00ff00'
   ctx.lineWidth = 2 / scale
   ctx.setLineDash([5 / scale, 5 / scale])
@@ -126,7 +126,7 @@ function renderFrame(frame: typeof previewFrame.value) {
     )
   })
 
-  // Draw current selection highlight
+  // 绘制当前选中高亮
   if (selectedRegionIndex.value !== null) {
     const region = config.value.crop_regions[selectedRegionIndex.value]
     if (region) {
@@ -141,7 +141,7 @@ function renderFrame(frame: typeof previewFrame.value) {
     }
   }
 
-  // Draw current drawing rect
+  // 绘制当前绘制的矩形
   if (isDrawing.value && (currentRect.value.w > 0 || currentRect.value.h > 0)) {
     ctx.strokeStyle = '#ff0000'
     ctx.lineWidth = 2 / scale
@@ -157,7 +157,7 @@ function renderFrame(frame: typeof previewFrame.value) {
   ctx.setLineDash([])
 }
 
-// Canvas mouse events for ROI drawing
+// Canvas 鼠标事件用于 ROI 绘制
 function getCanvasCoords(e: MouseEvent) {
   if (!canvasRef.value) return { x: 0, y: 0 }
   const rect = canvasRef.value.getBoundingClientRect()
@@ -189,9 +189,9 @@ function handleMouseUp() {
   if (!isDrawing.value) return
   isDrawing.value = false
 
-  // Only add if rect is big enough
+  // 仅在矩形足够大时添加
   if (currentRect.value.w > 10 && currentRect.value.h > 10) {
-    // Convert canvas coords to frame coords
+    // 将 Canvas 坐标转换为帧坐标
     const canvas = canvasRef.value
     if (!canvas) return
 
@@ -218,7 +218,7 @@ function handleMouseUp() {
 }
 
 function handleCanvasClick(e: MouseEvent) {
-  if (isObserving.value) return // Don't select when drawing
+  if (isObserving.value) return // 绘制时不选择
 
   const coords = getCanvasCoords(e)
   const targetWidth = config.value.capture.target_width
@@ -235,7 +235,7 @@ function handleCanvasClick(e: MouseEvent) {
   const clickX = (coords.x - offsetX) / scale
   const clickY = (coords.y - offsetY) / scale
 
-  // Find clicked region
+  // 查找点击的区域
   const clickedIndex = config.value.crop_regions.findIndex(region => {
     return clickX >= region.x && clickX <= region.x + region.w &&
            clickY >= region.y && clickY <= region.y + region.h
@@ -245,7 +245,7 @@ function handleCanvasClick(e: MouseEvent) {
 }
 
 function handleAddRegion() {
-  // Enter draw mode hint
+  // 进入绘制模式提示
   if (!isObserving.value) {
     alert('请先在"截图配置"中启动观察')
     return
@@ -271,7 +271,7 @@ onUnmounted(() => {
 
 <template>
   <div class="crop-panel">
-    <!-- Preview area (left side) -->
+    <!-- 预览区域（左侧） -->
     <div class="preview-area">
       <canvas
         ref="canvasRef"
@@ -284,7 +284,7 @@ onUnmounted(() => {
         @click="handleCanvasClick"
       />
 
-      <!-- Hint when not observing -->
+      <!-- 未观察时的提示 -->
       <div
         v-if="!isObserving"
         class="preview-placeholder"
@@ -293,11 +293,11 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- Config panel (right side) -->
+    <!-- 配置面板（右侧） -->
     <div class="config-panel">
       <h3>裁切配置</h3>
 
-      <!-- FPS indicator -->
+      <!-- FPS 指示器 -->
       <div class="config-group">
         <div class="status-row">
           <span class="status-label">实际帧率</span>
@@ -305,7 +305,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Crop regions list -->
+      <!-- 裁切区域列表 -->
       <div class="config-group">
         <label>裁切区域列表</label>
         <div class="crop-regions">
@@ -329,7 +329,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Instructions -->
+      <!-- 说明 -->
       <div class="config-group">
         <div class="instructions">
           <p v-if="isObserving">
@@ -342,7 +342,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- Action bar -->
+    <!-- 操作栏 -->
     <div class="action-bar">
       <button @click="handleAddRegion">
         添加区域

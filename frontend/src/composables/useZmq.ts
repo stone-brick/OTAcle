@@ -10,11 +10,22 @@ export interface ZmqMessage {
   content: string
 }
 
+export interface CommStatus {
+  pull_running: boolean
+  pub_running: boolean
+  pull_address: string
+  pub_address: string
+  pub_connected: string
+  pub_messages_sent: number
+  pub_bytes_sent: number
+  pub_last_error: string | null
+}
+
 const isConnected = ref(false)
 const address = ref('')
 const messages = ref<ZmqMessage[]>([])
 
-// Create a single effect scope for all reactive effects managed by this composable
+// 创建单个 effect scope 来管理此 composable 的所有响应式效果
 const scope = effectScope()
 
 function formatTime(): string {
@@ -22,7 +33,7 @@ function formatTime(): string {
   return now.toLocaleTimeString('zh-CN', { hour12: false })
 }
 
-// Listener handles - stored at module level for cleanup access
+// 监听器句柄 - 存储在模块级别以便清理访问
 let unlistenLog: UnlistenFn | null = null
 let unlistenError: UnlistenFn | null = null
 
@@ -31,9 +42,9 @@ export function useZmq() {
 
   async function fetchStatus() {
     try {
-      const [connected, addr] = await invoke<[boolean, string]>('zmq_get_status')
-      isConnected.value = connected
-      address.value = addr
+      const status = await invoke<CommStatus>('comm_get_status')
+      isConnected.value = status.pull_running
+      address.value = status.pull_address
     } catch (e) {
       addLog(`获取 ZMQ 状态失败: ${e}`, 'error')
     }
@@ -41,7 +52,8 @@ export function useZmq() {
 
   async function start(address_: string) {
     try {
-      await invoke('zmq_start', { addr: address_ })
+      await invoke('comm_set_pull_address', { addr: address_ })
+      await invoke('comm_start_pull')
       address.value = address_
       addLog(`ZMQ 连接已启动: ${address_}`, 'success')
       await fetchStatus()
@@ -53,7 +65,7 @@ export function useZmq() {
 
   async function stop() {
     try {
-      await invoke('zmq_stop')
+      await invoke('comm_stop_pull')
       addLog('ZMQ 连接已停止', 'info')
       await fetchStatus()
     } catch (e) {
@@ -67,7 +79,7 @@ export function useZmq() {
       type,
       content,
     })
-    // Keep only last MAX_ZMQ_MESSAGES messages
+    // 只保留最近 MAX_ZMQ_MESSAGES 条消息
     if (messages.value.length > MAX_ZMQ_MESSAGES) {
       messages.value.shift()
     }
@@ -78,13 +90,13 @@ export function useZmq() {
   }
 
   /**
-   * Start listening for ZMQ events. Call this in component's onMounted.
+   * 开始监听 ZMQ 事件。在组件的 onMounted 中调用。
    */
   async function startListening() {
-    // Fetch initial status
+    // 获取初始状态
     await fetchStatus()
 
-    // Listen for ZMQ log events
+    // 监听 ZMQ 日志事件
     unlistenLog = await listen<string>('zmq:log', (event) => {
       addMessage(event.payload, 'success')
     })
@@ -95,7 +107,7 @@ export function useZmq() {
   }
 
   /**
-   * Stop listening for ZMQ events. Call this in component's onUnmounted.
+   * 停止监听 ZMQ 事件。在组件的 onUnmounted 中调用。
    */
   function stopListening() {
     unlistenLog?.()
@@ -105,7 +117,7 @@ export function useZmq() {
   }
 
   /**
-   * Cleanup all resources. Call this when permanently disposing of this composable.
+   * 清理所有资源。当永久释放此 composable 时调用。
    */
   function cleanup() {
     stopListening()

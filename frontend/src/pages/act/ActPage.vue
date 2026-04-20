@@ -46,7 +46,7 @@ async function searchWindows(mode: SearchMode, value: string): Promise<number[]>
   }
 }
 
-// Config actions
+// 配置操作
 async function handleLoad(path: string) {
   await actionEditor.loadConfig(path);
 }
@@ -90,16 +90,12 @@ function handleSetDefaultBackend(backend: InputBackend) {
   actionEditor.setDefaultBackend(backend);
 }
 
-function handleSetExecutionBackend(backend: InputBackend) {
-  actionExecutor.setExecutionBackend(backend);
-}
-
 async function handleCreateAction(type: string, name: string | undefined) {
   const index = await actionEditor.createAction(type, name);
   actionEditor.selectAction(index);
 }
 
-// Window actions
+// 窗口操作
 async function handleSelectWindow(hwnd: number | null) {
   if (hwnd !== null) {
     await selectWindow(hwnd);
@@ -141,7 +137,6 @@ async function handleExecuteAction(payload: { actionIdx: number; params: Record<
         @undo="handleUndo"
         @redo="handleRedo"
         @set-default-backend="handleSetDefaultBackend"
-        @set-execution-backend="handleSetExecutionBackend"
         @create-action="handleCreateAction"
       />
 

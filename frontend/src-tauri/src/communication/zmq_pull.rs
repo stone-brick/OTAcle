@@ -1,25 +1,14 @@
 //! ZMQ PULL 模块
 //!
-//! 接收 Python 通过 ZeroMQ PUSH 发送的控制命令
+//! 从 Python 端接收 ZeroMQ PUSH 发送的控制命令
 
-use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 use zmq::{Context, Socket};
 
-/// ZMQ 命令消息格式
-#[derive(Debug, Clone, Deserialize)]
-pub struct ZmqCommand {
-    /// 执行列表，按顺序对应配置文件中 action 的 index
-    /// 例如 [true, false, true] 表示执行 index=0 和 index=2 的动作
-    pub execute: Vec<bool>,
-    /// 动态参数映射 (param_name -> value)
-    /// 如果省略或为空，使用配置文件中的默认值
-    #[serde(default)]
-    pub params: HashMap<String, serde_json::Value>,
-}
+use crate::communication::types::ZmqCommand;
 
 /// ZMQ 接收者
 pub struct ZmqPuller {
@@ -52,8 +41,6 @@ impl ZmqPuller {
 
         let socket = self.socket;
         let running_clone = running.clone();
-
-        // 先发送一个初始化完成信号
 
         thread::spawn(move || {
             while running_clone.load(Ordering::SeqCst) {

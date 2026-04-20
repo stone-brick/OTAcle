@@ -13,8 +13,6 @@ lazy_static! {
     pub static ref DEFAULT_INPUT_BACKEND: Mutex<InputBackend> = Mutex::new(InputBackend::Win32);
     /// 动作执行的目标窗口（HWND）
     pub static ref TARGET_WINDOW: Mutex<Option<isize>> = Mutex::new(None);
-    /// 全局执行后端覆盖（None 表示未设置，使用默认后端）
-    pub static ref OVERRIDE_INPUT_BACKEND: Mutex<Option<InputBackend>> = Mutex::new(None);
     /// 撤销历史栈
     pub static ref UNDO_STACK: Mutex<Vec<HistoryEntry>> = Mutex::new(Vec::new());
     /// 重做历史栈

@@ -16,7 +16,7 @@ const emit = defineEmits<{
 const pathInput = ref('');
 const isPathFocused = ref(false);
 
-// Sync with prop
+// 与 prop 同步
 watch(() => props.configPath, (newPath) => {
   if (!isPathFocused.value) {
     pathInput.value = newPath;

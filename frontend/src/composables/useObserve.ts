@@ -1,16 +1,16 @@
 import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
-import type { ObserveConfig, CropRegion, FrameMessage } from '../types'
+import type { ObserveConfig, CropRegion, FrameMessage, ObserveStatus, SessionStatus, ObserveGlobalStats } from '../types'
 
 // 状态
 const isObserving = ref(false)
 const previewFrame = ref<FrameMessage | null>(null)
 const config = ref<ObserveConfig>({
   capture: { frame_rate: 20, target_width: 640, target_height: 480 },
-  zmq: { address: 'tcp://127.0.0.1:5556' },
   crop_regions: []
 })
+const fullStatus = ref<ObserveStatus | null>(null)
 
 // 用于事件监听的清理函数
 let unlistenFrame: UnlistenFn | null = null
@@ -18,15 +18,64 @@ let unlistenError: UnlistenFn | null = null
 // 标记是否正在监听
 let isListeningActive = false
 
+// 状态轮询
+let statusPollInterval: ReturnType<typeof setInterval> | null = null
+
 export function useObserve() {
+  // 开始状态轮询
+  function startStatusPolling() {
+    if (statusPollInterval) return
+    statusPollInterval = setInterval(async () => {
+      if (isObserving.value) {
+        await fetchStatus()
+      }
+    }, 1000) // 每秒刷新一次
+  }
+
+  // 停止状态轮询
+  function stopStatusPolling() {
+    if (statusPollInterval) {
+      clearInterval(statusPollInterval)
+      statusPollInterval = null
+    }
+  }
+
+  // 获取第一个会话的统计信息（目前仅支持单会话）
+  function getFirstSessionStats(): SessionStatus | null {
+    const sessions = fullStatus.value?.sessions
+    if (!sessions) return null
+    const keys = Object.keys(sessions)
+    if (keys.length === 0) return null
+    return sessions[Number(keys[0])]
+  }
+
+  // 格式化字节数
+  function formatBytes(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+  }
+
+  // 格式化运行时长
+  function formatUptime(seconds: number): string {
+    const h = Math.floor(seconds / 3600)
+    const m = Math.floor((seconds % 3600) / 60)
+    const s = seconds % 60
+    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+    return `${m}:${s.toString().padStart(2, '0')}`
+  }
+
   // 开始观察
   async function startObserve(windowId: string): Promise<void> {
+    previewFrame.value = null
     try {
       await invoke('observe_start', {
         window: windowId,
         config: config.value
       })
       isObserving.value = true
+      await fetchStatus()
+      startStatusPolling()
     } catch (e) {
       isObserving.value = false
       throw e
@@ -39,19 +88,35 @@ export function useObserve() {
       await invoke('observe_stop')
     } finally {
       isObserving.value = false
+      stopStatusPolling()
+      await fetchStatus()
       // 确保停止后清理监听器
       stopListening()
     }
   }
 
   // 获取观察状态
-  async function fetchStatus(): Promise<void> {
+  async function fetchStatus(): Promise<ObserveStatus | null> {
     try {
-      const status = await invoke<boolean>('observe_get_status')
-      isObserving.value = status
+      const status = await invoke<ObserveStatus>('observe_get_status')
+      fullStatus.value = status
+      // 兼容旧逻辑：检查是否有活跃会话
+      isObserving.value = Object.values(status.sessions).some(s => s.running)
+      return status
     } catch (e) {
       console.error('Failed to get observe status:', e)
+      return null
     }
+  }
+
+  // 获取指定会话的统计信息
+  function getSessionStats(hwnd: number): SessionStatus | null {
+    return fullStatus.value?.sessions[hwnd] ?? null
+  }
+
+  // 获取全局统计信息
+  function getGlobalStats(): ObserveGlobalStats | null {
+    return fullStatus.value?.global_stats ?? null
   }
 
   // 加载配置
@@ -125,11 +190,17 @@ export function useObserve() {
     isObserving,
     previewFrame,
     config,
+    fullStatus,
 
     // 方法
     startObserve,
     stopObserve,
     fetchStatus,
+    getSessionStats,
+    getGlobalStats,
+    getFirstSessionStats,
+    formatBytes,
+    formatUptime,
     loadConfig,
     saveConfig,
     updateCropRegions,

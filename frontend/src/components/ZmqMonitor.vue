@@ -16,7 +16,7 @@ const {
 
 const inputAddress = ref('tcp://127.0.0.1:5555')
 
-// Correctly manage ZMQ listener lifecycle
+// 正确管理 ZMQ 监听器生命周期
 onMounted(async () => {
   await startListening()
 })

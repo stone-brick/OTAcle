@@ -2,14 +2,13 @@
 
 use crate::input;
 use super::history;
-use super::action_state;
+use super::state;
 use super::types::{Action, ActionData, ActionList, InputBackend};
 use serde::Deserialize;
 use std::fs;
 use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
 
 // history 函数已改为纯函数，config 负责应用状态
-pub use super::history::{clear_history, get_history_status};
 pub use super::validation::{validate_action, validate_config};
 
 /// JSON 配置结构（与 ObserveConfig 区分，命名更明确）
@@ -66,7 +65,7 @@ pub fn load_config(path: &str) -> Result<(ActionList, InputBackend), String> {
     validate_config(&action_list)?;
 
     // 保存列表以供后续访问
-    let mut global_list = action_state::ACTION_CONFIG_LIST.lock()
+    let mut global_list = state::ACTION_CONFIG_LIST.lock()
         .map_err(|_| "Failed to lock action list".to_string())?;
     *global_list = Some(action_list.clone());
 
@@ -78,7 +77,7 @@ pub fn load_config_with_backend(path: &str, _backend: InputBackend) -> Result<()
     // 后端现在在每个配置文件中指定，而不是每次调用
     let (action_list, default_backend) = load_config(path)?;
 
-    let mut global_backend = action_state::DEFAULT_INPUT_BACKEND
+    let mut global_backend = state::DEFAULT_INPUT_BACKEND
         .lock()
         .map_err(|_| "Failed to lock default backend".to_string())?;
 
@@ -95,7 +94,7 @@ pub fn load_config_with_backend(path: &str, _backend: InputBackend) -> Result<()
 
 /// 获取带名称的动作列表（保留顺序和名称）
 pub fn get_action_list() -> Result<ActionList, String> {
-    let global = action_state::ACTION_CONFIG_LIST
+    let global = state::ACTION_CONFIG_LIST
         .lock()
         .map_err(|_| "Failed to lock action list".to_string())?;
 
@@ -106,7 +105,7 @@ pub fn get_action_list() -> Result<ActionList, String> {
 
 /// 从加载的配置获取默认后端
 pub fn get_default_backend() -> Result<InputBackend, String> {
-    let global = action_state::DEFAULT_INPUT_BACKEND
+    let global = state::DEFAULT_INPUT_BACKEND
         .lock()
         .map_err(|_| "Failed to lock default backend".to_string())?;
 
@@ -139,7 +138,7 @@ pub fn set_target_window(window: Option<String>) -> Result<(), String> {
         }
         None => {
             // 清除目标窗口
-            let mut global = action_state::TARGET_WINDOW
+            let mut global = state::TARGET_WINDOW
                 .lock()
                 .map_err(|_| "Failed to lock target window".to_string())?;
             *global = None;
@@ -147,7 +146,7 @@ pub fn set_target_window(window: Option<String>) -> Result<(), String> {
         }
     };
 
-    let mut global = action_state::TARGET_WINDOW
+    let mut global = state::TARGET_WINDOW
         .lock()
         .map_err(|_| "Failed to lock target window".to_string())?;
     *global = Some(hwnd);
@@ -156,26 +155,9 @@ pub fn set_target_window(window: Option<String>) -> Result<(), String> {
 
 /// 获取当前目标窗口（HWND）
 pub fn get_target_window() -> Option<isize> {
-    action_state::TARGET_WINDOW
+    state::TARGET_WINDOW
         .lock()
         .map(|g| *g)
-        .unwrap_or(None)
-}
-
-/// 设置执行后端覆盖
-pub fn set_execution_backend(backend: InputBackend) -> Result<(), String> {
-    let mut global = action_state::OVERRIDE_INPUT_BACKEND
-        .lock()
-        .map_err(|_| "Failed to lock execution backend".to_string())?;
-    *global = Some(backend);
-    Ok(())
-}
-
-/// 获取当前执行后端覆盖（None 表示未设置）
-pub fn get_execution_backend() -> Option<InputBackend> {
-    action_state::OVERRIDE_INPUT_BACKEND
-        .lock()
-        .map(|g| g.clone())
         .unwrap_or(None)
 }
 
@@ -188,7 +170,7 @@ pub fn set_default_backend(backend: InputBackend) -> Result<(), String> {
     // 修改前保存当前状态到历史记录
     history::save_to_history(actions, current_backend)?;
 
-    let mut global = action_state::DEFAULT_INPUT_BACKEND
+    let mut global = state::DEFAULT_INPUT_BACKEND
         .lock()
         .map_err(|_| "Failed to lock default backend".to_string())?;
     *global = backend;
@@ -197,7 +179,7 @@ pub fn set_default_backend(backend: InputBackend) -> Result<(), String> {
 
 /// 获取下一个可用动作索引（列表长度，如果为空则为 0）
 pub fn get_next_available_index() -> Result<u32, String> {
-    let list = action_state::ACTION_CONFIG_LIST
+    let list = state::ACTION_CONFIG_LIST
         .lock()
         .map_err(|_| "Failed to lock action list".to_string())?;
 
@@ -216,7 +198,7 @@ pub fn create_action(action: ActionData, name: Option<String>) -> Result<u32, St
     // 首先验证动作
     validate_action(&action)?;
 
-    let mut list = action_state::ACTION_CONFIG_LIST
+    let mut list = state::ACTION_CONFIG_LIST
         .lock()
         .map_err(|_| "Failed to lock action list".to_string())?;
 
@@ -252,7 +234,7 @@ pub fn update_action(index: u32, action: ActionData, name: Option<String>) -> Re
     // 首先验证动作
     validate_action(&action)?;
 
-    let mut list = action_state::ACTION_CONFIG_LIST
+    let mut list = state::ACTION_CONFIG_LIST
         .lock()
         .map_err(|_| "Failed to lock action list".to_string())?;
 
@@ -278,7 +260,7 @@ pub fn delete_action(index: u32) -> Result<(), String> {
     // 修改前保存当前状态到历史记录
     history::save_to_history(actions, current_backend)?;
 
-    let mut list = action_state::ACTION_CONFIG_LIST
+    let mut list = state::ACTION_CONFIG_LIST
         .lock()
         .map_err(|_| "Failed to lock action list".to_string())?;
 
@@ -320,58 +302,3 @@ pub fn save_config(path: &str, default_backend: InputBackend, actions: &ActionLi
 
     Ok(())
 }
-
-/// 撤销 - 恢复上一个状态
-pub fn undo() -> Result<(), String> {
-    let actions = get_action_list()?;
-    let current_backend = get_default_backend()?;
-
-    let entry = history::prepare_undo(actions, current_backend)?;
-
-    // 应用历史条目中的状态
-    let mut list = action_state::ACTION_CONFIG_LIST.lock().map_err(|_| "Failed to lock action list")?;
-    *list = Some(entry.actions);
-    drop(list);
-
-    let mut backend = action_state::DEFAULT_INPUT_BACKEND.lock().map_err(|_| "Failed to lock backend")?;
-    *backend = entry.default_backend;
-
-    Ok(())
-}
-
-/// 重做 - 恢复下一个状态
-pub fn redo() -> Result<(), String> {
-    let actions = get_action_list()?;
-    let current_backend = get_default_backend()?;
-
-    let entry = history::prepare_redo(actions, current_backend)?;
-
-    // 应用历史条目中的状态
-    let mut list = action_state::ACTION_CONFIG_LIST.lock().map_err(|_| "Failed to lock action list")?;
-    *list = Some(entry.actions);
-    drop(list);
-
-    let mut backend = action_state::DEFAULT_INPUT_BACKEND.lock().map_err(|_| "Failed to lock backend")?;
-    *backend = entry.default_backend;
-
-    Ok(())
-}
-
-/// 丢弃所有更改 - 恢复到原始状态（可撤销）
-pub fn discard_changes() -> Result<(), String> {
-    let actions = get_action_list()?;
-    let current_backend = get_default_backend()?;
-
-    let entry = history::prepare_discard(actions, current_backend)?;
-
-    // 应用历史条目中的状态
-    let mut list = action_state::ACTION_CONFIG_LIST.lock().map_err(|_| "Failed to lock action list")?;
-    *list = Some(entry.actions);
-    drop(list);
-
-    let mut backend = action_state::DEFAULT_INPUT_BACKEND.lock().map_err(|_| "Failed to lock backend")?;
-    *backend = entry.default_backend;
-
-    Ok(())
-}
-

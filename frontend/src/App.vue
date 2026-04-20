@@ -1,10 +1,18 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { useLog } from './composables/useLog'
+import { useProject } from './composables/useProject'
 import AppSideMenu from './components/nav/AppSideMenu.vue'
 import TitleBar from './components/TitleBar.vue'
 import LogPanel from './components/LogPanel.vue'
 
 const { logs, clearLogs } = useLog()
+const { checkCurrentProject, refreshRecentProjects } = useProject()
+
+onMounted(async () => {
+  await checkCurrentProject()
+  await refreshRecentProjects()
+})
 </script>
 
 <template>

@@ -1,5 +1,4 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { InputBackend } from '../../types';
 import { useLog } from '../useLog';
 
 async function executeActionWithParams(
@@ -31,21 +30,9 @@ async function setTargetWindow(window: string | null): Promise<void> {
   }
 }
 
-async function setExecutionBackend(backend: InputBackend): Promise<void> {
-  const { addLog } = useLog();
-
-  try {
-    await invoke('act_set_execution_backend', { backend });
-    addLog(`执行后端已设置为: ${backend}`, 'success');
-  } catch (e) {
-    addLog(`设置执行后端失败: ${e}`, 'error');
-  }
-}
-
 export function useActionExecutor() {
   return {
     executeActionWithParams,
     setTargetWindow,
-    setExecutionBackend,
   };
 }

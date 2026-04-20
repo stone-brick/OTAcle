@@ -4,7 +4,8 @@
 
 use base64::Engine;
 use image::{ImageBuffer, Rgba};
-use crate::observe::types::{CropBlock, CropRegion};
+use crate::observe::types::CropRegion;
+use crate::communication::types::CropBlock;
 
 /// 用于缩放和裁剪操作的图像处理器
 pub struct ImageProcessor;

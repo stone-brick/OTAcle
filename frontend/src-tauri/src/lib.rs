@@ -1,7 +1,9 @@
 mod act;
+mod communication;
 mod input;
 mod observe;
 pub mod commands;
+mod project;
 
 use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
 
@@ -28,8 +30,13 @@ pub fn get_hwnd_from_spec(spec: &str) -> Result<isize, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // 初始化加载最近项目
+    let _ = project::load_recent_projects();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![
             // Action commands
             commands::action::act_load_config,
@@ -51,9 +58,6 @@ pub fn run() {
             // Target window commands
             commands::target_window::window_set_target,
             commands::target_window::window_get_target,
-            // Execution backend commands
-            commands::execution_backend::act_set_execution_backend,
-            commands::execution_backend::act_get_execution_backend,
             // Window input commands
             commands::window_input::window_activate,
             commands::window_input::window_get_foreground,
@@ -77,15 +81,39 @@ pub fn run() {
             commands::window_search::window_find_by_exe,
             commands::window_search::window_find_by_hwnd,
             // ZMQ commands
+            commands::zmq::zmq_set_address,
             commands::zmq::zmq_start,
             commands::zmq::zmq_stop,
             commands::zmq::zmq_get_status,
+            // Communication commands
+            commands::communication::comm_load_config,
+            commands::communication::comm_save_config,
+            commands::communication::comm_get_config,
+            commands::communication::comm_set_pull_address,
+            commands::communication::comm_get_pub_address,
+            commands::communication::comm_set_pub_address,
+            commands::communication::comm_get_status,
+            commands::communication_pull::comm_start_pull,
+            commands::communication_pull::comm_stop_pull,
             // Observe commands
             commands::observe::observe_start,
             commands::observe::observe_stop,
             commands::observe::observe_get_status,
             commands::observe::observe_save_config,
             commands::observe::observe_load_config,
+            // Project commands
+            commands::project::project_open,
+            commands::project::project_create,
+            commands::project::project_close,
+            commands::project::project_get_current,
+            commands::project::project_get_recent,
+            commands::project::project_remove_recent,
+            commands::project::project_toggle_pin,
+            commands::project::project_list_templates,
+            commands::project::project_get_config_dir,
+            commands::project::project_get_actions_config_path,
+            commands::project::project_get_observe_config_path,
+            commands::project::project_get_comm_config_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

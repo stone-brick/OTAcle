@@ -30,11 +30,10 @@ const emit = defineEmits<{
   undo: [];
   redo: [];
   setDefaultBackend: [backend: InputBackend];
-  setExecutionBackend: [backend: InputBackend];
   createAction: [type: string, name: string | undefined];
 }>();
 
-// Modal state
+// 模态框状态
 const showNewActionModal = ref(false);
 
 function openNewActionModal() {
@@ -52,7 +51,6 @@ function handleCancelCreateAction() {
 
 function handleBackendChange(backend: InputBackend) {
   emit('setDefaultBackend', backend);
-  emit('setExecutionBackend', backend);
 }
 
 function handleSelectAction(index: number) {
@@ -80,7 +78,7 @@ function handleDeleteAction(index: number) {
     />
 
     <div class="editor-content">
-      <!-- Left Panel: Action List -->
+      <!-- 左侧面板：动作列表 -->
       <div class="left-panel">
         <ActionList
           v-if="isLoaded"
@@ -104,7 +102,7 @@ function handleDeleteAction(index: number) {
         </div>
       </div>
 
-      <!-- Right Panel: Config & Action Form -->
+      <!-- 右侧面板：配置与动作表单 -->
       <div class="right-panel">
         <EditorTopBar
           :default-backend="defaultBackend"
@@ -118,7 +116,7 @@ function handleDeleteAction(index: number) {
           @redo="emit('redo')"
         />
 
-        <!-- Action Form -->
+        <!-- 动作表单 -->
         <div class="form-area">
           <ActionForm
             v-if="selectedAction"

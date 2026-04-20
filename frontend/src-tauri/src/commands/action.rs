@@ -75,25 +75,25 @@ pub fn act_execute_action_with_params(
 
 #[tauri::command]
 pub fn act_undo() -> Result<(), String> {
-    act::config::undo()
+    act::history::undo()
 }
 
 #[tauri::command]
 pub fn act_redo() -> Result<(), String> {
-    act::config::redo()
+    act::history::redo()
 }
 
 #[tauri::command]
 pub fn act_get_history_status() -> Result<(usize, usize), String> {
-    Ok(act::config::get_history_status())
+    Ok(act::history::get_history_status())
 }
 
 #[tauri::command]
 pub fn act_clear_history() -> Result<(), String> {
-    act::config::clear_history()
+    act::history::clear_history()
 }
 
 #[tauri::command]
 pub fn act_discard_all() -> Result<(), String> {
-    act::config::discard_changes()
+    act::history::discard()
 }

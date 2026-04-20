@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
 import { useObserve } from '../../composables/useObserve'
 
 const {
@@ -10,12 +11,20 @@ const {
   saveConfig,
   startListening,
   stopListening,
+  getFirstSessionStats,
+  formatBytes,
 } = useObserve()
+
+// ZMQ 地址（来自 communication 模块）
+const zmqAddress = ref('tcp://127.0.0.1:5556')
+
+// 当前会话统计
+const sessionStats = computed(() => getFirstSessionStats())
 
 // Canvas ref
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 
-// FPS tracking
+// FPS 追踪
 const actualFps = ref(0)
 let lastFrameTime = 0
 let frameCount = 0
@@ -23,10 +32,30 @@ let fpsUpdateTime = 0
 const lastUpdateTime = ref(0)
 const PREVIEW_INTERVAL_MS = 100
 
-// Config path state
+// 加载 ZMQ 地址
+async function loadZmqAddress() {
+  try {
+    const addr = await invoke<string>('comm_get_pub_address')
+    zmqAddress.value = addr
+  } catch (e) {
+    console.error('Failed to load ZMQ address:', e)
+  }
+}
+
+// 保存 ZMQ 地址
+async function saveZmqAddress() {
+  try {
+    await invoke('comm_set_pub_address', { addr: zmqAddress.value })
+  } catch (e) {
+    console.error('Failed to save ZMQ address:', e)
+    throw e
+  }
+}
+
+// 配置路径状态
 const configPath = ref('')
 
-// Watch preview frames
+// 监听预览帧
 watch(previewFrame, (frame) => {
   if (!frame) return
 
@@ -34,7 +63,7 @@ watch(previewFrame, (frame) => {
   if (now - lastUpdateTime.value < PREVIEW_INTERVAL_MS) return
   lastUpdateTime.value = now
 
-  // Calculate actual FPS
+  // 计算实际 FPS
   if (lastFrameTime > 0) {
     const elapsed = now - lastFrameTime
     if (elapsed > 0) {
@@ -148,6 +177,7 @@ async function handleSaveAs() {
 }
 
 onMounted(async () => {
+  await loadZmqAddress()
   await startListening()
 })
 
@@ -158,14 +188,14 @@ onUnmounted(() => {
 
 <template>
   <div class="transport-panel">
-    <!-- Preview area (left side) -->
+    <!-- 预览区域（左侧） -->
     <div class="preview-area">
       <canvas
         ref="canvasRef"
         class="preview-canvas"
       />
 
-      <!-- Hint when not observing -->
+      <!-- 未观察时的提示 -->
       <div
         v-if="!isObserving"
         class="preview-placeholder"
@@ -174,21 +204,22 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- Config panel (right side) -->
+    <!-- 配置面板（右侧） -->
     <div class="config-panel">
       <h3>传输配置</h3>
 
-      <!-- ZMQ address -->
+      <!-- ZMQ 地址 -->
       <div class="config-group">
         <label>ZMQ 地址</label>
         <input
-          v-model="config.zmq.address"
+          v-model="zmqAddress"
           type="text"
           placeholder="tcp://127.0.0.1:5556"
+          @change="saveZmqAddress"
         >
       </div>
 
-      <!-- FPS indicator -->
+      <!-- FPS 指示器 -->
       <div class="config-group">
         <div class="status-row">
           <span class="status-label">实际帧率</span>
@@ -196,7 +227,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Crop regions info -->
+      <!-- 裁切区域信息 -->
       <div class="config-group">
         <label>裁切区域</label>
         <div class="crop-info">
@@ -210,7 +241,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Config file operations -->
+      <!-- 配置文件操作 -->
       <div class="config-group">
         <label>配置文件</label>
         <div class="config-actions">
@@ -235,7 +266,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Connection status -->
+      <!-- 连接状态 -->
       <div class="config-group">
         <div class="status-row">
           <span class="status-label">观察状态</span>
@@ -244,9 +275,34 @@ onUnmounted(() => {
           </span>
         </div>
       </div>
+
+      <!-- ZMQ 统计 -->
+      <div class="config-group">
+        <label>ZMQ 传输</label>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <span class="stat-label">连接状态</span>
+            <span :class="['stat-value', sessionStats?.zmq_connected ? 'success' : 'error']">
+              {{ sessionStats?.zmq_connected ? '已连接' : '未连接' }}
+            </span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">发送消息</span>
+            <span class="stat-value">{{ sessionStats?.zmq_messages_sent ?? 0 }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">发送数据</span>
+            <span class="stat-value">{{ formatBytes(sessionStats?.bytes_sent ?? 0) }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">发送帧数</span>
+            <span class="stat-value">{{ sessionStats?.frames_captured ?? 0 }}</span>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Action bar -->
+    <!-- 操作栏 -->
     <div class="action-bar">
       <div class="action-info">
         <span class="info-label">ZMQ PUB → Python SUB</span>
@@ -373,6 +429,37 @@ onUnmounted(() => {
 .crop-hint {
   color: var(--color-text-muted);
   font-size: 11px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: var(--color-surface-secondary);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+.stat-label {
+  color: var(--color-text-secondary);
+}
+
+.stat-value {
+  font-weight: 500;
+}
+
+.stat-value.success {
+  color: var(--color-success, #22c55e);
+}
+
+.stat-value.error {
+  color: var(--color-error, #dc2626);
 }
 
 .config-actions {

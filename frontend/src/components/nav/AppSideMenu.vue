@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import ProjectSelector from '../ProjectSelector.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -34,6 +35,8 @@ function isActive(path: string): boolean {
     <div class="menu-header">
       <span class="logo">OTAcle</span>
     </div>
+
+    <ProjectSelector />
 
     <ul class="menu-list">
       <li

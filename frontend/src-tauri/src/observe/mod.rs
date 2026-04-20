@@ -10,12 +10,11 @@ pub mod types;
 pub mod config;
 pub mod processor;
 pub mod capture;
-pub mod zmq_pub;
+pub mod state;
+pub mod status;
 
-use lazy_static::lazy_static;
-use std::sync::Mutex;
-
-lazy_static! {
-    /// Global observe session
-    pub static ref OBSERVE_SESSION: Mutex<Option<crate::observe::capture::CaptureSession>> = Mutex::new(None);
-}
+pub use capture::capture_screenshot;
+pub use state::{GLOBAL_STATS, SESSIONS, SessionHandle};
+pub use status::{get_full_status, get_status_map, ObserveStatus, SessionStatus};
+pub use config::{load_config, save_config, get_config, validate_config,
+                 update_config, add_crop_region, remove_crop_region};

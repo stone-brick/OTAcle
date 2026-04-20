@@ -48,19 +48,14 @@ impl ExecContext {
 }
 
 /// 获取动作的有效后端
-/// 优先级：action.backend > execution_backend > default_backend
-fn resolve_backend(action: &ActionData, default_backend: InputBackend, execution_backend: Option<InputBackend>) -> InputBackend {
+/// 优先级：action.backend > default_backend
+fn resolve_backend(action: &ActionData, default_backend: InputBackend) -> InputBackend {
     // First priority: action's own backend setting
     if let Some(backend) = get_action_backend(action) {
         return backend;
     }
 
-    // Second priority: execution_backend (global override)
-    if let Some(backend) = execution_backend {
-        return backend;
-    }
-
-    // Third priority: config default_backend
+    // Second priority: config default_backend
     default_backend
 }
 
@@ -146,9 +141,8 @@ pub fn execute_action(
         .ok_or_else(|| format!("Action {} not found in configuration", action_idx))?;
     let action = &action_item.data;
 
-    // 获取全局执行后端（如果设置则覆盖默认值）
-    let execution_backend = config::get_execution_backend();
-    let resolved_backend = resolve_backend(action, default_backend, execution_backend);
+    // 解析后端：action.backend > default_backend
+    let resolved_backend = resolve_backend(action, default_backend);
 
     // 获取全局目标窗口（已经解析为 HWND）
     let target_hwnd = config::get_target_window();
@@ -193,9 +187,8 @@ pub fn execute_action_with_params(
         action_item.data.clone()
     };
 
-    // 获取全局执行后端（如果设置则覆盖默认值）
-    let execution_backend = config::get_execution_backend();
-    let resolved_backend = resolve_backend(&resolved_action, default_backend, execution_backend);
+    // 解析后端：action.backend > default_backend
+    let resolved_backend = resolve_backend(&resolved_action, default_backend);
 
     // 获取全局目标窗口（已经解析为 HWND）
     let target_hwnd = config::get_target_window();
@@ -232,9 +225,6 @@ pub fn execute_actions(
     // 获取全局目标窗口（已经解析为 HWND）
     let target_hwnd = config::get_target_window();
 
-    // 获取全局执行后端
-    let execution_backend = config::get_execution_backend();
-
     // 先收集所有需要执行的 action
     let actions_to_execute: Vec<(u32, &ActionData)> = execute
         .iter()
@@ -253,8 +243,8 @@ pub fn execute_actions(
             action.clone()
         };
 
-        // 解析后端：action > execution_backend > default_backend
-        let resolved_backend = resolve_backend(&resolved_action, default_backend.clone(), execution_backend.clone());
+        // 解析后端：action.backend > default_backend
+        let resolved_backend = resolve_backend(&resolved_action, default_backend.clone());
 
         // 使用全局目标窗口创建执行上下文
         let ctx = ExecContext::new(resolved_backend, target_hwnd);

@@ -11,7 +11,7 @@ export function useObserveCanvas(
 ) {
   const lastUpdateTime = ref(0)
 
-  // Actual FPS tracking
+  // 实际 FPS 追踪
   const actualFps = ref(0)
   let lastFrameTime = 0
   let frameCount = 0
@@ -106,6 +106,15 @@ export function useObserveCanvas(
     ctx.setLineDash([])
   }
 
+  function resetCanvas() {
+    const canvas = canvasRef.value
+    if (!canvas) return
+
+    actualFps.value = 0
+    lastFrameTime = 0
+    frameCount = 0
+  }
+
   // 监听帧变化，节流渲染
   watch(previewFrame, (frame) => {
     if (!frame) return
@@ -114,12 +123,12 @@ export function useObserveCanvas(
     if (now - lastUpdateTime.value < PREVIEW_INTERVAL_MS) return
     lastUpdateTime.value = now
 
-    // Calculate actual FPS
+    // 计算实际 FPS
     if (lastFrameTime > 0) {
       const elapsed = now - lastFrameTime
       if (elapsed > 0) {
         frameCount++
-        // Update FPS every 500ms
+        // 每 500ms 更新一次 FPS
         if (now - fpsUpdateTime >= 500) {
           actualFps.value = Math.round((frameCount * 1000) / (now - fpsUpdateTime))
           frameCount = 0
@@ -136,5 +145,6 @@ export function useObserveCanvas(
 
   return {
     actualFps,
+    resetCanvas,
   }
 }

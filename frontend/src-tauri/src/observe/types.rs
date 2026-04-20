@@ -11,7 +11,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Default)]
 pub struct ObserveConfig {
     pub capture: CaptureConfig,
-    pub zmq: ZmqConfig,
     #[serde(default)]
     pub crop_regions: Vec<CropRegion>,
 }
@@ -38,21 +37,6 @@ impl Default for CaptureConfig {
     }
 }
 
-/// ZMQ configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ZmqConfig {
-    #[serde(default = "default_zmq_address")]
-    pub address: String,
-}
-
-impl Default for ZmqConfig {
-    fn default() -> Self {
-        Self {
-            address: default_zmq_address(),
-        }
-    }
-}
-
 /// Crop region in the captured frame
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CropRegion {
@@ -60,31 +44,6 @@ pub struct CropRegion {
     pub y: u32,
     pub w: u32,
     pub h: u32,
-}
-
-// ============================================================================
-// 帧消息类型
-// ============================================================================
-
-/// Frame message sent via ZMQ PUB and Tauri events
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FrameMessage {
-    pub width: u32,
-    pub height: u32,
-    pub timestamp: u64,
-    pub frame_id: u64,
-    pub data: Vec<CropBlock>,
-}
-
-/// Single crop block within a frame
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CropBlock {
-    pub x: u32,
-    pub y: u32,
-    pub w: u32,
-    pub h: u32,
-    /// Base64 encoded RGBA8 image data
-    pub image: String,
 }
 
 // ============================================================================
@@ -101,8 +60,4 @@ fn default_target_width() -> u32 {
 
 fn default_target_height() -> u32 {
     480
-}
-
-fn default_zmq_address() -> String {
-    "tcp://127.0.0.1:5556".to_string()
 }

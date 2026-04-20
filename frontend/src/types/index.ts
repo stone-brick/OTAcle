@@ -1,4 +1,4 @@
-// Window information from Rust backend
+// 窗口信息（来自 Rust 后端）
 export interface WindowInfo {
   hwnd: number;
   title: string;
@@ -8,53 +8,53 @@ export interface WindowInfo {
   is_visible: boolean;
 }
 
-// Input backend type
+// 输入后端类型
 export type InputBackend = 'enigo' | 'win32';
 
-// Mouse button type
+// 鼠标按钮类型
 export type MouseButton = 'left' | 'right' | 'middle';
 
-// Scroll direction type
+// 滚动方向类型
 export type ScrollDirection = 'up' | 'down' | 'left' | 'right';
 
-// Variable definition - maps a parameter name to an action field name
+// 变量定义 - 将参数名映射到动作字段名
 export interface Variable {
   param_name: string;
   field_name: string;
 }
 
 // =============================================================================
-// ActionItem Types (Unified - replaces separate Action and ActionItem types)
+// ActionItem 类型（统一结构 - 替代分离的 Action 和 ActionItem 类型）
 // =============================================================================
 
-// Base interface for all action types - common fields
+// 所有动作类型的基接口 - 公共字段
 export interface ActionItemBase {
   name?: string | null;
   backend?: InputBackend | null;
 }
 
-// Key Action - single key press
+// 按键动作 - 单次按键
 export interface KeyActionItem extends ActionItemBase {
   type: 'key';
   key: string;
   hold_time_ms?: number;
 }
 
-// Key Sequence Item
+// 按键序列项
 export interface KeySequenceItem {
   key: string;
   hold_time_ms?: number;
   interval_ms?: number | null;
 }
 
-// Key Sequence Action - multiple key presses
+// 按键序列动作 - 多次按键
 export interface KeySequenceActionItem extends ActionItemBase {
   type: 'key_sequence';
   keys: KeySequenceItem[];
   default_interval_ms: number;
 }
 
-// Mouse Click Action
+// 鼠标点击动作
 export interface MouseClickActionItem extends ActionItemBase {
   type: 'mouse_click';
   button: MouseButton;
@@ -64,7 +64,7 @@ export interface MouseClickActionItem extends ActionItemBase {
   variables?: Variable[];
 }
 
-// Mouse Move Action
+// 鼠标移动动作
 export interface MouseMoveActionItem extends ActionItemBase {
   type: 'mouse_move';
   x: number;
@@ -73,26 +73,26 @@ export interface MouseMoveActionItem extends ActionItemBase {
   variables?: Variable[];
 }
 
-// Mouse Scroll Action
+// 鼠标滚动动作
 export interface MouseScrollActionItem extends ActionItemBase {
   type: 'mouse_scroll';
   direction: ScrollDirection;
   amount: number;
 }
 
-// Delay Action
+// 延迟动作
 export interface DelayActionItem extends ActionItemBase {
   type: 'delay';
   duration_ms: number;
 }
 
-// Text Action
+// 文本动作
 export interface TextActionItem extends ActionItemBase {
   type: 'text';
   content: string;
 }
 
-// Union type for all action items
+// 所有动作项的联合类型
 export type ActionItem =
   | KeyActionItem
   | KeySequenceActionItem
@@ -102,45 +102,40 @@ export type ActionItem =
   | DelayActionItem
   | TextActionItem;
 
-// ActionItem type for editor (same as ActionItem - kept for backwards compatibility)
+// ActionItem 类型用于编辑器（与 ActionItem 相同 - 保持向后兼容）
 export type ActionType = ActionItem['type'];
 
-// Action config data (full config structure)
+// 动作配置数据（完整配置结构）
 export interface ActionConfigData {
   default_backend: InputBackend;
   actions: ActionItem[];
 }
 
-// Log entry
+// 日志条目
 export interface LogEntry {
   time: string;
   message: string;
   type: 'info' | 'success' | 'error';
 }
 
-// App status
+// 应用状态
 export type AppStatus = 'ready' | 'sending' | 'error';
 
-// Window search mode
+// 窗口搜索模式
 export type SearchMode = 'title' | 'title_contains' | 'class' | 'pid' | 'exe' | 'hwnd';
 
 // =============================================================================
-// Observe Module Types
+// Observe 模块类型
 // =============================================================================
 
-// Capture configuration
+// 截图配置
 export interface CaptureConfig {
   frame_rate: number;
   target_width: number;
   target_height: number;
 }
 
-// ZMQ configuration
-export interface ZmqConfig {
-  address: string;
-}
-
-// Crop region in captured frame
+// 帧内裁切区域
 export interface CropRegion {
   x: number;
   y: number;
@@ -148,27 +143,53 @@ export interface CropRegion {
   h: number;
 }
 
-// Observe module configuration
+// Observe 模块配置
 export interface ObserveConfig {
   capture: CaptureConfig;
-  zmq: ZmqConfig;
   crop_regions: CropRegion[];
 }
 
-// Single crop block within a frame
+// 帧内单个裁切块
 export interface CropBlock {
   x: number;
   y: number;
   w: number;
   h: number;
-  image: string;  // Base64 encoded
+  image: string;  // Base64 编码
 }
 
-// Frame message sent via ZMQ and Tauri events
+// 通过 ZMQ 和 Tauri 事件发送的帧消息
 export interface FrameMessage {
   width: number;
   height: number;
   timestamp: number;
   frame_id: number;
   data: CropBlock[];
+}
+
+// 会话运行时状态
+export interface SessionStatus {
+  hwnd: number;
+  running: boolean;
+  uptime_seconds: number;
+  config: ObserveConfig;
+  frames_captured: number;
+  bytes_sent: number;
+  errors_count: number;
+  zmq_connected: boolean;
+  zmq_messages_sent: number;
+}
+
+// Observe 全局统计
+export interface ObserveGlobalStats {
+  total_frames_captured: number;
+  total_bytes_sent: number;
+  total_errors: number;
+  active_sessions: number;
+}
+
+// Observe 完整状态
+export interface ObserveStatus {
+  sessions: Record<number, SessionStatus>;
+  global_stats: ObserveGlobalStats;
 }

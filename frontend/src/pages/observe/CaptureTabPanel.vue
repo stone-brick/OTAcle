@@ -12,21 +12,26 @@ const {
   stopObserve,
   startListening,
   stopListening,
+  getFirstSessionStats,
+  formatUptime,
 } = useObserve()
+
+// 当前会话统计
+const sessionStats = computed(() => getFirstSessionStats())
 
 const { windows, selectedWindow, refreshWindows, selectWindow } = useWindows()
 
 // Canvas ref
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 
-// Derived target dimensions
+// 推导的目标尺寸
 const targetWidth = computed(() => config.value.capture.target_width)
 const targetHeight = computed(() => config.value.capture.target_height)
 
-// Canvas rendering
-const { actualFps } = useObserveCanvas(canvasRef, previewFrame, targetWidth.value, targetHeight.value)
+// Canvas 渲染
+const { actualFps, resetCanvas } = useObserveCanvas(canvasRef, previewFrame, targetWidth.value, targetHeight.value)
 
-// Error state
+// 错误状态
 const errorMessage = ref<string | null>(null)
 
 function clearError() {
@@ -40,6 +45,7 @@ async function handleStart() {
   }
   try {
     errorMessage.value = null
+    resetCanvas()
     await startObserve(selectedWindow.value.hwnd.toString())
   } catch (e) {
     errorMessage.value = `启动观察失败: ${e}`
@@ -182,6 +188,29 @@ onUnmounted(() => {
         <div class="status-row">
           <span class="status-label">实际帧率</span>
           <span class="status-value">{{ actualFps }} fps</span>
+        </div>
+      </div>
+
+      <!-- Statistics -->
+      <div class="config-group">
+        <label>采集统计</label>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <span class="stat-label">帧数</span>
+            <span class="stat-value">{{ sessionStats?.frames_captured ?? 0 }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">运行时长</span>
+            <span class="stat-value">{{ formatUptime(sessionStats?.uptime_seconds ?? 0) }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">错误</span>
+            <span class="stat-value">{{ sessionStats?.errors_count ?? 0 }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">发送数据</span>
+            <span class="stat-value">{{ sessionStats?.bytes_sent ?? 0 }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -375,6 +404,29 @@ onUnmounted(() => {
 
 .status-value.inactive {
   color: var(--color-text-muted);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: var(--color-surface-secondary);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+.stat-label {
+  color: var(--color-text-secondary);
+}
+
+.stat-value {
+  font-weight: 500;
 }
 
 .action-bar {

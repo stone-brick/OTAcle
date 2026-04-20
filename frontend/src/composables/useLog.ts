@@ -2,7 +2,7 @@ import { ref } from 'vue';
 import type { LogEntry } from '../types';
 
 // ============================================================================
-// Module-level Singleton State
+// 模块级单例状态
 // ============================================================================
 const logs = ref<LogEntry[]>([]);
 
@@ -24,17 +24,17 @@ function clearLogs(): void {
 }
 
 // ============================================================================
-// Singleton Instance
+// 单例实例
 // ============================================================================
 const logService = {
   /**
-   * Logs array - module-level singleton exposed directly.
+   * 日志数组 - 模块级单例，直接暴露。
    *
-   * NOTE: This is intentionally a direct ref (not wrapped in readonly)
-   * to maintain compatibility with existing component prop types.
-   * The singleton nature ensures all components share the same state.
+   * 注意：这里有意使用直接 ref（而非包装在 readonly 中）
+   * 以保持与现有组件 prop 类型兼容。
+   * 单例性质确保所有组件共享同一状态。
    *
-   * External modification should be avoided - use addLog() and clearLogs() instead.
+   * 应避免外部修改 - 请使用 addLog() 和 clearLogs()。
    */
   logs,
 
@@ -44,40 +44,40 @@ const logService = {
 };
 
 // ============================================================================
-// Composable Wrapper - 保持向后兼容
+// Composable 包装器 - 保持向后兼容
 // ============================================================================
 
 /**
- * useLog - Vue composable compatible interface
+ * useLog - Vue composable 兼容接口
  *
- * Returns the singleton log service instance.
- * Despite the "use" prefix suggesting new instances, this always returns
- * the same singleton, ensuring centralized logging across the application.
+ * 返回单例日志服务实例。
+ * 尽管"use"前缀暗示创建新实例，但此函数始终返回
+ * 同一单例，确保应用程序中的集中式日志记录。
  *
  * @example
- * // For reading and clearing logs
+ * // 用于读取和清除日志
  * const { logs, clearLogs } = useLog()
  *
  * @example
- * // For adding logs (common in other composables)
+ * // 用于添加日志（在其他 composables 中常用）
  * const { addLog } = useLog()
- * addLog('Operation completed', 'success')
+ * addLog('操作完成', 'success')
  */
 export function useLog() {
   return logService;
 }
 
 // ============================================================================
-// Named Export - 可选的直接访问方式
+// 命名导出 - 可选的直接访问方式
 // ============================================================================
 
 /**
- * LogService - Direct singleton access without composable wrapper.
+ * LogService - 无需 composable 包装的直接单例访问。
  *
- * Alternative to useLog() for cases where the composable pattern is not needed.
- * Provides the same interface as useLog().
+ * 在不需要 composable 模式时使用 useLog() 的替代方案。
+ * 提供与 useLog() 相同的接口。
  *
  * @example
  * import { LogService } from '@/composables/useLog'
- * LogService.addLog('Direct call', 'info')
+ * LogService.addLog('直接调用', 'info')
  */

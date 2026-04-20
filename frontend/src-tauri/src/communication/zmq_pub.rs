@@ -2,12 +2,13 @@
 //!
 //! 向 Python 端通过 ZeroMQ PUB 发送图像帧数据
 
-use std::thread;
 use std::sync::mpsc::Receiver;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
+use std::thread::{self, JoinHandle};
 
-use crate::observe::types::FrameMessage;
+use crate::communication::types::{FrameMessage, ZmqPubState};
 
 /// 创建 ZMQ PUB 发布线程
 ///
@@ -15,29 +16,42 @@ use crate::observe::types::FrameMessage;
 /// * `addr` - ZMQ 地址 (如 "tcp://127.0.0.1:5556")
 /// * `running` - 运行标志，用于控制线程停止
 /// * `receiver` - 帧消息接收器
+/// * `zmq_state` - ZMQ 状态，用于更新连接状态和发送统计
 ///
 /// # Returns
-/// * `Sender<FrameMessage>` - 用于发送帧消息的发送端
+/// * `JoinHandle<()>` - 用于等待线程结束
 pub fn start_publisher(
     addr: &str,
     running: Arc<AtomicBool>,
     receiver: Receiver<FrameMessage>,
-) -> Result<(), String> {
+    zmq_state: Arc<Mutex<ZmqPubState>>,
+) -> Result<JoinHandle<()>, String> {
     let addr = addr.to_string();
 
-    thread::spawn(move || {
+    let handle = thread::spawn(move || {
         let ctx = zmq::Context::new();
         let socket = match ctx.socket(zmq::PUB) {
             Ok(s) => s,
             Err(e) => {
                 eprintln!("ZMQ socket creation failed: {}", e);
+                if let Ok(mut state) = zmq_state.lock() {
+                    state.set_error(format!("Socket creation failed: {}", e));
+                }
                 return;
             }
         };
 
         if let Err(e) = socket.bind(&addr) {
             eprintln!("ZMQ bind failed for {}: {}", addr, e);
+            if let Ok(mut state) = zmq_state.lock() {
+                state.set_error(format!("Bind failed: {}", e));
+            }
             return;
+        }
+
+        // 连接成功
+        if let Ok(mut state) = zmq_state.lock() {
+            state.set_connected();
         }
 
         let _ = socket.set_conflate(true);
@@ -49,8 +63,12 @@ pub fn start_publisher(
                         Ok(j) => j,
                         Err(_) => continue,
                     };
-                    if socket.send(json.as_bytes(), 0).is_err() {
-                        break;
+                    let bytes = json.len() as u64;
+                    if socket.send(json.as_bytes(), 0).is_ok() {
+                        if let Ok(mut state) = zmq_state.lock() {
+                            state.add_messages_sent(1);
+                            state.add_bytes_sent(bytes);
+                        }
                     }
                 }
                 Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
@@ -61,7 +79,12 @@ pub fn start_publisher(
                 }
             }
         }
+
+        // 线程结束，设置断开状态
+        if let Ok(mut state) = zmq_state.lock() {
+            state.set_disconnected();
+        }
     });
 
-    Ok(())
+    Ok(handle)
 }

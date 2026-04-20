@@ -1,9 +1,11 @@
 //! 撤销/重做历史管理
 //!
-//! 这些函数作为纯函数，接收当前状态值作为参数，返回新状态值。
-//! 调用者（config）负责实际的状态读写。
+//! 提供完整的撤销/重做功能，包括状态管理和历史栈操作。
 
-use super::action_state::{UNDO_STACK, REDO_STACK, ORIGINAL_CONFIG_SNAPSHOT};
+use super::state::{
+    ACTION_CONFIG_LIST, DEFAULT_INPUT_BACKEND, UNDO_STACK, REDO_STACK,
+    ORIGINAL_CONFIG_SNAPSHOT,
+};
 use super::types::HistoryEntry;
 
 /// 最大历史记录条目数
@@ -38,10 +40,66 @@ pub fn save_to_history(
     Ok(())
 }
 
-/// 准备撤销操作 - 返回应恢复到的新状态
+/// 撤销操作 - 从撤销栈弹出上一个状态并应用到全局
+///
+/// 返回 Err 如果撤销栈为空
+pub fn undo() -> Result<(), String> {
+    let actions = get_action_list()?;
+    let current_backend = get_default_backend()?;
+    let entry = pop_undo(actions, current_backend)?;
+    apply_entry(entry)
+}
+
+/// 重做操作 - 从重做栈弹出下一个状态并应用到全局
+///
+/// 返回 Err 如果重做栈为空
+pub fn redo() -> Result<(), String> {
+    let actions = get_action_list()?;
+    let current_backend = get_default_backend()?;
+    let entry = pop_redo(actions, current_backend)?;
+    apply_entry(entry)
+}
+
+/// 丢弃所有更改 - 恢复到原始加载状态
+///
+/// 返回 Err 如果没有原始快照
+pub fn discard() -> Result<(), String> {
+    let actions = get_action_list()?;
+    let current_backend = get_default_backend()?;
+    let entry = restore_original(actions, current_backend)?;
+    apply_entry(entry)
+}
+
+/// 将 HistoryEntry 应用到全局状态
+fn apply_entry(entry: HistoryEntry) -> Result<(), String> {
+    let mut list = ACTION_CONFIG_LIST.lock()
+        .map_err(|_| "Failed to lock action list")?;
+    *list = Some(entry.actions);
+    drop(list);
+    let mut backend = DEFAULT_INPUT_BACKEND.lock()
+        .map_err(|_| "Failed to lock backend")?;
+    *backend = entry.default_backend;
+    Ok(())
+}
+
+/// 获取当前动作列表
+fn get_action_list() -> Result<super::types::ActionList, String> {
+    let list = ACTION_CONFIG_LIST.lock()
+        .map_err(|_| "Failed to lock action list")?;
+    list.clone().ok_or_else(|| "No action list loaded".to_string())
+}
+
+/// 获取当前默认后端
+fn get_default_backend() -> Result<super::types::InputBackend, String> {
+    let backend = DEFAULT_INPUT_BACKEND.lock()
+        .map_err(|_| "Failed to lock backend")?;
+    Ok(backend.clone())
+}
+
+/// 准备撤销操作 - 从撤销栈弹出状态（不直接应用）
 ///
 /// 返回 HistoryEntry 如果可以撤销，Err 如果不能
-pub fn prepare_undo(
+fn pop_undo(
     actions: super::types::ActionList,
     default_backend: super::types::InputBackend,
 ) -> Result<HistoryEntry, String> {
@@ -64,10 +122,10 @@ pub fn prepare_undo(
     Ok(prev)
 }
 
-/// 准备重做操作 - 返回应恢复到的新状态
+/// 准备重做操作 - 从重做栈获取状态（不直接应用）
 ///
 /// 返回 HistoryEntry 如果可以重做，Err 如果不能
-pub fn prepare_redo(
+fn pop_redo(
     actions: super::types::ActionList,
     default_backend: super::types::InputBackend,
 ) -> Result<HistoryEntry, String> {
@@ -90,8 +148,10 @@ pub fn prepare_redo(
     Ok(next)
 }
 
-/// 丢弃所有更改 - 返回原始状态（可撤销）
-pub fn prepare_discard(
+/// 准备丢弃操作 - 返回原始状态快照（保存当前到历史）
+///
+/// 返回 HistoryEntry 如果有原始快照，Err 如果没有
+fn restore_original(
     actions: super::types::ActionList,
     default_backend: super::types::InputBackend,
 ) -> Result<HistoryEntry, String> {

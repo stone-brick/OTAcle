@@ -15,7 +15,7 @@ const isLoaded = ref(false);
 // 组合 useActionHistory
 const { refreshHistoryCount } = useActionHistory();
 
-// Refresh action list from backend (exported for use by undo/redo)
+// 从后端刷新动作列表（导出供 undo/redo 使用）
 async function refreshActionList(): Promise<void> {
   const actionList = await invoke<ActionItem[]>('act_get_list');
   const backend = await invoke<InputBackend>('act_get_default_backend');
@@ -33,19 +33,19 @@ async function loadConfig(path: string): Promise<void> {
     });
     configPath.value = path;
 
-    // Fetch the action list with names
+    // 获取带名称的动作列表
     const actionList = await invoke<ActionItem[]>('act_get_list');
     actions.value = actionList;
     baselineActions.value = JSON.parse(JSON.stringify(actionList));
 
-    // Get default backend
+    // 获取默认后端
     const backend = await invoke<InputBackend>('act_get_default_backend');
     defaultBackend.value = backend;
     baselineDefaultBackend.value = backend;
 
     isLoaded.value = true;
 
-    // Clear backend history on load
+    // 加载时清除后端历史
     await invoke('act_clear_history');
     await refreshHistoryCount();
 
@@ -72,11 +72,11 @@ async function saveConfig(path?: string): Promise<void> {
     });
     configPath.value = savePath;
 
-    // Save successful - update original snapshot
-    // Note: do NOT clear history here - saving should not destroy undo/redo capability
+    // 保存成功 - 更新原始快照
+    // 注意：这里不清除历史 - 保存不应破坏撤销/重做能力
     baselineActions.value = JSON.parse(JSON.stringify(actions.value));
     baselineDefaultBackend.value = defaultBackend.value;
-    // History is NOT cleared - user can still undo/redo after save
+    // 历史不会被清除 - 用户保存后仍可以撤销/重做
 
     addLog(`已保存配置文件: ${savePath}`, 'success');
   } catch (e) {
@@ -88,11 +88,11 @@ async function saveConfig(path?: string): Promise<void> {
 async function createAction(type: string, name?: string): Promise<number> {
   const { addLog } = useLog();
 
-  // Create a default action based on type
+  // 根据类型创建默认动作
   const action = createDefaultAction(type);
 
   try {
-    // Call backend to create action (which saves to history)
+    // 调用后端创建动作（会保存到历史）
     const index = await invoke<number>('act_create', {
       action,
       name: name || null,
@@ -114,14 +114,14 @@ async function updateAction(index: number, action: ActionItem, name?: string): P
   const { addLog } = useLog();
 
   try {
-    // Call backend to update action (which saves to history)
+    // 调用后端更新动作（会保存到历史）
     await invoke('act_update', {
       index,
       action,
       name: name || null,
     });
 
-    // Refresh state from backend
+    // 从后端刷新状态
     await refreshActionList();
     await refreshHistoryCount();
 
@@ -136,14 +136,14 @@ async function deleteAction(index: number): Promise<void> {
   const { addLog } = useLog();
 
   try {
-    // Call backend to delete action (which saves to history)
+    // 调用后端删除动作（会保存到历史）
     await invoke('act_delete', { index });
 
-    // Refresh state from backend (indices are rebuilt by backend)
+    // 从后端刷新状态（索引由后端重建）
     await refreshActionList();
     await refreshHistoryCount();
 
-    // Adjust selectedIndex if needed (may now be out of bounds)
+    // 必要时调整 selectedIndex（可能已超出范围）
     if (selectedIndex.value !== null && selectedIndex.value >= actions.value.length) {
       selectedIndex.value = actions.value.length > 0 ? actions.value.length - 1 : null;
     }
@@ -167,7 +167,7 @@ async function setDefaultBackend(backend: InputBackend): Promise<void> {
   const { addLog } = useLog();
 
   try {
-    // Call backend to set default backend (which saves to history)
+    // 调用后端设置默认后端（会保存到历史）
     await invoke('act_set_default_backend', { backend });
     defaultBackend.value = backend;
     await refreshHistoryCount();
@@ -186,7 +186,7 @@ function clearEditor(): void {
   isLoaded.value = false;
 }
 
-// Check if a specific action has changed from baseline (by array position)
+// 检查特定动作是否已从基准线更改（按数组位置）
 function hasActionChanged(index: number): boolean {
   const baseline = baselineActions.value[index];
   const current = actions.value[index];
@@ -195,20 +195,20 @@ function hasActionChanged(index: number): boolean {
   return JSON.stringify(baseline) !== JSON.stringify(current);
 }
 
-// Get list of changed action indices (array positions)
+// 获取已更改动作的索引列表（数组位置）
 function getChangedIndices(): number[] {
   return actions.value
     .map((_, idx) => idx)
     .filter(idx => hasActionChanged(idx));
 }
 
-// Sync baselineActions snapshot to current state (call after undo/redo)
+// 将 baselineActions 快照同步到当前状态（undo/redo 后调用）
 function syncBaselineActions(): void {
   baselineActions.value = JSON.parse(JSON.stringify(actions.value));
   baselineDefaultBackend.value = defaultBackend.value;
 }
 
-// Discard all changes - restore to original state (calls backend for undo/redo support)
+// 丢弃所有更改 - 恢复到原始状态（调用后端以支持撤销/重做）
 async function discardChanges(): Promise<void> {
   await invoke('act_discard_all');
   await refreshActionList();
@@ -216,7 +216,7 @@ async function discardChanges(): Promise<void> {
   syncBaselineActions();
 }
 
-// Helper to create default action based on type
+// 根据类型创建默认动作的帮助函数
 function createDefaultAction(type: string): ActionItem {
   switch (type) {
     case 'key':

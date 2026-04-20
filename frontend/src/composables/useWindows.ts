@@ -8,7 +8,7 @@ const selectedWindow = ref<WindowInfo | null>(null);
 const isLoading = ref(false);
 
 // ============================================================================
-// Window list operations
+// 窗口列表操作
 // ============================================================================
 
 async function refreshWindows(): Promise<void> {
@@ -39,11 +39,11 @@ async function selectWindow(hwnd: number): Promise<void> {
 }
 
 // ============================================================================
-// Dedicated window search functions
+// 专用窗口搜索函数
 // ============================================================================
 
 /**
- * Find all windows by title (prefix match)
+ * 按窗口标题查找所有窗口（前缀匹配）
  */
 async function findWindowsByTitle(title: string): Promise<number[]> {
   const { addLog } = useLog();
@@ -58,7 +58,7 @@ async function findWindowsByTitle(title: string): Promise<number[]> {
 }
 
 /**
- * Find all windows by title (contains match)
+ * 按窗口标题查找所有窗口（包含匹配）
  */
 async function findWindowsByTitleContains(title: string): Promise<number[]> {
   const { addLog } = useLog();
@@ -73,7 +73,7 @@ async function findWindowsByTitleContains(title: string): Promise<number[]> {
 }
 
 /**
- * Find window by exact class name
+ * 按精确类名查找窗口
  */
 async function findWindowByClass(className: string): Promise<number | null> {
   const { addLog } = useLog();
@@ -92,7 +92,7 @@ async function findWindowByClass(className: string): Promise<number | null> {
 }
 
 /**
- * Find all windows for a process ID
+ * 按进程 ID 查找所有窗口
  */
 async function findWindowsByPid(pid: number): Promise<number[]> {
   const { addLog } = useLog();
@@ -107,7 +107,7 @@ async function findWindowsByPid(pid: number): Promise<number[]> {
 }
 
 /**
- * Find all windows for an executable name
+ * 按可执行文件名查找所有窗口
  */
 async function findWindowsByExe(processName: string): Promise<number[]> {
   const { addLog } = useLog();
@@ -122,7 +122,7 @@ async function findWindowsByExe(processName: string): Promise<number[]> {
 }
 
 /**
- * Find window by exact HWND
+ * 按精确 HWND 查找窗口
  */
 async function findWindowByHwnd(hwnd: number): Promise<number | null> {
   const { addLog } = useLog();
@@ -141,7 +141,7 @@ async function findWindowByHwnd(hwnd: number): Promise<number | null> {
 }
 
 /**
- * Get WindowInfo for multiple hwnds
+ * 获取多个 HWND 的 WindowInfo
  */
 async function getWindowsInfoByHwnds(hwnds: number[]): Promise<WindowInfo[]> {
   const results = await Promise.all(
@@ -157,7 +157,7 @@ export function useWindows() {
     isLoading,
     refreshWindows,
     selectWindow,
-    // Dedicated search functions
+    // 专用搜索函数
     findWindowsByTitle,
     findWindowsByTitleContains,
     findWindowByClass,
