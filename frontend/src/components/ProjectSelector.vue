@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
+import { mdiFolderOpen, mdiPlus, mdiPin, mdiMapMarker } from '@mdi/js'
+import BaseIcon from './ui/BaseIcon.vue'
 import { useProject, type RecentProject } from '../composables/useProject';
+import { useDialog } from '../composables/useDialog';
 
 const {
   currentProject,
@@ -16,12 +19,22 @@ const {
   openProject,
 } = useProject();
 
+const { prompt } = useDialog();
+
 const showRecentList = ref(false);
 const hoveredProject = ref<string | null>(null);
+const isHoveringProject = ref(false);
 
 onMounted(() => {
   refreshRecentProjects();
 });
+
+async function handleCreateProject() {
+  const name = await prompt('输入项目名称:', 'my-otacle-project');
+  if (name) {
+    await createProjectDialog(name);
+  }
+}
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -55,58 +68,116 @@ function handleRemoveRecent(e: Event, path: string) {
 </script>
 
 <template>
-  <div class="project-selector">
-    <div class="current-project" v-if="isProjectLoaded && currentProject">
-      <div class="project-info">
-        <span class="project-icon">📁</span>
-        <span class="project-name" :title="currentProject.path">{{ currentProject.name }}</span>
+  <div class="p-3 border-b border-gray-100 dark:border-slate-800">
+    <!-- Current Project Loaded -->
+    <div
+      v-if="isProjectLoaded && currentProject"
+      class="relative flex items-center justify-between px-3 py-2 pr-8 rounded-md bg-blue-50 dark:bg-blue-900/30"
+      @mouseenter="isHoveringProject = true"
+      @mouseleave="isHoveringProject = false"
+    >
+      <div class="flex items-center gap-2 min-w-0">
+        <span
+          class="text-sm font-semibold text-blue-600 dark:text-blue-400 truncate"
+          :title="currentProject.path"
+        >{{ currentProject.name }}</span>
       </div>
-      <button class="close-btn" @click="closeProject" title="关闭项目">×</button>
+      <button
+        class="absolute right-2 top-1/2 -translate-y-1/2 bg-none border-none text-base
+               text-gray-400 dark:text-gray-500 cursor-pointer px-1 py-0.5 rounded
+               opacity-0 hover:opacity-100 hover:bg-gray-100 dark:hover:bg-slate-700 transition-opacity"
+        title="关闭项目"
+        @click="closeProject"
+      >
+        ×
+      </button>
     </div>
 
-    <div class="no-project" v-else>
-      <div class="project-actions">
-        <button class="action-btn primary" @click="openProjectDialog" :disabled="isLoading">
-          📂 打开项目
+    <!-- No Project -->
+    <div
+      v-else
+      class="flex flex-col gap-2"
+    >
+      <div class="flex flex-col gap-1.5">
+        <button
+          class="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900
+                 rounded-md cursor-pointer transition-all
+                 hover:bg-gray-50 dark:hover:bg-slate-800 hover:border-blue-400
+                 disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="isLoading"
+          @click="openProjectDialog"
+        >
+          <BaseIcon :path="mdiFolderOpen" :size="16" />
+          <span>打开项目</span>
         </button>
-        <button class="action-btn" @click="createProjectDialog" :disabled="isLoading">
-          ➕ 新建项目
+        <button
+          class="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900
+                 rounded-md cursor-pointer transition-all
+                 hover:bg-gray-50 dark:hover:bg-slate-800 hover:border-blue-400
+                 disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="isLoading"
+          @click="handleCreateProject"
+        >
+          <BaseIcon :path="mdiPlus" :size="16" />
+          <span>新建项目</span>
         </button>
       </div>
 
-      <div class="recent-dropdown" v-if="recentProjects.length > 0">
-        <button class="recent-toggle" @click="showRecentList = !showRecentList">
-          📌 最近项目
-          <span class="arrow">{{ showRecentList ? '▲' : '▼' }}</span>
+      <!-- Recent Projects Dropdown -->
+      <div
+        v-if="recentProjects.length > 0"
+        class="relative"
+      >
+        <button
+          class="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900
+                 rounded-md cursor-pointer
+                 hover:bg-gray-50 dark:hover:bg-slate-800"
+          @click="showRecentList = !showRecentList"
+        >
+          <BaseIcon :path="mdiPin" :size="12" />
+          <span class="flex-1 text-left">最近项目</span>
+          <span class="text-[8px] text-gray-400 dark:text-gray-500">{{ showRecentList ? '▲' : '▼' }}</span>
         </button>
 
-        <div class="recent-list" v-if="showRecentList">
+        <!-- Recent List -->
+        <div
+          v-if="showRecentList"
+          class="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800
+                 rounded-md shadow-lg max-h-[200px] overflow-y-auto z-[100]"
+        >
           <div
             v-for="project in [...pinnedProjects, ...unpinnedProjects]"
             :key="project.path"
-            class="recent-item"
-            :class="{ pinned: project.pinned }"
+            class="flex items-center gap-2 px-2.5 py-2 cursor-pointer transition-colors
+                   hover:bg-gray-50 dark:hover:bg-slate-800"
+            :class="project.pinned ? 'bg-blue-50 dark:bg-blue-900/30' : ''"
             @click="handleOpenRecent(project)"
             @mouseenter="hoveredProject = project.path"
             @mouseleave="hoveredProject = null"
           >
-            <span class="recent-icon">{{ project.pinned ? '📌' : '📂' }}</span>
-            <div class="recent-info">
-              <span class="recent-name">{{ project.name }}</span>
-              <span class="recent-date">{{ formatDate(project.last_opened) }}</span>
+            <BaseIcon :path="project.pinned ? mdiPin : mdiFolderOpen" :size="16" />
+            <div class="flex-1 min-w-0 flex flex-col">
+              <span class="text-xs text-gray-700 dark:text-slate-200 truncate">{{ project.name }}</span>
+              <span class="text-[10px] text-gray-400 dark:text-gray-500">{{ formatDate(project.last_opened) }}</span>
             </div>
-            <div class="recent-actions" v-if="hoveredProject === project.path">
+            <!-- Hover Actions -->
+            <div
+              v-if="hoveredProject === project.path"
+              class="flex gap-1"
+            >
               <button
-                class="icon-btn"
-                @click="(e) => handleTogglePin(e, project.path)"
+                class="bg-none border-none text-xs cursor-pointer px-1 py-0.5 rounded
+                       hover:bg-gray-100 dark:hover:bg-slate-700"
                 :title="project.pinned ? '取消固定' : '固定'"
+                @click="(e) => handleTogglePin(e, project.path)"
               >
-                {{ project.pinned ? '📍' : '📌' }}
+                <BaseIcon :path="project.pinned ? mdiMapMarker : mdiPin" :size="12" />
               </button>
               <button
-                class="icon-btn remove"
-                @click="(e) => handleRemoveRecent(e, project.path)"
+                class="bg-none border-none text-xs cursor-pointer px-1 py-0.5 rounded
+                       hover:bg-gray-100 dark:hover:bg-slate-700 text-red-500"
                 title="移除"
+                @click="(e) => handleRemoveRecent(e, project.path)"
               >
                 ×
               </button>
@@ -117,201 +188,3 @@ function handleRemoveRecent(e: Event, path: string) {
     </div>
   </div>
 </template>
-
-<style scoped>
-.project-selector {
-  padding: 12px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.current-project {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  background: var(--color-primary-bg);
-  border-radius: var(--radius-md);
-}
-
-.project-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.project-icon {
-  font-size: 16px;
-}
-
-.project-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-}
-
-.close-btn:hover {
-  background: var(--color-hover);
-  color: var(--color-text);
-}
-
-.no-project {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.project-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.action-btn {
-  flex: 1;
-  padding: 8px 12px;
-  font-size: 12px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-duration);
-  white-space: nowrap;
-}
-
-.action-btn:hover:not(:disabled) {
-  background: var(--color-hover);
-  border-color: var(--color-primary);
-}
-
-.action-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.action-btn.primary {
-  background: var(--color-primary);
-  color: white;
-  border-color: var(--color-primary);
-}
-
-.action-btn.primary:hover:not(:disabled) {
-  background: var(--color-primary-dark);
-}
-
-.recent-dropdown {
-  position: relative;
-}
-
-.recent-toggle {
-  width: 100%;
-  padding: 6px 10px;
-  font-size: 11px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.recent-toggle:hover {
-  background: var(--color-hover);
-}
-
-.arrow {
-  font-size: 8px;
-  color: var(--color-text-secondary);
-}
-
-.recent-list {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  margin-top: 4px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  max-height: 200px;
-  overflow-y: auto;
-  z-index: 100;
-}
-
-.recent-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  cursor: pointer;
-  transition: background var(--transition-duration);
-}
-
-.recent-item:hover {
-  background: var(--color-hover);
-}
-
-.recent-item.pinned {
-  background: var(--color-primary-bg);
-}
-
-.recent-icon {
-  font-size: 14px;
-}
-
-.recent-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.recent-name {
-  font-size: 12px;
-  color: var(--color-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.recent-date {
-  font-size: 10px;
-  color: var(--color-text-secondary);
-}
-
-.recent-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.icon-btn {
-  background: none;
-  border: none;
-  font-size: 12px;
-  cursor: pointer;
-  padding: 2px 4px;
-  border-radius: var(--radius-sm);
-}
-
-.icon-btn:hover {
-  background: var(--color-hover);
-}
-
-.icon-btn.remove {
-  color: var(--color-error);
-}
-</style>

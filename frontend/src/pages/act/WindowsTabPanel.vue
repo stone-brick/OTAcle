@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import type { ActionItem, WindowInfo, SearchMode } from '../../types';
-import WindowSidebar from '../../components/WindowSidebar.vue';
+import WindowList from '../../components/WindowList.vue';
 import ActionList from '../../components/ActionList.vue';
 import ActionTestPanel from '../../components/ActionTestPanel.vue';
 
@@ -54,51 +54,35 @@ function handleExecute(payload: { actionIdx: number; params: Record<string, any>
 </script>
 
 <template>
-  <div class="windows-tab-panel">
-    <WindowSidebar
-      :windows="displayWindows"
-      :selected-hwnd="selectedWindow?.hwnd ?? null"
-      :is-loading="isLoading"
-      @select="handleSelectWindow"
-      @refresh="emit('refreshWindows'); searchResults = null"
-      @search="handleSearch"
-    />
-    <ActionList
-      :actions="actions"
-      :selected-index="selectedTestActionIndex"
-      @select="handleSelectTestAction"
-    />
-    <ActionTestPanel
-      :selected-window="selectedWindow"
-      :actions="actions"
-      :is-loaded="isLoaded"
-      :selected-action-index="selectedTestActionIndex"
-      @execute="handleExecute"
-    />
+  <div class="flex flex-row p-3 gap-3 h-full box-border">
+    <div class="w-[30%] flex-shrink-0">
+      <WindowList
+        :windows="displayWindows"
+        :selected-hwnd="selectedWindow?.hwnd ?? null"
+        :is-loading="isLoading"
+        class="h-full rounded-xl overflow-hidden"
+        @select="handleSelectWindow"
+        @refresh="emit('refreshWindows'); searchResults = null"
+        @search="handleSearch"
+      />
+    </div>
+    <div class="w-[30%] flex-shrink-0">
+      <ActionList
+        :actions="actions"
+        :selected-index="selectedTestActionIndex"
+        class="h-full rounded-xl overflow-hidden"
+        @select="handleSelectTestAction"
+      />
+    </div>
+    <div class="flex-1 flex-shrink-0">
+      <ActionTestPanel
+        :selected-window="selectedWindow"
+        :actions="actions"
+        :is-loaded="isLoaded"
+        :selected-action-index="selectedTestActionIndex"
+        class="h-full rounded-xl overflow-hidden"
+        @execute="handleExecute"
+      />
+    </div>
   </div>
 </template>
-
-<style scoped>
-.windows-tab-panel {
-  display: flex;
-  flex-direction: row;
-  height: 100%;
-  overflow: hidden;
-}
-
-.windows-tab-panel > :first-child {
-  flex: 0 0 35%;
-  width: 35%;
-}
-
-.windows-tab-panel > :nth-child(2) {
-  flex: 0 0 25%;
-  width: 25%;
-  min-width: 0;
-}
-
-.windows-tab-panel > :last-child {
-  flex: 0 0 40%;
-  width: 40%;
-}
-</style>

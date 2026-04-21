@@ -4,12 +4,22 @@ import { useLog } from './composables/useLog'
 import { useProject } from './composables/useProject'
 import { useActionEditor } from './composables/act/useActionEditor'
 import { useObserve } from './composables/useObserve'
+import { useDialog } from './composables/useDialog'
 import AppSideMenu from './components/nav/AppSideMenu.vue'
 import TitleBar from './components/TitleBar.vue'
 import LogPanel from './components/LogPanel.vue'
+import AlertDialog from './components/dialog/AlertDialog.vue'
+import InputDialog from './components/dialog/InputDialog.vue'
 
 const { logs, clearLogs } = useLog()
 const { checkCurrentProject, refreshRecentProjects } = useProject()
+const {
+  alertState,
+  inputState,
+  handleAlertOk,
+  handleInputConfirm,
+  handleInputCancel,
+} = useDialog()
 
 onMounted(async () => {
   // 先初始化项目事件监听，再检查当前项目（确保监听器已注册）
@@ -35,6 +45,23 @@ onMounted(async () => {
     <LogPanel
       :logs="logs"
       @clear="clearLogs"
+    />
+
+    <AlertDialog
+      :show="alertState.show"
+      :title="alertState.title"
+      :message="alertState.message"
+      @ok="handleAlertOk"
+    />
+
+    <InputDialog
+      :show="inputState.show"
+      :title="inputState.title"
+      :message="inputState.message"
+      :default-value="inputState.defaultValue"
+      :placeholder="inputState.placeholder"
+      @confirm="handleInputConfirm"
+      @cancel="handleInputCancel"
     />
   </div>
 </template>

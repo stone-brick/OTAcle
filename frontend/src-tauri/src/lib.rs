@@ -106,8 +106,13 @@ pub fn run() {
             commands::observe::observe_start,
             commands::observe::observe_stop,
             commands::observe::observe_get_status,
+            commands::observe::observe_get_config,
+            commands::observe::observe_add_crop_region,
+            commands::observe::observe_remove_crop_region,
             commands::observe::observe_save_config,
             commands::observe::observe_load_config,
+            commands::observe::observe_capture_preview,
+            commands::observe::observe_capture_full_frame,
             // Project commands
             commands::project::project_open,
             commands::project::project_create,

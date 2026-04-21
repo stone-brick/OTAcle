@@ -81,7 +81,7 @@ export function useProject() {
     }
   }
 
-  async function createProjectDialog(): Promise<void> {
+  async function createProjectDialog(name: string): Promise<void> {
     try {
       const selected = await open({
         directory: true,
@@ -90,10 +90,7 @@ export function useProject() {
       });
 
       if (selected) {
-        const name = prompt('输入项目名称:', 'my-otacle-project');
-        if (name) {
-          await createProject(name, selected as string);
-        }
+        await createProject(name, selected as string);
       }
     } catch (e) {
       addLog(`创建项目失败: ${e}`, 'error', 'system');

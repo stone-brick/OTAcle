@@ -11,7 +11,7 @@ use std::thread::JoinHandle;
 use std::time::Instant;
 
 use crate::communication::types::PubState;
-use super::types::ObserveConfig;
+use super::types::{ObserveConfig, FullFrameMessage};
 
 lazy_static! {
     /// 所有活跃的 Observe 会话，key 为 hwnd
@@ -19,6 +19,25 @@ lazy_static! {
 
     /// Observe 模块全局统计（聚合所有会话）
     pub static ref GLOBAL_STATS: Mutex<ObserveGlobalStats> = Mutex::new(ObserveGlobalStats::default());
+
+    /// 全局 observe 配置存储
+    pub static ref OBSERVE_CONFIG: Mutex<Option<ObserveConfig>> = Mutex::new(None);
+}
+
+/// 获取全局配置
+pub fn get_config() -> Result<ObserveConfig, String> {
+    OBSERVE_CONFIG.lock()
+        .map_err(|_| "Failed to lock observe config".to_string())?
+        .clone()
+        .ok_or_else(|| "No configuration loaded".to_string())
+}
+
+/// 设置全局配置
+pub fn set_config(config: ObserveConfig) -> Result<(), String> {
+    let mut global = OBSERVE_CONFIG.lock()
+        .map_err(|_| "Failed to lock observe config".to_string())?;
+    *global = Some(config);
+    Ok(())
 }
 
 /// 会话运行时统计
@@ -90,6 +109,8 @@ pub struct SessionHandle {
     pub stats: SessionStats,
     /// PUB 连接状态
     pub pub_state: PubState,
+    /// 最新完整帧（供前端轮询获取）
+    pub latest_full_frame: Arc<Mutex<Option<FullFrameMessage>>>,
 }
 
 impl SessionHandle {
@@ -99,6 +120,7 @@ impl SessionHandle {
         running: Arc<std::sync::atomic::AtomicBool>,
         capture_handle: Option<JoinHandle<()>>,
         publisher_handle: Option<JoinHandle<()>>,
+        latest_full_frame: Arc<Mutex<Option<FullFrameMessage>>>,
     ) -> Self {
         Self {
             hwnd,
@@ -109,6 +131,7 @@ impl SessionHandle {
             publisher_handle,
             stats: SessionStats::new(),
             pub_state: PubState::new(),
+            latest_full_frame,
         }
     }
 

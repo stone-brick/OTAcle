@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { InputBackend } from '../../types';
 import BackendSelector from '../../components/editor/BackendSelector.vue';
+import BaseButton from '@/components/ui/BaseButton.vue';
+import BaseLevel from '@/components/ui/BaseLevel.vue';
+import { mdiContentSave, mdiPlus, mdiUndo, mdiRedo, mdiDeleteSweep } from '@mdi/js';
 
 defineProps<{
   defaultBackend: InputBackend;
@@ -11,6 +14,7 @@ defineProps<{
 
 const emit = defineEmits<{
   backendChange: [backend: InputBackend];
+  save: [];
   openNewActionModal: [];
   discardAll: [];
   undo: [];
@@ -19,9 +23,9 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="top-bar">
-    <div class="top-bar-left">
-      <span class="top-bar-label">执行后台</span>
+  <div class="bg-white dark:bg-slate-900/70 rounded-xl p-3 flex flex-col md:flex-row items-start md:items-center gap-3">
+    <div class="flex items-center gap-3">
+      <span class="text-sm font-medium text-gray-500 dark:text-slate-400">执行后台</span>
       <BackendSelector
         :model-value="defaultBackend"
         :hide-default="true"
@@ -29,100 +33,35 @@ const emit = defineEmits<{
       />
     </div>
 
-    <div class="top-bar-right">
-      <button
-        class="btn-primary"
+    <BaseLevel class="flex-1 justify-end">
+      <BaseButton
+        :icon="mdiContentSave"
+        color="whiteDark"
+        :disabled="!hasChanges"
+        @click="emit('save')"
+      />
+      <BaseButton
+        :icon="mdiPlus"
         @click="emit('openNewActionModal')"
-      >
-        + 新建动作
-      </button>
-      <button
-        class="btn-secondary"
+      />
+      <BaseButton
+        :icon="mdiDeleteSweep"
+        color="whiteDark"
         :disabled="!hasChanges"
         @click="emit('discardAll')"
-      >
-        撤销全部
-      </button>
-      <button
-        class="btn-secondary"
+      />
+      <BaseButton
+        :icon="mdiUndo"
+        color="whiteDark"
         :disabled="!canUndo"
         @click="emit('undo')"
-      >
-        撤销
-      </button>
-      <button
-        class="btn-secondary"
+      />
+      <BaseButton
+        :icon="mdiRedo"
+        color="whiteDark"
         :disabled="!canRedo"
         @click="emit('redo')"
-      >
-        重做
-      </button>
-    </div>
+      />
+    </BaseLevel>
   </div>
 </template>
-
-<style scoped>
-.top-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px 16px;
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
-  flex-wrap: wrap;
-}
-
-.top-bar-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.top-bar-right {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.top-bar-label {
-  font-size: 13px;
-  color: var(--color-text-secondary);
-  font-weight: 500;
-}
-
-.btn-primary {
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  background: var(--color-primary);
-  color: white;
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-
-.btn-primary:hover {
-  background: var(--color-primary-hover);
-}
-
-.btn-secondary {
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  background: var(--color-surface-secondary);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: var(--color-surface-hover);
-}
-
-.btn-secondary:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-</style>

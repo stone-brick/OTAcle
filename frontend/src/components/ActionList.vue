@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import type { ActionItem } from '../types';
-import { getActionTypeLabel, formatActionDetail, getTypeClass } from '../utils/actionHelpers';
+import { getActionTypeLabel, formatActionDetail } from '../utils/actionHelpers';
+import BaseButton from '@/components/ui/BaseButton.vue';
+import CardBox from '@/components/ui/CardBox.vue';
+import CardBoxComponentBody from '@/components/ui/CardBoxComponentBody.vue';
+import { mdiClose } from '@mdi/js';
 
 defineProps<{
   actions: ActionItem[];
@@ -15,245 +19,80 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="action-list">
-    <div class="list-header">
-      <h4>动作列表</h4>
+  <CardBox class="flex flex-col flex-1 border-l border-gray-100 dark:border-slate-800">
+    <div class="px-3 py-2 border-b border-gray-100 dark:border-slate-800">
+      <h3 class="m-0 text-sm font-semibold text-gray-700 dark:text-slate-200">
+        动作列表
+      </h3>
     </div>
-    <div
+
+    <CardBoxComponentBody
       v-if="actions.length === 0"
-      class="empty-state"
+      class="flex flex-col items-center justify-center flex-1"
     >
-      <slot name="empty">
-        暂无动作
-      </slot>
-    </div>
-    <div
+      <p class="text-gray-500 dark:text-slate-400 text-sm">
+        <slot name="empty">
+          暂无动作
+        </slot>
+      </p>
+    </CardBoxComponentBody>
+
+    <CardBoxComponentBody
       v-else
-      class="action-items"
+      class="flex-1 overflow-hidden"
     >
-      <div
-        v-for="(item, idx) in actions"
-        :key="idx"
-        class="action-item"
-        :class="{ selected: selectedIndex === idx }"
-        @click="emit('select', idx)"
-      >
-        <div class="action-info">
-          <div class="action-header">
-            <span class="action-index">#{{ idx }}</span>
-            <span
-              class="type-badge"
-              :class="getTypeClass(item)"
-            >
-              {{ getActionTypeLabel(item) }}
-            </span>
-          </div>
-          <div
-            v-if="item.name"
-            class="action-name"
-          >
-            {{ item.name }}
-          </div>
-          <div class="action-detail">
-            {{ formatActionDetail(item) }}
-          </div>
-        </div>
+      <div class="flex-1 overflow-y-auto p-1.5 flex flex-col gap-1">
         <div
-          v-if="showDelete"
-          class="action-buttons"
+          v-for="(item, idx) in actions"
+          :key="idx"
+          class="group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors border border-transparent"
+          :class="selectedIndex === idx
+            ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-500 dark:border-blue-400'
+            : 'bg-gray-50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-800'"
+          @click="emit('select', idx)"
         >
-          <button
-            class="delete-btn"
-            title="删除动作"
-            @click.stop="emit('delete', idx)"
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="font-mono font-semibold text-xs text-blue-600 dark:text-blue-400">#{{ idx }}</span>
+              <span
+                class="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded capitalize"
+                :class="{
+                  'bg-blue-500 text-white': item.type === 'key',
+                  'bg-purple-500 text-white': item.type === 'key_sequence',
+                  'bg-orange-500 text-white': item.type === 'mouse_click',
+                  'bg-green-500 text-white': item.type === 'mouse_move',
+                  'bg-red-500 text-white': item.type === 'mouse_scroll',
+                  'bg-gray-500 text-white': item.type === 'delay',
+                  'bg-indigo-500 text-white': item.type === 'text',
+                }"
+              >
+                {{ getActionTypeLabel(item) }}
+              </span>
+            </div>
+            <div
+              v-if="item.name"
+              class="text-sm font-medium text-gray-700 dark:text-slate-200 mb-0.5"
+            >
+              {{ item.name }}
+            </div>
+            <div class="text-xs text-gray-500 dark:text-slate-400 font-mono truncate">
+              {{ formatActionDetail(item) }}
+            </div>
+          </div>
+
+          <div
+            v-if="showDelete"
+            class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
           >
-            ✕
-          </button>
+            <BaseButton
+              :icon="mdiClose"
+              small
+              transparent-bg
+              @click.stop="emit('delete', idx)"
+            />
+          </div>
         </div>
       </div>
-    </div>
-  </div>
+    </CardBoxComponentBody>
+  </CardBox>
 </template>
-
-<style scoped>
-.action-list {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--color-surface);
-  border-left: 1px solid var(--color-border);
-  border-right: 1px solid var(--color-border);
-}
-
-.list-header {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.list-header h4 {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.action-list::-webkit-scrollbar {
-  width: var(--scrollbar-width);
-}
-
-.action-list::-webkit-scrollbar-track {
-  background: var(--color-surface);
-}
-
-.action-list::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: var(--scrollbar-radius);
-}
-
-.action-list::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-muted);
-}
-
-.empty-state {
-  text-align: center;
-  padding: 24px 12px;
-  color: var(--color-text-muted);
-  font-size: 13px;
-}
-
-.action-items {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px;
-}
-
-.action-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  background: var(--color-surface-secondary);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background var(--transition-duration);
-  border: 1px solid transparent;
-}
-
-.action-item:hover {
-  background: var(--color-surface-hover);
-}
-
-.action-item.selected {
-  background: var(--color-primary-bg);
-  border-color: var(--color-primary);
-}
-
-.action-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.action-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.action-index {
-  font-family: monospace;
-  font-weight: 600;
-  font-size: 12px;
-  color: var(--color-primary);
-}
-
-.type-badge {
-  display: inline-block;
-  padding: 2px 6px;
-  font-size: 10px;
-  font-weight: 600;
-  border-radius: 3px;
-  text-transform: uppercase;
-}
-
-.type-badge.key {
-  background: var(--color-action-key);
-  color: white;
-}
-
-.type-badge.key_sequence {
-  background: var(--color-action-key_sequence);
-  color: white;
-}
-
-.type-badge.mouse_click {
-  background: var(--color-action-mouse_click);
-  color: white;
-}
-
-.type-badge.mouse_move {
-  background: var(--color-action-mouse_move);
-  color: white;
-}
-
-.type-badge.mouse_scroll {
-  background: var(--color-action-mouse_scroll);
-  color: white;
-}
-
-.type-badge.delay {
-  background: var(--color-action-delay);
-  color: white;
-}
-
-.type-badge.text {
-  background: var(--color-action-text);
-  color: white;
-}
-
-.action-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text);
-  margin-bottom: 2px;
-}
-
-.action-detail {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  font-family: monospace;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 4px;
-}
-
-.delete-btn {
-  padding: 4px 8px;
-  font-size: 11px;
-  background: transparent;
-  color: var(--color-text-muted);
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity var(--transition-duration), color var(--transition-duration);
-}
-
-.action-item:hover .delete-btn {
-  opacity: 1;
-}
-
-.delete-btn:hover {
-  color: var(--color-error);
-  background: var(--color-error-bg);
-}
-</style>

@@ -25,6 +25,7 @@ use crate::observe::processor::ImageProcessor;
 use crate::observe::types::ObserveConfig;
 use crate::observe::state::SessionStats;
 use crate::communication::types::{CropBlock, FrameMessage};
+use crate::observe::types::FullFrameMessage;
 
 /// 限制预览帧发送到前端的频率（毫秒）
 const PREVIEW_THROTTLE_MS: u64 = 200;
@@ -38,6 +39,8 @@ struct WgcHandlerData {
     last_preview_time: Mutex<Instant>,
     running: Arc<AtomicBool>,
     stats: Arc<SessionStats>,
+    /// 最新完整帧（供前端轮询获取）
+    latest_full_frame: Arc<Mutex<Option<FullFrameMessage>>>,
 }
 
 /// 通过 Settings::Flags 传递给 OneShotFrameHandler 的数据
@@ -72,12 +75,12 @@ impl GraphicsCaptureApiHandler for WgcFrameHandler {
         }
 
         // 2. 处理帧（使用 process_frame 消除重复代码）
-        let frame_msg = match process_frame(
+        let (frame_msg, full_frame_base64) = match process_frame(
             frame,
             &self.data.config,
             &self.data.frame_id,
         ) {
-            Ok(msg) => msg,
+            Ok(result) => result,
             Err(e) => {
                 error!("Frame processing failed: {}", e);
                 let _ = self.data.app.emit("observe:error", &serde_json::json!({ "error": e }));
@@ -85,25 +88,38 @@ impl GraphicsCaptureApiHandler for WgcFrameHandler {
             }
         };
 
-        // 5. 更新统计
+        // 存储完整帧（供前端事件驱动获取）
+        let full_frame = FullFrameMessage {
+            width: frame_msg.width,
+            height: frame_msg.height,
+            timestamp: frame_msg.timestamp,
+            frame_id: frame_msg.frame_id,
+            image: full_frame_base64,
+        };
+        {
+            let mut latest = self.data.latest_full_frame.lock().unwrap();
+            *latest = Some(full_frame.clone());
+        }
+
+        // 更新统计
         self.data.stats.add_frames_captured(1);
         // 估算字节数：base64 编码后的大小
         let estimated_bytes: u64 = frame_msg.data.iter().map(|b| b.image.len() as u64).sum();
         self.data.stats.add_bytes_sent(estimated_bytes);
 
-        // 6. 通过 ZMQ 发送（通道接收线程）
+        // 通过 ZMQ 发送（通道接收线程）
         let _ = self.data.frame_tx.send(frame_msg.clone());
 
-        // 6. 发送到前端预览（节流）
+        // 发送到前端预览（事件驱动，替代旧的事件和轮询）
         let now = Instant::now();
         let mut last_time = self.data.last_preview_time.lock().unwrap();
         let elapsed = now.duration_since(*last_time).as_millis() as u64;
         if elapsed >= PREVIEW_THROTTLE_MS {
             *last_time = now;
             drop(last_time);
-            if let Err(e) = self.data.app.emit("observe:frame", &frame_msg) {
+            if let Err(e) = self.data.app.emit("observe:full_frame", &full_frame) {
                 error!("Tauri emit error: {}", e);
-                let _ = self.data.app.emit("observe:error", &serde_json::json!({ "error": format!("Frame emit failed: {}", e) }));
+                let _ = self.data.app.emit("observe:error", &serde_json::json!({ "error": format!("Full frame emit failed: {}", e) }));
             }
         }
 
@@ -133,12 +149,12 @@ fn remove_padding(width: u32, height: u32, buffer: &mut windows_capture::frame::
     rgba
 }
 
-/// 处理帧并构建 FrameMessage
+/// 处理帧并构建 FrameMessage，同时返回完整帧 base64（用于前端预览）
 fn process_frame(
     frame: &mut Frame,
     config: &ObserveConfig,
     frame_id: &AtomicU64,
-) -> Result<FrameMessage, String> {
+) -> Result<(FrameMessage, String), String> {
     let (width, height) = (frame.width(), frame.height());
 
     let mut buffer = frame.buffer()
@@ -161,13 +177,16 @@ fn process_frame(
         rgba
     };
 
+    // 完整帧 base64（用于前端预览）
+    let full_frame_base64 = base64::engine::general_purpose::STANDARD.encode(&scaled);
+
     let crop_blocks: Vec<CropBlock> = if config.crop_regions.is_empty() {
         vec![CropBlock {
             x: 0,
             y: 0,
             w: config.capture.target_width,
             h: config.capture.target_height,
-            image: base64::engine::general_purpose::STANDARD.encode(&scaled),
+            image: full_frame_base64.clone(),
         }]
     } else {
         let processor = ImageProcessor {};
@@ -179,7 +198,7 @@ fn process_frame(
         )
     };
 
-    Ok(FrameMessage {
+    let frame_msg = FrameMessage {
         width: config.capture.target_width,
         height: config.capture.target_height,
         timestamp: SystemTime::now()
@@ -188,7 +207,9 @@ fn process_frame(
             .as_millis() as u64,
         frame_id: frame_id.fetch_add(1, Ordering::SeqCst),
         data: crop_blocks,
-    })
+    };
+
+    Ok((frame_msg, full_frame_base64))
 }
 
 /// 实现 GraphicsCaptureApiHandler trait 的单次截图处理器
@@ -209,7 +230,8 @@ impl GraphicsCaptureApiHandler for OneShotFrameHandler {
         frame: &mut Frame,
         capture_control: InternalCaptureControl,
     ) -> Result<(), Self::Error> {
-        let result = process_frame(frame, &self.data.config, &self.data.frame_id);
+        let result = process_frame(frame, &self.data.config, &self.data.frame_id)
+            .map(|(msg, _)| msg); // 只取 FrameMessage，丢弃完整帧 base64
         let _ = self.data.result_tx.send(result);
         capture_control.stop();
         Ok(())
@@ -283,6 +305,7 @@ pub fn start_capture(
     frame_tx: std::sync::mpsc::Sender<FrameMessage>,
     running: Arc<AtomicBool>,
     stats: Arc<SessionStats>,
+    latest_full_frame: Arc<Mutex<Option<FullFrameMessage>>>,
 ) -> Result<JoinHandle<()>, String> {
     if running.load(Ordering::SeqCst) {
         return Err("Capture already running".to_string());
@@ -306,6 +329,7 @@ pub fn start_capture(
         last_preview_time: Mutex::new(Instant::now()),
         running,
         stats,
+        latest_full_frame,
     });
 
     // 构建设置
@@ -331,5 +355,40 @@ pub fn start_capture(
         // 已经调用 capture_control.stop()。
     });
 
-    Ok(handle)
+Ok(handle)
+}
+
+/// 捕获完整帧（不裁切），专供前端预览使用
+///
+/// # 参数
+/// * `hwnd` - 要捕获的窗口句柄
+/// * `config` - Observe 配置
+///
+/// # 返回值
+/// 返回 `FullFrameMessage`（包含完整缩放后图像）或错误信息
+pub fn capture_full_frame(
+    hwnd: isize,
+    config: ObserveConfig,
+) -> Result<FullFrameMessage, String> {
+    // 临时清空裁切区域，确保获取完整图像
+    let mut full_config = config.clone();
+    full_config.crop_regions.clear();
+
+    // 调用标准截图（会生成完整图像，因为裁切区域为空）
+    let frame = capture_screenshot(hwnd, full_config)?;
+
+    // 只有一个 block，包含完整图像
+    let full_image = frame
+        .data
+        .first()
+        .map(|b| b.image.clone())
+        .unwrap_or_default();
+
+    Ok(FullFrameMessage {
+        width: frame.width,
+        height: frame.height,
+        timestamp: frame.timestamp,
+        frame_id: frame.frame_id,
+        image: full_image,
+    })
 }

@@ -1,22 +1,12 @@
 //! Observe 模块的配置加载和保存
 
 use std::fs;
-use std::sync::Mutex;
-use lazy_static::lazy_static;
 use crate::observe::types::{ObserveConfig, CropRegion};
-
-lazy_static! {
-    /// 全局 observe 配置存储
-    pub static ref OBSERVE_CONFIG: Mutex<Option<ObserveConfig>> = Mutex::new(None);
-}
+use super::state;
 
 /// 获取当前全局配置
 pub fn get_config() -> Result<ObserveConfig, String> {
-    let global = OBSERVE_CONFIG.lock()
-        .map_err(|_| "Failed to lock observe config".to_string())?;
-
-    global.clone()
-        .ok_or_else(|| "No configuration loaded".to_string())
+    state::get_config()
 }
 
 /// 验证 ObserveConfig 的合法性
@@ -58,47 +48,35 @@ pub fn validate_config(config: &ObserveConfig) -> Result<(), String> {
 /// 更新全局配置（不保存到文件）
 pub fn update_config(config: ObserveConfig) -> Result<(), String> {
     validate_config(&config)?;
-    let mut global = OBSERVE_CONFIG.lock()
-        .map_err(|_| "Failed to lock observe config".to_string())?;
-    *global = Some(config);
-    Ok(())
+    state::set_config(config)
 }
 
 /// 添加裁剪区域到当前配置
 pub fn add_crop_region(region: CropRegion) -> Result<(), String> {
-    let mut global = OBSERVE_CONFIG.lock()
-        .map_err(|_| "Failed to lock observe config".to_string())?;
-    let config = global.take().ok_or("No configuration loaded")?;
+    let config = state::get_config()?;
 
     let mut new_config = config.clone();
     new_config.crop_regions.push(region);
     if let Err(e) = validate_config(&new_config) {
-        *global = Some(config);
         return Err(e);
     }
-    *global = Some(new_config);
-    Ok(())
+    state::set_config(new_config)
 }
 
 /// 从当前配置删除裁剪区域
 pub fn remove_crop_region(index: usize) -> Result<(), String> {
-    let mut global = OBSERVE_CONFIG.lock()
-        .map_err(|_| "Failed to lock observe config".to_string())?;
-    let config = global.take().ok_or("No configuration loaded")?;
+    let config = state::get_config()?;
 
     if index >= config.crop_regions.len() {
-        *global = Some(config);
         return Err(format!("Crop region index {} out of range", index));
     }
 
     let mut new_config = config.clone();
     new_config.crop_regions.remove(index);
     if let Err(e) = validate_config(&new_config) {
-        *global = Some(config);
         return Err(e);
     }
-    *global = Some(new_config);
-    Ok(())
+    state::set_config(new_config)
 }
 
 /// 从 JSON 文件加载 observe 配置
@@ -106,6 +84,7 @@ pub fn load_config(path: &str) -> Result<ObserveConfig, String> {
     if !std::path::Path::new(path).exists() {
         // 如果文件不存在，返回默认配置
         let default_config = ObserveConfig::default();
+        state::set_config(default_config.clone())?;
         return Ok(default_config);
     }
 
@@ -119,9 +98,7 @@ pub fn load_config(path: &str) -> Result<ObserveConfig, String> {
     validate_config(&config)?;
 
     // 保存到全局状态
-    let mut global = OBSERVE_CONFIG.lock()
-        .map_err(|_| "Failed to lock observe config".to_string())?;
-    *global = Some(config.clone());
+    state::set_config(config.clone())?;
 
     Ok(config)
 }
@@ -136,9 +113,7 @@ pub fn save_config(path: &str, config: &ObserveConfig) -> Result<(), String> {
     fs::write(path, json)
         .map_err(|e| format!("Failed to write config file: {}", e))?;
 
-    let mut global = OBSERVE_CONFIG.lock()
-        .map_err(|_| "Failed to lock observe config".to_string())?;
-    *global = Some(config.clone());
+    state::set_config(config.clone())?;
 
     Ok(())
 }

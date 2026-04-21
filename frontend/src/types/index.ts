@@ -171,6 +171,15 @@ export interface FrameMessage {
   data: CropBlock[];
 }
 
+// 完整帧消息（用于前端预览）
+export interface FullFrameMessage {
+  width: number;
+  height: number;
+  timestamp: number;
+  frame_id: number;
+  image: string; // Base64 编码的完整 RGBA 图像
+}
+
 // 会话运行时状态
 export interface SessionStatus {
   hwnd: number;

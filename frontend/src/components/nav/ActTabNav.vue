@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { mdiCog, mdiWindowMaximize, mdiAccessPoint, mdiTarget } from '@mdi/js'
+import BaseIcon from '../ui/BaseIcon.vue'
+
 defineProps<{
   activeTab: 'monitor' | 'config' | 'windows'
 }>()
@@ -14,9 +17,9 @@ interface TabItem {
 }
 
 const tabs: TabItem[] = [
-  { id: 'monitor', label: '状态监控', icon: '📡' },
-  { id: 'config', label: '动作配置', icon: '⚙️' },
-  { id: 'windows', label: '窗口选择', icon: '🪟' },
+  { id: 'config', label: '动作配置', icon: mdiCog },
+  { id: 'windows', label: '窗口选择', icon: mdiWindowMaximize },
+  { id: 'monitor', label: '状态监控', icon: mdiAccessPoint },
 ]
 
 function selectTab(tab: TabItem) {
@@ -25,90 +28,24 @@ function selectTab(tab: TabItem) {
 </script>
 
 <template>
-  <nav class="act-tab-nav">
-    <div class="nav-brand">
-      <span class="brand-icon">🎯</span>
-      <span class="brand-text">Act</span>
+  <nav class="flex items-center gap-6 px-4 h-12 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800">
+    <div class="flex items-center gap-2 pr-4 border-r border-gray-200 dark:border-slate-700">
+      <BaseIcon :path="mdiTarget" :size="20" />
+      <span class="text-base font-bold text-blue-500">Act</span>
     </div>
-    <ul class="tab-list">
+    <ul class="flex list-none m-0 p-0 gap-1">
       <li
         v-for="tab in tabs"
         :key="tab.id"
-        class="tab-item"
-        :class="{ active: activeTab === tab.id }"
+        class="flex items-center gap-2 px-4 py-2 rounded-md cursor-pointer text-sm transition-colors duration-150"
+        :class="activeTab === tab.id
+          ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 font-semibold'
+          : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-gray-200'"
         @click="selectTab(tab)"
       >
-        <span class="tab-icon">{{ tab.icon }}</span>
-        <span class="tab-label">{{ tab.label }}</span>
+        <BaseIcon :path="tab.icon" :size="18" />
+        <span>{{ tab.label }}</span>
       </li>
     </ul>
   </nav>
 </template>
-
-<style scoped>
-.act-tab-nav {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  padding: 0 16px;
-  height: 48px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.nav-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-right: 16px;
-  border-right: 1px solid var(--color-border);
-}
-
-.brand-icon {
-  font-size: 18px;
-}
-
-.brand-text {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--color-primary);
-}
-
-.tab-list {
-  display: flex;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  gap: 4px;
-}
-
-.tab-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: background var(--transition-duration), color var(--transition-duration);
-  color: var(--color-text-secondary);
-}
-
-.tab-item:hover {
-  background: var(--color-hover);
-  color: var(--color-text);
-}
-
-.tab-item.active {
-  background: var(--color-primary-bg);
-  color: var(--color-primary);
-  font-weight: 600;
-}
-
-.tab-icon {
-  font-size: 16px;
-}
-
-.tab-label {
-  font-size: 14px;
-}
-</style>

@@ -2,6 +2,7 @@
 import type { MouseScrollActionItem } from '../../../types';
 import type { ScrollDirection } from '../../../types';
 import BackendSelector from '../BackendSelector.vue';
+import FormControl from '@/components/ui/FormControl.vue';
 
 const props = defineProps<{
   modelValue: MouseScrollActionItem;
@@ -17,41 +18,31 @@ function updateField<K extends keyof MouseScrollActionItem>(field: K, value: Mou
 </script>
 
 <template>
-  <div class="mouse-scroll-form">
-    <div class="form-field">
-      <label>滚动方向</label>
-      <select
-        :value="modelValue.direction"
-        class="select-input"
-        @change="updateField('direction', ($event.target as HTMLSelectElement).value as ScrollDirection)"
-      >
-        <option value="up">
-          向上
-        </option>
-        <option value="down">
-          向下
-        </option>
-        <option value="left">
-          向左
-        </option>
-        <option value="right">
-          向右
-        </option>
-      </select>
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">滚动方向</label>
+      <FormControl
+        :model-value="modelValue.direction"
+        :options="[
+          { value: 'up', label: '向上' },
+          { value: 'down', label: '向下' },
+          { value: 'left', label: '向左' },
+          { value: 'right', label: '向右' },
+        ]"
+        @update:model-value="updateField('direction', $event as ScrollDirection)"
+      />
     </div>
-    <div class="form-field">
-      <label>滚动量</label>
-      <input
-        :value="modelValue.amount"
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">滚动量</label>
+      <FormControl
+        :model-value="modelValue.amount"
         type="number"
-        min="1"
-        class="number-input"
-        @input="updateField('amount', Number(($event.target as HTMLInputElement).value))"
-      >
-      <span class="field-hint">Windows 默认滚轮 delta 为 120</span>
+        @update:model-value="updateField('amount', Number($event))"
+      />
+      <span class="text-xs text-gray-500 dark:text-slate-400">Windows 默认滚轮 delta 为 120</span>
     </div>
-    <div class="form-field">
-      <label>输入后端</label>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">输入后端</label>
       <BackendSelector
         :model-value="modelValue.backend ?? 'default'"
         @update:model-value="updateField('backend', $event === 'default' ? null : $event)"
@@ -59,47 +50,3 @@ function updateField<K extends keyof MouseScrollActionItem>(field: K, value: Mou
     </div>
   </div>
 </template>
-
-<style scoped>
-.mouse-scroll-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.form-field label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-}
-
-.text-input,
-.number-input,
-.select-input {
-  padding: 8px 12px;
-  font-size: 13px;
-  background: var(--color-background);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-family: inherit;
-}
-
-.text-input:focus,
-.number-input:focus,
-.select-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-
-.field-hint {
-  font-size: 11px;
-  color: var(--color-text-muted);
-}
-</style>

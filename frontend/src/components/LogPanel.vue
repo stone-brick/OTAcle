@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import type { LogEntry, LogSource } from '../types';
+import BaseButton from '@/components/ui/BaseButton.vue';
+import FormControl from '@/components/ui/FormControl.vue';
+import { getStatusTextColor } from '@/utils/colors';
 
 const props = defineProps<{
   logs: LogEntry[];
@@ -37,249 +40,87 @@ function handleClear() {
 </script>
 
 <template>
-  <div class="log-panel">
-    <div class="log-header">
-      <h3>操作日志</h3>
-      <div class="filter-group">
-        <button
-          class="filter-btn"
-          :class="{ active: activeFilter === 'all' }"
+  <div class="h-36 flex flex-col bg-white dark:bg-slate-900/70 border-t border-gray-100 dark:border-slate-800">
+    <div class="flex justify-between items-center px-4 py-2 border-b border-gray-100 dark:border-slate-800 gap-2">
+      <h3 class="m-0 text-xs font-semibold text-gray-700 dark:text-slate-200 flex-shrink-0">
+        操作日志
+      </h3>
+      <div class="flex gap-1 flex-1 justify-start">
+        <BaseButton
+          label="全部"
+          color="whiteDark"
+          :small="true"
+          :active="activeFilter === 'all'"
           @click="setFilter('all')"
-        >
-          全部
-        </button>
-        <button
-          class="filter-btn info"
-          :class="{ active: activeFilter === 'info' }"
+        />
+        <BaseButton
+          label="信息"
+          color="whiteDark"
+          :small="true"
+          :active="activeFilter === 'info'"
           @click="setFilter('info')"
-        >
-          信息
-        </button>
-        <button
-          class="filter-btn success"
-          :class="{ active: activeFilter === 'success' }"
+        />
+        <BaseButton
+          label="成功"
+          color="whiteDark"
+          :small="true"
+          :active="activeFilter === 'success'"
           @click="setFilter('success')"
-        >
-          成功
-        </button>
-        <button
-          class="filter-btn warn"
-          :class="{ active: activeFilter === 'warn' }"
+        />
+        <BaseButton
+          label="警告"
+          color="whiteDark"
+          :small="true"
+          :active="activeFilter === 'warn'"
           @click="setFilter('warn')"
-        >
-          警告
-        </button>
-        <button
-          class="filter-btn error"
-          :class="{ active: activeFilter === 'error' }"
+        />
+        <BaseButton
+          label="错误"
+          color="whiteDark"
+          :small="true"
+          :active="activeFilter === 'error'"
           @click="setFilter('error')"
-        >
-          错误
-        </button>
+        />
       </div>
-      <div class="source-filter">
-        <select v-model="activeSource" class="source-select">
-          <option value="all">全部来源</option>
-          <option value="system">系统</option>
-          <option value="comm">通信</option>
-          <option value="observe">观察</option>
-          <option value="action">动作</option>
-          <option value="window">窗口</option>
-        </select>
-      </div>
-      <button
-        class="clear-btn"
+      <FormControl
+        v-model="activeSource"
+        class="!w-24 flex-shrink-0"
+        :options="[
+          { value: 'all', label: '全部来源' },
+          { value: 'system', label: '系统' },
+          { value: 'comm', label: '通信' },
+          { value: 'observe', label: '观察' },
+          { value: 'action', label: '动作' },
+          { value: 'window', label: '窗口' },
+        ]"
+      />
+      <BaseButton
+        label="清空"
+        color="whiteDark"
+        small
+        class="flex-shrink-0"
         @click="handleClear"
-      >
-        清空
-      </button>
+      />
     </div>
 
-    <div class="log-list">
+    <div class="flex-1 overflow-y-auto px-4 py-2 font-mono text-xs">
       <div
         v-for="(log, index) in filteredLogs"
         :key="index"
-        class="log-entry"
-        :class="log.type"
+        class="flex gap-3 py-1 border-b border-gray-50 dark:border-slate-800/50 last:border-0"
       >
-        <span class="log-time">[{{ log.time }}]</span>
-        <span class="log-message">{{ log.message }}</span>
+        <span class="text-gray-400 flex-shrink-0">{{ log.time }}</span>
+        <span
+          :class="['break-all', getStatusTextColor(log.type)]"
+        >{{ log.message }}</span>
       </div>
 
       <div
         v-if="filteredLogs.length === 0"
-        class="empty-state"
+        class="py-4 text-center text-gray-400"
       >
         暂无日志
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.log-panel {
-  height: 150px;
-  display: flex;
-  flex-direction: column;
-  background: var(--color-surface);
-  border-top: 1px solid var(--color-border);
-}
-
-.log-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--color-border);
-  gap: 8px;
-}
-
-.log-header h3 {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.filter-group {
-  display: flex;
-  gap: 4px;
-  flex: 1;
-}
-
-.filter-btn {
-  padding: 2px 8px;
-  font-size: 11px;
-  background: transparent;
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: 3px;
-  cursor: pointer;
-}
-
-.filter-btn:hover {
-  background: var(--color-hover);
-}
-
-.filter-btn.active {
-  border-color: var(--color-border-active, var(--color-text-secondary));
-  color: var(--color-text);
-}
-
-.filter-btn.success.active {
-  color: var(--color-success);
-  border-color: var(--color-success);
-}
-
-.filter-btn.warn.active {
-  color: var(--color-warn);
-  border-color: var(--color-warn);
-}
-
-.filter-btn.error.active {
-  color: var(--color-error);
-  border-color: var(--color-error);
-}
-
-.clear-btn {
-  padding: 2px 10px;
-  font-size: 11px;
-  background: transparent;
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: 3px;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.clear-btn:hover {
-  background: var(--color-hover);
-}
-
-.source-filter {
-  flex-shrink: 0;
-}
-
-.source-select {
-  padding: 2px 8px;
-  font-size: 11px;
-  background: var(--color-surface);
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: 3px;
-  cursor: pointer;
-}
-
-.source-select:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-
-.log-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px 16px;
-  font-family: 'Consolas', 'Monaco', monospace;
-  font-size: 12px;
-}
-
-.log-list::-webkit-scrollbar {
-  width: var(--scrollbar-width);
-}
-
-.log-list::-webkit-scrollbar-track {
-  background: var(--color-surface);
-}
-
-.log-list::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: var(--scrollbar-radius);
-}
-
-.log-list::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-muted);
-}
-
-.log-entry {
-  display: flex;
-  gap: 8px;
-  padding: 4px 0;
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.log-entry:last-child {
-  border-bottom: none;
-}
-
-.log-time {
-  color: var(--color-text-muted);
-  flex-shrink: 0;
-}
-
-.log-message {
-  color: var(--color-text);
-}
-
-.log-entry.success .log-message {
-  color: var(--color-success);
-}
-
-.log-entry.error .log-message {
-  color: var(--color-error);
-}
-
-.log-entry.info .log-message {
-  color: var(--color-text-secondary);
-}
-
-.log-entry.warn .log-message {
-  color: var(--color-warn);
-}
-
-.empty-state {
-  text-align: center;
-  padding: 16px;
-  color: var(--color-text-muted);
-  font-size: 12px;
-}
-</style>

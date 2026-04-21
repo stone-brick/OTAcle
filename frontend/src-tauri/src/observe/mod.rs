@@ -13,7 +13,7 @@ pub mod capture;
 pub mod state;
 pub mod status;
 
-pub use capture::capture_screenshot;
+pub use capture::{capture_screenshot, capture_full_frame};
 pub use state::{GLOBAL_STATS, SESSIONS, SessionHandle};
 pub use status::{get_full_status, get_status_map, ObserveStatus, SessionStatus};
 pub use config::{load_config, save_config, get_config, validate_config,

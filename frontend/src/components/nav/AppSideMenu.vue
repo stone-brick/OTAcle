@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { mdiEye, mdiMessageTextOutline, mdiTarget } from '@mdi/js'
+import BaseIcon from '../ui/BaseIcon.vue'
 import ProjectSelector from '../ProjectSelector.vue'
 
 const router = useRouter()
@@ -14,9 +16,9 @@ interface NavItem {
 }
 
 const menuItems: NavItem[] = [
-  { id: 'observe', label: '观察', icon: '👁', path: '/observe' },
-  { id: 'think', label: '思考', icon: '💭', path: '/think' },
-  { id: 'act', label: '执行', icon: '🎯', path: '/act' },
+  { id: 'observe', label: '观察', icon: mdiEye, path: '/observe' },
+  { id: 'think', label: '思考', icon: mdiMessageTextOutline, path: '/think' },
+  { id: 'act', label: '执行', icon: mdiTarget, path: '/act' },
 ]
 
 const currentPath = computed(() => route.path)
@@ -31,83 +33,22 @@ function isActive(path: string): boolean {
 </script>
 
 <template>
-  <nav class="side-menu">
-    <div class="menu-header">
-      <span class="logo">OTAcle</span>
-    </div>
-
+  <nav class="w-[200px] h-full bg-white dark:bg-slate-900 border-r border-gray-100 dark:border-slate-800 flex flex-col">
     <ProjectSelector />
 
-    <ul class="menu-list">
+    <ul class="list-none p-2 m-0">
       <li
         v-for="item in menuItems"
         :key="item.id"
-        class="menu-item"
-        :class="{ active: isActive(item.path) }"
+        class="flex items-center gap-2.5 px-4 py-3 mb-1 rounded-lg cursor-pointer transition-colors duration-150 text-sm"
+        :class="isActive(item.path)
+          ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold'
+          : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-gray-200'"
         @click="navigateTo(item.path)"
       >
-        <span class="menu-icon">{{ item.icon }}</span>
-        <span class="menu-label">{{ item.label }}</span>
+        <BaseIcon :path="item.icon" :size="20" />
+        <span>{{ item.label }}</span>
       </li>
     </ul>
   </nav>
 </template>
-
-<style scoped>
-.side-menu {
-  width: 160px;
-  height: 100%;
-  background: var(--color-surface);
-  border-right: 1px solid var(--color-border);
-  display: flex;
-  flex-direction: column;
-}
-
-.menu-header {
-  padding: 16px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.logo {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--color-primary);
-}
-
-.menu-list {
-  list-style: none;
-  padding: 8px;
-  margin: 0;
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  margin-bottom: 4px;
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  transition: background var(--transition-duration), color var(--transition-duration);
-  color: var(--color-text-secondary);
-}
-
-.menu-item:hover {
-  background: var(--color-hover);
-  color: var(--color-text);
-}
-
-.menu-item.active {
-  background: var(--color-primary-bg);
-  color: var(--color-primary);
-  font-weight: 600;
-}
-
-.menu-icon {
-  font-size: 18px;
-}
-
-.menu-label {
-  font-size: 14px;
-}
-</style>

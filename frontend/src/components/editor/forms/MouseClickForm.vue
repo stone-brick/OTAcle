@@ -2,6 +2,7 @@
 import type { MouseClickActionItem } from '../../../types';
 import BackendSelector from '../BackendSelector.vue';
 import VariableEditor from '../VariableEditor.vue';
+import FormControl from '@/components/ui/FormControl.vue';
 
 const props = defineProps<{
   modelValue: MouseClickActionItem;
@@ -19,64 +20,52 @@ const availableFields = ['count'];
 </script>
 
 <template>
-  <div class="mouse-click-form">
-    <div class="form-field">
-      <label>鼠标按钮</label>
-      <select
-        :value="modelValue.button"
-        class="select-input"
-        @change="updateField('button', ($event.target as HTMLSelectElement).value as 'left' | 'right' | 'middle')"
-      >
-        <option value="left">
-          左键
-        </option>
-        <option value="right">
-          右键
-        </option>
-        <option value="middle">
-          中键
-        </option>
-      </select>
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">鼠标按钮</label>
+      <FormControl
+        :model-value="modelValue.button"
+        :options="[
+          { value: 'left', label: '左键' },
+          { value: 'right', label: '右键' },
+          { value: 'middle', label: '中键' },
+        ]"
+        @update:model-value="updateField('button', $event as 'left' | 'right' | 'middle')"
+      />
     </div>
-    <div class="form-field">
-      <label>点击次数</label>
-      <input
-        :value="modelValue.count"
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">点击次数</label>
+      <FormControl
+        :model-value="modelValue.count"
         type="number"
-        min="1"
-        class="number-input"
-        @input="updateField('count', Number(($event.target as HTMLInputElement).value))"
-      >
+        @update:model-value="updateField('count', Number($event))"
+      />
     </div>
-    <div class="form-field">
-      <label>间隔 (ms，可选)</label>
-      <input
-        :value="modelValue.interval_ms"
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">间隔 (ms，可选)</label>
+      <FormControl
+        :model-value="modelValue.interval_ms"
         type="number"
-        min="0"
-        class="number-input"
-        @input="updateField('interval_ms', Number(($event.target as HTMLInputElement).value))"
-      >
+        @update:model-value="updateField('interval_ms', Number($event))"
+      />
     </div>
-    <div class="form-field">
-      <label>按住时间 (ms)</label>
-      <input
-        :value="modelValue.hold_time_ms"
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">按住时间 (ms)</label>
+      <FormControl
+        :model-value="modelValue.hold_time_ms"
         type="number"
-        min="0"
-        class="number-input"
-        @input="updateField('hold_time_ms', Number(($event.target as HTMLInputElement).value))"
-      >
+        @update:model-value="updateField('hold_time_ms', Number($event))"
+      />
     </div>
-    <div class="form-field">
-      <label>输入后端</label>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">输入后端</label>
       <BackendSelector
         :model-value="modelValue.backend ?? 'default'"
         @update:model-value="updateField('backend', $event === 'default' ? null : $event)"
       />
     </div>
-    <div class="form-field">
-      <label>动态参数 (variables)</label>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">动态参数 (variables)</label>
       <VariableEditor
         :model-value="modelValue.variables || []"
         :available-fields="availableFields"
@@ -85,42 +74,3 @@ const availableFields = ['count'];
     </div>
   </div>
 </template>
-
-<style scoped>
-.mouse-click-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.form-field label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-}
-
-.text-input,
-.number-input,
-.select-input {
-  padding: 8px 12px;
-  font-size: 13px;
-  background: var(--color-background);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-family: inherit;
-}
-
-.text-input:focus,
-.number-input:focus,
-.select-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-</style>

@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
-import type { ObserveConfig, CropRegion, FrameMessage, ObserveStatus, SessionStatus, ObserveGlobalStats } from '../types'
+import type { ObserveConfig, CropRegion, FrameMessage, FullFrameMessage, ObserveStatus, SessionStatus, ObserveGlobalStats } from '../types'
 import { useLog } from './useLog'
 import { useProjectEvents, type ProjectEvent } from './useProjectEvents'
 import { useProject } from './useProject'
@@ -9,13 +9,15 @@ import { useProject } from './useProject'
 // 状态
 const isObserving = ref(false)
 const previewFrame = ref<FrameMessage | null>(null)
+const fullPreviewFrame = ref<FullFrameMessage | null>(null)
 const config = ref<ObserveConfig>({
-  capture: { frame_rate: 20, target_width: 640, target_height: 480 },
+  capture: { frame_rate: 3, target_width: 640, target_height: 480 },
   crop_regions: []
 })
 const fullStatus = ref<ObserveStatus | null>(null)
 
 // 用于事件监听的清理函数
+let unlistenFullFrame: UnlistenFn | null = null
 let unlistenFrame: UnlistenFn | null = null
 let unlistenError: UnlistenFn | null = null
 let unlistenPubStarted: UnlistenFn | null = null
@@ -73,6 +75,34 @@ export function useObserve() {
     const s = seconds % 60
     if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
     return `${m}:${s.toString().padStart(2, '0')}`
+  }
+
+  // 捕获单帧预览
+  async function capturePreview(windowId: string): Promise<void> {
+    try {
+      const frame = await invoke<FrameMessage>('observe_capture_preview', {
+        window: windowId,
+        config: config.value,
+      })
+      previewFrame.value = frame
+      addLog(`预览已捕获: ${frame.width}x${frame.height}`, 'success', 'observe')
+    } catch (e) {
+      addLog(`预览捕获失败: ${e}`, 'error', 'observe')
+    }
+  }
+
+  // 捕获完整帧预览（用于前端展示完整窗口 + ROI 遮罩）
+  async function captureFullFrame(windowId: string): Promise<void> {
+    try {
+      const frame = await invoke<FullFrameMessage>('observe_capture_full_frame', {
+        window: windowId,
+        config: config.value,
+      })
+      fullPreviewFrame.value = frame
+      addLog(`完整帧预览已捕获: ${frame.width}x${frame.height}`, 'success', 'observe')
+    } catch (e) {
+      addLog(`完整帧预览捕获失败: ${e}`, 'error', 'observe')
+    }
   }
 
   // 开始观察
@@ -141,7 +171,7 @@ export function useObserve() {
     } catch (e) {
       // 配置文件不存在时使用默认配置（自动加载场景下不抛出错误）
       config.value = {
-        capture: { frame_rate: 20, target_width: 640, target_height: 480 },
+        capture: { frame_rate: 3, target_width: 640, target_height: 480 },
         crop_regions: []
       }
       addLog('观察配置文件不存在，使用默认配置', 'info', 'observe')
@@ -181,9 +211,9 @@ export function useObserve() {
     // 获取初始状态
     await fetchStatus()
 
-    // 监听预览帧事件
-    unlistenFrame = await listen<FrameMessage>('observe:frame', (event) => {
-      previewFrame.value = event.payload
+    // 监听完整帧事件（事件驱动，替代轮询）
+    unlistenFullFrame = await listen<FullFrameMessage>('observe:full_frame', (event) => {
+      fullPreviewFrame.value = event.payload
     })
 
     // 监听错误事件
@@ -207,10 +237,12 @@ export function useObserve() {
   // 停止监听事件
   function stopListening(): void {
     if (!isListeningActive) return
+    unlistenFullFrame?.()
     unlistenFrame?.()
     unlistenError?.()
     unlistenPubStarted?.()
     unlistenPubError?.()
+    unlistenFullFrame = null
     unlistenFrame = null
     unlistenError = null
     unlistenPubStarted = null
@@ -234,12 +266,12 @@ export function useObserve() {
           try {
             await loadConfig(cfgPath)
           } catch {
-            // 静默忽略（loadConfig 内部已处理）
+            addLog('自动加载观察配置文件失败，使用默认配置', 'warn', 'observe');
           }
         }
       } else if (event.type === 'closed') {
         config.value = {
-          capture: { frame_rate: 20, target_width: 640, target_height: 480 },
+          capture: { frame_rate: 3, target_width: 640, target_height: 480 },
           crop_regions: []
         }
       }
@@ -250,10 +282,13 @@ export function useObserve() {
     // 状态
     isObserving,
     previewFrame,
+    fullPreviewFrame,
     config,
     fullStatus,
 
     // 方法
+    capturePreview,
+    captureFullFrame,
     startObserve,
     stopObserve,
     fetchStatus,

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { TextActionItem } from '../../../types';
 import BackendSelector from '../BackendSelector.vue';
+import FormControl from '@/components/ui/FormControl.vue';
 
 const props = defineProps<{
   modelValue: TextActionItem;
@@ -16,20 +17,19 @@ function updateField<K extends keyof TextActionItem>(field: K, value: TextAction
 </script>
 
 <template>
-  <div class="text-action-form">
-    <div class="form-field">
-      <label>文本内容</label>
-      <textarea
-        :value="modelValue.content"
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">文本内容</label>
+      <FormControl
+        :model-value="modelValue.content"
+        type="textarea"
         placeholder="输入要发送的文本..."
-        class="textarea-input"
-        rows="4"
-        @input="updateField('content', ($event.target as HTMLTextAreaElement).value)"
+        @update:model-value="updateField('content', $event)"
       />
-      <span class="field-hint">支持通过 variables 动态参数覆盖</span>
+      <span class="text-xs text-gray-500 dark:text-slate-400">支持通过 variables 动态参数覆盖</span>
     </div>
-    <div class="form-field">
-      <label>输入后端</label>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">输入后端</label>
       <BackendSelector
         :model-value="modelValue.backend ?? 'default'"
         @update:model-value="updateField('backend', $event === 'default' ? null : $event)"
@@ -37,45 +37,3 @@ function updateField<K extends keyof TextActionItem>(field: K, value: TextAction
     </div>
   </div>
 </template>
-
-<style scoped>
-.text-action-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.form-field label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-}
-
-.textarea-input {
-  padding: 8px 12px;
-  font-size: 13px;
-  background: var(--color-background);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-family: inherit;
-  resize: vertical;
-  min-height: 80px;
-}
-
-.textarea-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-
-.field-hint {
-  font-size: 11px;
-  color: var(--color-text-muted);
-}
-</style>

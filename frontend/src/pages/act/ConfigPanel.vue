@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import type { ActionItem, InputBackend } from '../../types';
-import EditorHeader from './EditorHeader.vue';
 import EditorTopBar from './EditorTopBar.vue';
 import ActionList from '../../components/ActionList.vue';
 import ActionForm from '../../components/editor/ActionForm.vue';
@@ -10,7 +9,6 @@ import NewActionModal from './NewActionModal.vue';
 defineProps<{
   actions: ActionItem[];
   defaultBackend: InputBackend;
-  configPath: string;
   selectedIndex: number | null;
   isLoaded: boolean;
   selectedAction: ActionItem | null;
@@ -20,9 +18,7 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{
-  load: [path: string];
   save: [];
-  saveAs: [];
   selectAction: [index: number | null];
   updateAction: [index: number, action: ActionItem];
   deleteAction: [index: number];
@@ -67,49 +63,34 @@ function handleDeleteAction(index: number) {
 </script>
 
 <template>
-  <div class="config-panel">
-    <EditorHeader
-      :config-path="configPath"
-      :is-dirty="hasChanges"
-      :is-loaded="isLoaded"
-      @load="emit('load', $event)"
-      @save="emit('save')"
-      @save-as="emit('saveAs')"
-    />
-
-    <div class="editor-content">
+  <div class="flex flex-col p-3 gap-3 h-full box-border">
+    <div class="flex flex-1 gap-3 min-h-0">
       <!-- 左侧面板：动作列表 -->
-      <div class="left-panel">
+      <div class="w-72 flex-shrink-0 flex flex-col rounded-xl overflow-hidden">
         <ActionList
-          v-if="isLoaded"
-          :actions="actions"
+          :actions="isLoaded ? actions : []"
           :selected-index="selectedIndex"
           :show-delete="true"
           @select="handleSelectAction"
           @delete="handleDeleteAction"
         >
           <template #empty>
-            <div class="empty-state-custom">
-              暂无动作，请点击上方「新建动作」创建
+            <div>
+              暂无动作，请加载或创建
             </div>
           </template>
         </ActionList>
-        <div
-          v-else
-          class="empty-state"
-        >
-          <p>请先加载配置文件</p>
-        </div>
       </div>
 
       <!-- 右侧面板：配置与动作表单 -->
-      <div class="right-panel">
+      <div class="flex-1 flex flex-col gap-3 min-w-0">
         <EditorTopBar
           :default-backend="defaultBackend"
           :has-changes="hasChanges"
           :can-undo="canUndo"
           :can-redo="canRedo"
           @backend-change="handleBackendChange"
+          @save="emit('save')"
           @open-new-action-modal="openNewActionModal"
           @discard-all="emit('discardChanges')"
           @undo="emit('undo')"
@@ -117,7 +98,7 @@ function handleDeleteAction(index: number) {
         />
 
         <!-- 动作表单 -->
-        <div class="form-area">
+        <div class="flex-1 bg-white dark:bg-slate-900/70 rounded-xl p-3 overflow-y-auto">
           <ActionForm
             v-if="selectedAction"
             :action="selectedAction"
@@ -126,10 +107,14 @@ function handleDeleteAction(index: number) {
           />
           <div
             v-else
-            class="empty-state"
+            class="flex flex-col items-center justify-center h-full gap-1"
           >
-            <p>选择左侧列表中的动作进行编辑</p>
-            <p>或点击「新建动作」创建新动作</p>
+            <p class="text-gray-500 text-sm">
+              选择左侧列表中的动作进行编辑
+            </p>
+            <p class="text-gray-400 text-sm">
+              或点击「新建动作」创建新动作
+            </p>
           </div>
         </div>
       </div>
@@ -142,68 +127,3 @@ function handleDeleteAction(index: number) {
     />
   </div>
 </template>
-
-<style scoped>
-.config-panel {
-  display: flex;
-  flex-direction: column;
-  padding: 16px;
-  gap: 16px;
-  height: 100%;
-  box-sizing: border-box;
-}
-
-.editor-content {
-  display: flex;
-  flex: 1;
-  gap: 16px;
-  min-height: 0;
-}
-
-.left-panel {
-  width: 280px;
-  flex-shrink: 0;
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
-  overflow-y: auto;
-}
-
-.right-panel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-}
-
-.form-area {
-  flex: 1;
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
-  padding: 16px;
-  overflow-y: auto;
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  color: var(--color-text-muted);
-  font-size: 13px;
-  text-align: center;
-  padding: 24px;
-}
-
-.empty-state p {
-  margin: 4px 0;
-}
-
-.empty-state-custom {
-  text-align: center;
-  padding: 24px 12px;
-  color: var(--color-text-muted);
-  font-size: 13px;
-}
-</style>

@@ -500,42 +500,55 @@ fn execute_key_sequence(action: &KeySequenceAction, ctx: &ExecContext) -> Result
 }
 
 /// 执行鼠标点击动作
-fn execute_mouse_click(action: &MouseClickAction, _ctx: &ExecContext) -> Result<(), String> {
+fn execute_mouse_click(action: &MouseClickAction, ctx: &ExecContext) -> Result<(), String> {
     let count = action.count;
-
-    // 注意：目前，鼠标点击始终使用 Enigo，因为它对于绝对定位更可靠
-    // 这可以增强为也支持 Win32 后端
-    let mut enigo = Enigo::new(&Settings::default())
-        .map_err(|e| format!("Failed to create Enigo: {:?}", e))?;
-
-    let button = match action.button {
-        MouseButton::Left => Button::Left,
-        MouseButton::Right => Button::Right,
-        MouseButton::Middle => Button::Middle,
-    };
-
+    let button = action.button;
     let interval = action.interval_ms.unwrap_or(0);
     let hold_time = action.hold_time_ms;
 
-    for i in 0..count {
-        // 按下、保持，然后释放
-        enigo.button(button, Direction::Press)
-            .map_err(|e| format!("Failed to press mouse button: {:?}", e))?;
-
-        if hold_time > 0 {
-            std::thread::sleep(std::time::Duration::from_millis(hold_time));
+    match ctx.backend {
+        InputBackend::Win32 => {
+            let hwnd = ctx.target_hwnd
+                .ok_or("Win32 backend requires target window for mouse click")?;
+            for i in 0..count {
+                input::win32_input::send_mouse_click(hwnd, 0, 0, button)?;
+                if hold_time > 0 {
+                    std::thread::sleep(std::time::Duration::from_millis(hold_time));
+                }
+                if i < count - 1 && interval > 0 {
+                    std::thread::sleep(std::time::Duration::from_millis(interval));
+                }
+            }
+            Ok(())
         }
+        InputBackend::Enigo => {
+            let mut enigo = Enigo::new(&Settings::default())
+                .map_err(|e| format!("Failed to create Enigo: {:?}", e))?;
 
-        enigo.button(button, Direction::Release)
-            .map_err(|e| format!("Failed to release mouse button: {:?}", e))?;
+            let btn = match button {
+                MouseButton::Left => Button::Left,
+                MouseButton::Right => Button::Right,
+                MouseButton::Middle => Button::Middle,
+            };
 
-        // 不要在最后一次点击后休眠
-        if i < count - 1 && interval > 0 {
-            std::thread::sleep(std::time::Duration::from_millis(interval));
+            for i in 0..count {
+                enigo.button(btn, Direction::Press)
+                    .map_err(|e| format!("Failed to press mouse button: {:?}", e))?;
+
+                if hold_time > 0 {
+                    std::thread::sleep(std::time::Duration::from_millis(hold_time));
+                }
+
+                enigo.button(btn, Direction::Release)
+                    .map_err(|e| format!("Failed to release mouse button: {:?}", e))?;
+
+                if i < count - 1 && interval > 0 {
+                    std::thread::sleep(std::time::Duration::from_millis(interval));
+                }
+            }
+            Ok(())
         }
     }
-
-    Ok(())
 }
 
 /// 执行鼠标移动动作

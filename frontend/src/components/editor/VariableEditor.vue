@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { Variable } from '../../types';
+import BaseButton from '@/components/ui/BaseButton.vue';
+import FormControl from '@/components/ui/FormControl.vue';
 
 const props = defineProps<{
   modelValue: Variable[];
@@ -25,149 +27,48 @@ function updateField(index: number, field: 'param_name' | 'field_name', value: s
   vars[index][field] = value;
   emit('update:modelValue', vars);
 }
+
+const fieldOptions = () =>
+  props.availableFields.map(f => ({ value: f, label: f }));
 </script>
 
 <template>
-  <div class="variable-editor">
-    <div class="variables-list">
+  <div class="flex flex-col gap-2">
+    <div class="flex flex-col gap-2">
       <div
         v-for="(variable, index) in modelValue"
         :key="index"
-        class="variable-item"
+        class="flex items-center gap-2"
       >
-        <select
-          :value="variable.field_name"
-          class="select-input"
-          @change="updateField(index, 'field_name', ($event.target as HTMLSelectElement).value)"
-        >
-          <option value="">
-            选择字段...
-          </option>
-          <option
-            v-for="field in availableFields"
-            :key="field"
-            :value="field"
-          >
-            {{ field }}
-          </option>
-        </select>
-        <span class="arrow">→</span>
-        <input
-          :value="variable.param_name"
+        <FormControl
+          :model-value="variable.field_name"
+          class="!w-24"
+          :options="[{ value: '', label: '选择字段...' }, ...fieldOptions()]"
+          @update:model-value="updateField(index, 'field_name', $event)"
+        />
+        <span class="text-gray-500 dark:text-slate-400 text-sm">→</span>
+        <FormControl
+          :model-value="variable.param_name"
           type="text"
           placeholder="参数名"
-          class="text-input param-input"
-          @input="updateField(index, 'param_name', ($event.target as HTMLInputElement).value)"
-        >
-        <button
-          class="remove-var-btn"
+          class="flex-1"
+          @update:model-value="updateField(index, 'param_name', $event)"
+        />
+        <BaseButton
+          icon="mdiClose"
+          color="whiteDark"
+          small
+          transparent-bg
           @click="removeVariable(index)"
-        >
-          ✕
-        </button>
+        />
       </div>
-      <button
-        class="add-var-btn"
+      <BaseButton
+        label="+ 添加参数"
+        color="info"
+        outline
         @click="addVariable"
-      >
-        + 添加参数
-      </button>
+      />
     </div>
-    <span class="field-hint">定义可动态覆盖的字段和参数名称，运行时通过通信参数传值</span>
+    <span class="text-xs text-gray-500 dark:text-slate-400">定义可动态覆盖的字段和参数名称，运行时通过通信参数传值</span>
   </div>
 </template>
-
-<style scoped>
-.variable-editor {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.variables-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.variable-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.variable-item .select-input {
-  width: 100px;
-}
-
-.arrow {
-  color: var(--color-text-muted);
-  font-size: 12px;
-}
-
-.param-input {
-  flex: 1;
-}
-
-.remove-var-btn {
-  padding: 4px 8px;
-  font-size: 11px;
-  background: transparent;
-  color: var(--color-text-muted);
-  border: none;
-  cursor: pointer;
-}
-
-.remove-var-btn:hover {
-  color: var(--color-error);
-}
-
-.add-var-btn {
-  padding: 8px;
-  font-size: 12px;
-  background: var(--color-surface-secondary);
-  color: var(--color-primary);
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-
-.add-var-btn:hover {
-  background: var(--color-surface-hover);
-}
-
-.field-hint {
-  font-size: 11px;
-  color: var(--color-text-muted);
-}
-
-.text-input {
-  padding: 8px 12px;
-  font-size: 13px;
-  background: var(--color-background);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-family: inherit;
-}
-
-.text-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-
-.select-input {
-  padding: 8px 12px;
-  font-size: 13px;
-  background: var(--color-background);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-family: inherit;
-}
-
-.select-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-</style>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { KeyActionItem } from '../../../types';
 import BackendSelector from '../BackendSelector.vue';
+import FormControl from '@/components/ui/FormControl.vue';
 
 const props = defineProps<{
   modelValue: KeyActionItem;
@@ -16,29 +17,26 @@ function updateField<K extends keyof KeyActionItem>(field: K, value: KeyActionIt
 </script>
 
 <template>
-  <div class="key-action-form">
-    <div class="form-field">
-      <label>按键</label>
-      <input
-        :value="modelValue.key"
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">按键</label>
+      <FormControl
+        :model-value="modelValue.key"
         type="text"
         placeholder="例如: space, ctrl, a"
-        class="text-input"
-        @input="updateField('key', ($event.target as HTMLInputElement).value)"
-      >
+        @update:model-value="updateField('key', $event)"
+      />
     </div>
-    <div class="form-field">
-      <label>按住时间 (ms)</label>
-      <input
-        :value="modelValue.hold_time_ms"
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">按住时间 (ms)</label>
+      <FormControl
+        :model-value="modelValue.hold_time_ms"
         type="number"
-        min="0"
-        class="number-input"
-        @input="updateField('hold_time_ms', Number(($event.target as HTMLInputElement).value))"
-      >
+        @update:model-value="updateField('hold_time_ms', Number($event))"
+      />
     </div>
-    <div class="form-field">
-      <label>输入后端</label>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">输入后端</label>
       <BackendSelector
         :model-value="modelValue.backend ?? 'default'"
         @update:model-value="updateField('backend', $event === 'default' ? null : $event)"
@@ -46,40 +44,3 @@ function updateField<K extends keyof KeyActionItem>(field: K, value: KeyActionIt
     </div>
   </div>
 </template>
-
-<style scoped>
-.key-action-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.form-field label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-}
-
-.text-input,
-.number-input {
-  padding: 8px 12px;
-  font-size: 13px;
-  background: var(--color-background);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-family: inherit;
-}
-
-.text-input:focus,
-.number-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-</style>

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import type { MouseButton } from '../types';
+import BaseButton from '@/components/ui/BaseButton.vue';
+import FormControl from '@/components/ui/FormControl.vue';
 
 defineProps<{
   selectedHwnd: number | null;
@@ -37,206 +39,94 @@ function handleGetPosition() {
 </script>
 
 <template>
-  <div class="mouse-control">
-    <h4>鼠标操作</h4>
+  <div class="p-4 border-t border-gray-100 dark:border-slate-800">
+    <h4 class="m-0 mb-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+      鼠标操作
+    </h4>
 
-    <div class="mouse-inputs">
-      <div class="input-group">
-        <label>X</label>
-        <input
+    <div class="flex items-center gap-3 mb-3">
+      <div class="flex items-center gap-1.5">
+        <label class="text-xs text-gray-500 dark:text-gray-400">X</label>
+        <FormControl
           v-model.number="x"
           type="number"
-          class="coord-input"
-        >
+          class="!w-20"
+        />
       </div>
-      <div class="input-group">
-        <label>Y</label>
-        <input
+      <div class="flex items-center gap-1.5">
+        <label class="text-xs text-gray-500 dark:text-gray-400">Y</label>
+        <FormControl
           v-model.number="y"
           type="number"
-          class="coord-input"
-        >
+          class="!w-20"
+        />
       </div>
-      <button
-        class="get-pos-btn"
+      <BaseButton
+        label="获取位置"
+        color="whiteDark"
         @click="handleGetPosition"
-      >
-        获取位置
-      </button>
+      />
     </div>
 
-    <div class="button-select">
-      <label class="radio-label">
+    <div class="flex gap-4 mb-3">
+      <label class="flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
         <input
           v-model="selectedButton"
           type="radio"
           value="left"
+          class="accent-blue-500"
         >
         <span>左键</span>
       </label>
-      <label class="radio-label">
+      <label class="flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
         <input
           v-model="selectedButton"
           type="radio"
           value="right"
+          class="accent-blue-500"
         >
         <span>右键</span>
       </label>
-      <label class="radio-label">
+      <label class="flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
         <input
           v-model="selectedButton"
           type="radio"
           value="middle"
+          class="accent-blue-500"
         >
         <span>中键</span>
       </label>
     </div>
 
-    <div class="mouse-actions">
-      <button
-        class="action-btn"
+    <div class="flex gap-2">
+      <BaseButton
+        class="flex-1"
+        label="点击"
+        color="info"
         :disabled="!selectedHwnd"
         @click="handleClick"
-      >
-        点击
-      </button>
-      <button
-        class="action-btn"
+      />
+      <BaseButton
+        class="flex-1"
+        label="双击"
+        color="info"
         :disabled="!selectedHwnd"
         @click="handleDoubleClick"
-      >
-        双击
-      </button>
-      <button
-        class="action-btn"
+      />
+      <BaseButton
+        class="flex-1"
+        label="移动"
+        color="info"
         :disabled="!selectedHwnd"
         @click="handleMove"
-      >
-        移动
-      </button>
+      />
     </div>
 
-    <div
+    <p
       v-if="!selectedHwnd"
-      class="hint"
+      class="mt-2 text-xs text-gray-400 dark:text-gray-500 text-center"
     >
       请先在侧边栏选择一个窗口
-    </div>
+    </p>
   </div>
 </template>
-
-<style scoped>
-.mouse-control {
-  padding: 16px;
-  border-top: 1px solid var(--color-border);
-}
-
-.mouse-control h4 {
-  margin: 0 0 12px 0;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.mouse-inputs {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.input-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.input-group label {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-}
-
-.coord-input {
-  width: 80px;
-  padding: 6px 10px;
-  font-size: 13px;
-  background: var(--color-background);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-}
-
-.coord-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-
-.get-pos-btn {
-  padding: 6px 12px;
-  font-size: 12px;
-  background: var(--color-surface-secondary);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-
-.get-pos-btn:hover {
-  background: var(--color-hover);
-}
-
-.button-select {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 12px;
-}
-
-.radio-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--color-text);
-  cursor: pointer;
-}
-
-.radio-label input[type="radio"] {
-  accent-color: var(--color-primary);
-}
-
-.mouse-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.action-btn {
-  flex: 1;
-  padding: 10px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  background: var(--color-primary);
-  color: white;
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: background var(--transition-duration);
-}
-
-.action-btn:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-}
-
-.action-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.hint {
-  margin-top: 8px;
-  font-size: 11px;
-  color: var(--color-text-muted);
-  text-align: center;
-}
-</style>

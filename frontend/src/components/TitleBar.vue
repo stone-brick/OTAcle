@@ -32,16 +32,22 @@ async function handleClose() {
 </script>
 
 <template>
-  <div class="title-bar">
+  <div
+    class="flex items-center justify-between h-8 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800"
+    style="-webkit-app-region: drag; user-select: none;"
+  >
     <div
-      class="title-content"
+      class="flex-1 flex items-center pl-3 h-full cursor-default"
       @mousedown="handleDrag"
     >
-      <span class="title-text">OTAcle</span>
+      <span class="text-sm font-semibold text-gray-700 dark:text-gray-200">OTAcle</span>
     </div>
-    <div class="window-controls">
+    <div
+      class="flex h-full"
+      style="-webkit-app-region: no-drag;"
+    >
       <button
-        class="control-btn minimize"
+        class="w-[46px] h-full flex items-center justify-center border-none bg-transparent text-gray-400 dark:text-gray-500 cursor-pointer transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-gray-200"
         title="最小化"
         @click="handleMinimize"
       >
@@ -60,7 +66,7 @@ async function handleClose() {
         </svg>
       </button>
       <button
-        class="control-btn maximize"
+        class="w-[46px] h-full flex items-center justify-center border-none bg-transparent text-gray-400 dark:text-gray-500 cursor-pointer transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-gray-200"
         :title="isMaximized ? '还原' : '最大化'"
         @click="handleToggleMaximize"
       >
@@ -104,7 +110,7 @@ async function handleClose() {
         </svg>
       </button>
       <button
-        class="control-btn close"
+        class="w-[46px] h-full flex items-center justify-center border-none bg-transparent text-gray-400 dark:text-gray-500 cursor-pointer transition-colors duration-150 hover:bg-red-500 hover:text-white"
         title="关闭"
         @click="handleClose"
       >
@@ -124,60 +130,3 @@ async function handleClose() {
     </div>
   </div>
 </template>
-
-<style scoped>
-.title-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 32px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-  -webkit-app-region: drag;
-  user-select: none;
-}
-
-.title-content {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  padding-left: 12px;
-  height: 100%;
-  cursor: default;
-}
-
-.title-text {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.window-controls {
-  display: flex;
-  height: 100%;
-  -webkit-app-region: no-drag;
-}
-
-.control-btn {
-  width: 46px;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: transparent;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: background var(--transition-duration), color var(--transition-duration);
-}
-
-.control-btn:hover {
-  background: var(--color-hover);
-  color: var(--color-text);
-}
-
-.control-btn.close:hover {
-  background: var(--color-error);
-  color: white;
-}
-</style>

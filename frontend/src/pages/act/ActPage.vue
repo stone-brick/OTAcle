@@ -10,7 +10,7 @@ import { useActionHistory } from '../../composables/act/useActionHistory';
 import { useActionExecutor } from '../../composables/act/useActionExecutor';
 import type { InputBackend, SearchMode } from '../../types';
 
-const activeTab = ref<'monitor' | 'config' | 'windows'>('monitor');
+const activeTab = ref<'monitor' | 'config' | 'windows'>('config');
 
 const {
   windows, selectedWindow, isLoading, refreshWindows, selectWindow,
@@ -47,19 +47,8 @@ async function searchWindows(mode: SearchMode, value: string): Promise<number[]>
 }
 
 // 配置操作
-async function handleLoad(path: string) {
-  await actionEditor.loadConfig(path);
-}
-
 async function handleSave() {
   await actionEditor.saveConfig();
-}
-
-async function handleSaveAs() {
-  const path = prompt('输入新配置文件路径:', actionEditor.configPath.value || 'actions.json');
-  if (path) {
-    await actionEditor.saveConfig(path);
-  }
 }
 
 function handleSelectAction(index: number | null) {
@@ -120,16 +109,13 @@ async function handleExecuteAction(payload: { actionIdx: number; params: Record<
         v-else-if="activeTab === 'config'"
         :actions="actionEditor.actions.value"
         :default-backend="actionEditor.defaultBackend.value"
-        :config-path="actionEditor.configPath.value"
         :selected-index="actionEditor.selectedIndex.value"
         :is-loaded="actionEditor.isLoaded.value"
         :selected-action="actionEditor.selectedAction.value"
         :has-changes="actionEditor.hasChanges.value"
         :can-undo="actionHistory.canUndo.value"
         :can-redo="actionHistory.canRedo.value"
-        @load="handleLoad"
         @save="handleSave"
-        @save-as="handleSaveAs"
         @select-action="handleSelectAction"
         @update-action="handleUpdateAction"
         @delete-action="handleDeleteAction"

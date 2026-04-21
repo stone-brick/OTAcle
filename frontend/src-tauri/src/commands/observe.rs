@@ -1,5 +1,6 @@
 use crate::communication;
-use crate::communication::types::PubState;
+use crate::communication::types::{FrameMessage, PubState};
+use crate::observe::types::FullFrameMessage;
 use crate::input;
 use crate::observe;
 use crate::observe::state::{GLOBAL_STATS, SessionHandle};
@@ -50,6 +51,10 @@ pub fn observe_start(
     // Create session stats
     let stats = Arc::new(observe::state::SessionStats::new());
 
+    // Create latest full frame storage (供前端轮询)
+    let latest_full_frame = Arc::new(Mutex::new(None));
+    let latest_full_frame_for_capture = latest_full_frame.clone();
+
     // Start capture and get handle
     let capture_handle = observe::capture::start_capture(
         hwnd,
@@ -58,6 +63,7 @@ pub fn observe_start(
         frame_tx,
         running_for_capture,
         stats,
+        latest_full_frame_for_capture,
     )?;
 
     // Create session handle with full info
@@ -67,6 +73,7 @@ pub fn observe_start(
         running,
         Some(capture_handle),
         Some(publisher_handle),
+        latest_full_frame,
     );
 
     // Register session
@@ -139,3 +146,43 @@ pub fn observe_save_config(path: String, config: observe::types::ObserveConfig) 
 pub fn observe_load_config(path: String) -> Result<observe::types::ObserveConfig, String> {
     observe::config::load_config(&path)
 }
+
+#[tauri::command]
+pub fn observe_add_crop_region(region: observe::types::CropRegion) -> Result<(), String> {
+    observe::config::add_crop_region(region)
+}
+
+#[tauri::command]
+pub fn observe_remove_crop_region(index: usize) -> Result<(), String> {
+    observe::config::remove_crop_region(index)
+}
+
+#[tauri::command]
+pub fn observe_get_config() -> Result<observe::types::ObserveConfig, String> {
+    observe::config::get_config()
+}
+
+#[tauri::command]
+pub fn observe_capture_preview(
+    window: String,
+    config: observe::types::ObserveConfig,
+) -> Result<FrameMessage, String> {
+    let search = input::parse_window_spec(&window);
+    let hwnd = input::find_window(&search)
+        .ok_or_else(|| format!("Window not found: {}", window))?;
+
+    observe::capture::capture_screenshot(hwnd, config)
+}
+
+#[tauri::command]
+pub fn observe_capture_full_frame(
+    window: String,
+    config: observe::types::ObserveConfig,
+) -> Result<FullFrameMessage, String> {
+    let search = input::parse_window_spec(&window);
+    let hwnd = input::find_window(&search)
+        .ok_or_else(|| format!("Window not found: {}", window))?;
+
+    observe::capture::capture_full_frame(hwnd, config)
+}
+

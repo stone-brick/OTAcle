@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import BaseButton from '@/components/ui/BaseButton.vue';
+import FormControl from '@/components/ui/FormControl.vue';
 
 defineProps<{
   show: boolean;
@@ -47,182 +49,62 @@ function handleKeydown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <div
-    v-if="show"
-    class="modal-overlay"
-    @click.self="handleCancel"
-  >
-    <div class="modal">
-      <h4>新建动作</h4>
-      <div class="modal-form">
-        <div class="form-field">
-          <label>动作类型</label>
-          <div class="action-type-grid">
+  <Teleport to="body">
+    <div
+      v-if="show"
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]"
+      @click.self="handleCancel"
+    >
+      <div
+        class="bg-white dark:bg-slate-900 rounded-lg p-6 max-w-lg w-[90%]"
+        @click.stop
+      >
+        <h4 class="text-lg font-semibold mb-3">
+          新建动作
+        </h4>
+
+        <div class="mb-5">
+          <label class="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">动作类型</label>
+          <div class="grid grid-cols-4 gap-2">
             <button
               v-for="type in actionTypes"
               :key="type.value"
-              class="type-btn"
-              :class="{ active: selectedType === type.value }"
+              type="button"
+              class="py-3 px-2 text-sm rounded-lg border cursor-pointer transition-colors"
+              :class="selectedType === type.value
+                ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-500 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                : 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700'"
               @click="selectedType = type.value"
             >
               {{ type.label }}
             </button>
           </div>
         </div>
-        <div class="form-field">
-          <label>名称（可选）</label>
-          <input
+
+        <div class="mb-5">
+          <label class="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">名称（可选）</label>
+          <FormControl
             v-model="newActionName"
             type="text"
-            class="text-input"
             placeholder="输入动作名称..."
             @keydown="handleKeydown"
-          >
+          />
+        </div>
+
+        <div class="flex justify-end gap-2">
+          <BaseButton
+            label="取消"
+            color="whiteDark"
+            @click="handleCancel"
+          />
+          <BaseButton
+            label="创建"
+            color="info"
+            :disabled="!selectedType"
+            @click="handleConfirm"
+          />
         </div>
       </div>
-      <div class="modal-actions">
-        <button
-          class="btn-secondary"
-          @click="handleCancel"
-        >
-          取消
-        </button>
-        <button
-          class="btn-primary"
-          :disabled="!selectedType"
-          @click="handleConfirm"
-        >
-          创建
-        </button>
-      </div>
     </div>
-  </div>
+  </Teleport>
 </template>
-
-<style scoped>
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal {
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
-  padding: 24px;
-  max-width: 480px;
-  width: 90%;
-}
-
-.modal h4 {
-  margin: 0 0 12px 0;
-  font-size: 16px;
-}
-
-.modal-form {
-  margin-bottom: 20px;
-}
-
-.modal-form .form-field {
-  margin-bottom: 12px;
-}
-
-.modal-form label {
-  display: block;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  margin-bottom: 4px;
-}
-
-.action-type-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
-
-.type-btn {
-  padding: 12px 8px;
-  background: var(--color-surface-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--color-text);
-  transition: all var(--transition-duration);
-}
-
-.type-btn:hover {
-  background: var(--color-surface-hover);
-}
-
-.type-btn.active {
-  background: var(--color-primary-bg);
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-}
-
-.text-input {
-  width: 100%;
-  padding: 8px 12px;
-  font-size: 13px;
-  background: var(--color-background);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  box-sizing: border-box;
-}
-
-.text-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.btn-primary {
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  background: var(--color-primary);
-  color: white;
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-}
-
-.btn-primary:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  background: var(--color-surface-secondary);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-
-.btn-secondary:hover {
-  background: var(--color-surface-hover);
-}
-</style>

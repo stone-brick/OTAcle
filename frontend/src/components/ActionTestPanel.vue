@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import type { ActionItem, WindowInfo, Variable } from '../types';
+import CardBox from '@/components/ui/CardBox.vue';
+import CardBoxComponentBody from '@/components/ui/CardBoxComponentBody.vue';
+import BaseButton from '@/components/ui/BaseButton.vue';
+import FormControl from '@/components/ui/FormControl.vue';
 
 const props = defineProps<{
   selectedWindow: WindowInfo | null;
@@ -125,104 +129,113 @@ function formatFieldName(fieldName: string): string {
   };
   return labels[fieldName] || fieldName;
 }
+
+// Action type color map
+const actionTypeColors: Record<string, string> = {
+  key: 'bg-blue-500 text-white',
+  key_sequence: 'bg-purple-500 text-white',
+  mouse_click: 'bg-orange-500 text-white',
+  mouse_move: 'bg-green-500 text-white',
+  mouse_scroll: 'bg-cyan-500 text-white',
+  delay: 'bg-gray-500 text-white',
+  text: 'bg-pink-500 text-white',
+};
 </script>
 
 <template>
-  <div class="action-test-panel">
-    <!-- Header -->
-    <div class="panel-header">
-      <h3>动作测试</h3>
+  <CardBox class="flex flex-col flex-1 border-l border-gray-100 dark:border-slate-800">
+    <div class="px-3 py-2 border-b border-gray-100 dark:border-slate-800">
+      <h3 class="m-0 text-sm font-semibold text-gray-700 dark:text-slate-200">
+        动作测试
+      </h3>
     </div>
 
-    <!-- No config loaded state -->
-    <div
+    <CardBoxComponentBody
       v-if="!isLoaded"
-      class="empty-state"
+      class="flex flex-col items-center justify-center flex-1"
     >
-      <p>请先在「配置」标签页加载动作配置文件</p>
-    </div>
+      <p class="text-gray-500 text-sm">
+        请先在「配置」标签页加载动作配置文件
+      </p>
+    </CardBoxComponentBody>
 
     <template v-else>
       <!-- Target Window Info -->
-      <div class="section">
-        <div class="section-title">
+      <div class="px-4 py-3 border-b border-gray-100 dark:border-slate-800">
+        <div class="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-2">
           目标窗口
         </div>
         <div
           v-if="selectedWindow"
-          class="window-info"
+          class="bg-gray-50 dark:bg-slate-800 rounded-lg p-3"
         >
-          <div class="window-title">
+          <div class="text-sm font-medium text-gray-700 dark:text-slate-200 mb-1 truncate">
             {{ selectedWindow.title }}
           </div>
-          <div class="window-meta">
-            <span class="hwnd">HWND: 0x{{ selectedWindow.hwnd.toString(16) }}</span>
-            <span class="process">{{ selectedWindow.process_name }}</span>
+          <div class="flex gap-3 text-xs text-gray-500 dark:text-slate-400">
+            <span class="font-mono">HWND: 0x{{ selectedWindow.hwnd.toString(16) }}</span>
+            <span>{{ selectedWindow.process_name }}</span>
           </div>
         </div>
         <div
           v-else
-          class="no-window"
+          class="text-sm text-gray-400 italic"
         >
           未选择窗口（将使用前台窗口）
         </div>
       </div>
 
       <!-- Selected Action Info -->
-      <div
-        v-if="selectedAction"
-        class="section"
-      >
-        <div class="section-title">
+      <div class="px-4 py-3 border-b border-gray-100 dark:border-slate-800">
+        <div class="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-2">
           当前动作
         </div>
-        <div class="selected-action-info">
+        <div
+          v-if="selectedAction"
+          class="flex items-center gap-2"
+        >
           <span
-            class="action-badge"
-            :class="selectedAction.type"
+            class="px-2.5 py-1 text-xs font-semibold rounded uppercase"
+            :class="actionTypeColors[selectedAction.type] || 'bg-gray-500 text-white'"
           >
             {{ selectedAction.type }}
           </span>
-          <span class="action-name">{{ selectedAction.name || '(无名称)' }}</span>
+          <span class="text-sm font-medium text-gray-700 dark:text-slate-200">{{ selectedAction.name || '(无名称)' }}</span>
+        </div>
+        <div
+          v-else
+          class="text-sm text-gray-400 italic"
+        >
+          请在中间列表选择一个动作
         </div>
       </div>
 
       <!-- Variable Params Form -->
       <div
-        v-else
-        class="section"
-      >
-        <div class="no-selection">
-          请在中间列表选择一个动作
-        </div>
-      </div>
-
-      <div
         v-if="selectedAction && variables.length > 0"
-        class="section"
+        class="px-4 py-3 border-b border-gray-100 dark:border-slate-800"
       >
-        <div class="section-title">
+        <div class="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-2">
           可调参数
         </div>
-        <div class="param-hint">
+        <p class="text-xs text-gray-400 mb-3">
           以下参数可在运行时动态调整
-        </div>
-        <div class="param-form">
+        </p>
+        <div class="flex flex-col gap-3">
           <div
             v-for="variable in variables"
             :key="variable.param_name"
-            class="param-row"
+            class="flex flex-col gap-1"
           >
-            <label class="param-label">
+            <label class="text-sm font-medium text-gray-700 dark:text-slate-200">
               {{ variable.param_name }}
-              <span class="field-name">({{ formatFieldName(variable.field_name) }})</span>
+              <span class="text-xs text-gray-500 font-normal">({{ formatFieldName(variable.field_name) }})</span>
             </label>
-            <input
+            <FormControl
               v-model="runtimeParams[variable.param_name]"
               :type="getFieldType(variable.field_name)"
-              class="param-input"
               :placeholder="`默认值: ${getFieldValue(variable.field_name)}`"
-            >
+            />
           </div>
         </div>
       </div>
@@ -230,216 +243,23 @@ function formatFieldName(fieldName: string): string {
       <!-- No variables hint -->
       <div
         v-else-if="selectedAction && variables.length === 0"
-        class="section"
+        class="px-4 py-3 border-b border-gray-100 dark:border-slate-800"
       >
-        <div class="no-variables">
+        <p class="text-sm text-gray-400 italic">
           此动作未配置可调参数
-        </div>
+        </p>
       </div>
 
       <!-- Execute Button -->
-      <div class="section">
-        <button
-          class="execute-btn"
+      <div class="px-4 py-3">
+        <BaseButton
+          label="执行动作"
+          color="info"
+          class="w-full"
           :disabled="selectedActionIndex === null"
           @click="handleExecute"
-        >
-          执行动作
-        </button>
+        />
       </div>
     </template>
-  </div>
+  </CardBox>
 </template>
-
-<style scoped>
-.action-test-panel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background: var(--color-surface);
-  border-left: 1px solid var(--color-border);
-  overflow-y: auto;
-}
-
-.panel-header {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.panel-header h3 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.section {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.section-title {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  margin-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  color: var(--color-text-muted);
-  font-size: 13px;
-  padding: 24px;
-}
-
-.window-info {
-  background: var(--color-surface-secondary);
-  border-radius: var(--radius-sm);
-  padding: 10px 12px;
-}
-
-.window-title {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text);
-  margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.window-meta {
-  display: flex;
-  gap: 12px;
-  font-size: 11px;
-  color: var(--color-text-secondary);
-}
-
-.hwnd {
-  font-family: monospace;
-}
-
-.no-window {
-  color: var(--color-text-muted);
-  font-size: 13px;
-  font-style: italic;
-}
-
-.selected-action-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.action-badge {
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  background: var(--color-primary-bg);
-  color: var(--color-primary);
-}
-
-.action-badge.key { background: #3b82f6; color: white; }
-.action-badge.key_sequence { background: #8b5cf6; color: white; }
-.action-badge.mouse_click { background: #f59e0b; color: white; }
-.action-badge.mouse_move { background: #10b981; color: white; }
-.action-badge.mouse_scroll { background: #06b6d4; color: white; }
-.action-badge.delay { background: #6b7280; color: white; }
-.action-badge.text { background: #ec4899; color: white; }
-
-.action-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--color-text);
-}
-
-.no-selection {
-  color: var(--color-text-muted);
-  font-size: 13px;
-  font-style: italic;
-}
-
-.param-hint {
-  font-size: 12px;
-  color: var(--color-text-muted);
-  margin-bottom: 12px;
-}
-
-.param-form {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.param-row {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.param-label {
-  font-size: 12px;
-  color: var(--color-text);
-  font-weight: 500;
-}
-
-.param-label .field-name {
-  color: var(--color-text-muted);
-  font-weight: normal;
-}
-
-.param-input {
-  padding: 8px 10px;
-  font-size: 13px;
-  background: var(--color-background);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.param-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-
-.param-input::placeholder {
-  color: var(--color-text-muted);
-}
-
-.no-variables {
-  color: var(--color-text-muted);
-  font-size: 13px;
-  font-style: italic;
-}
-
-.execute-btn {
-  width: 100%;
-  padding: 10px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  background: var(--color-primary);
-  color: white;
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background var(--transition-duration);
-}
-
-.execute-btn:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-}
-
-.execute-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-</style>

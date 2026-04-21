@@ -9,9 +9,12 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "lint": "eslint . --cache --cache-location ./node_modules/.cache/eslintcache",
-    "lint:fix": "eslint . --fix --cache --cache-location ./node_modules/.cache/eslintcache"
+    "lint:fix": "eslint . --fix --cache --cache-location ./node_modules/.cache/eslintcache",
+    "knip": "knip",
+    "knip:fix": "knip --fix"
   },
   "dependencies": {
+    "@mdi/js": "^7.4.47",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-dialog": "^2.7.0",
     "@tauri-apps/plugin-fs": "^2.5.0",
@@ -21,11 +24,15 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@tailwindcss/vite": "^4.2.2",
     "@tauri-apps/cli": "^2",
+    "@types/node": "^25.6.0",
     "@vitejs/plugin-vue": "^5.2.1",
     "eslint": "^10.2.0",
     "eslint-plugin-vue": "^10.8.0",
     "globals": "^17.5.0",
+    "knip": "^6.5.0",
+    "tailwindcss": "^4.2.2",
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.58.2",
     "vite": "^6.0.3",

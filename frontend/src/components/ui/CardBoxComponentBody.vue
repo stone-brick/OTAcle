@@ -6,8 +6,8 @@ defineProps({
 
 <template>
   <div
-    class="flex-1"
-    :class="{ 'p-6': !noPadding }"
+    class="flex flex-col h-full"
+    :class="{ 'p-2': !noPadding }"
   >
     <slot />
   </div>

@@ -42,7 +42,9 @@ export const colorsOutline = {
   info: [colorsText.info, 'border-blue-500'],
 }
 
-export const getButtonColor = (color, isOutlined, hasHover, isActive = false) => {
+type ButtonColor = 'white' | 'whiteDark' | 'lightDark' | 'contrast' | 'success' | 'danger' | 'warning' | 'info'
+
+export const getButtonColor = (color: ButtonColor, isOutlined: boolean, hasHover: boolean, isActive = false): string[] => {
   const colors = {
     ring: {
       white: 'ring-gray-200 dark:ring-gray-500',
@@ -113,17 +115,17 @@ export const getButtonColor = (color, isOutlined, hasHover, isActive = false) =>
         'hover:bg-red-600 hover:text-white dark:hover:text-white dark:hover:border-red-600',
       warning:
         'hover:bg-yellow-600 hover:text-white dark:hover:text-white dark:hover:border-yellow-600',
-      info: 'hover:bg-blue-600 hover:text-white dark:hover:text-white dark:hover:border-blue-600',
+      info: 'hover:bg-blue-600 hover:border-blue-600 dark:hover:bg-blue-700 dark:hover:border-blue-700',
     },
   }
 
   if (!colors.bg[color]) {
-    return color
+    return [color]
   }
 
   const isOutlinedProcessed = isOutlined && ['white', 'whiteDark', 'lightDark'].indexOf(color) < 0
 
-  const base = [colors.borders[color], colors.ring[color]]
+  const base: string[] = [colors.borders[color], colors.ring[color]]
 
   if (isActive) {
     base.push(colors.active[color])
@@ -136,4 +138,17 @@ export const getButtonColor = (color, isOutlined, hasHover, isActive = false) =>
   }
 
   return base
+}
+
+export type LogStatusType = 'info' | 'warn' | 'success' | 'error'
+
+const statusTextColors: Record<LogStatusType, string> = {
+  success: 'text-emerald-500 dark:text-emerald-400',
+  error: 'text-red-500 dark:text-red-400',
+  warn: 'text-yellow-500 dark:text-yellow-400',
+  info: 'text-gray-500 dark:text-slate-400',
+}
+
+export function getStatusTextColor(type: LogStatusType): string {
+  return statusTextColors[type] || statusTextColors.info
 }

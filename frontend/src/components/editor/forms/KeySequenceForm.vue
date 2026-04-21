@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { KeySequenceActionItem, KeySequenceItem } from '../../../types';
 import BackendSelector from '../BackendSelector.vue';
+import BaseButton from '@/components/ui/BaseButton.vue';
+import FormControl from '@/components/ui/FormControl.vue';
+import { mdiClose } from '@mdi/js';
 
 const props = defineProps<{
   modelValue: KeySequenceActionItem;
@@ -34,168 +37,64 @@ function updateKey(index: number, field: keyof KeySequenceItem, value: string | 
 </script>
 
 <template>
-  <div class="key-sequence-form">
-    <div class="form-field">
-      <label>默认间隔 (ms)</label>
-      <input
-        :value="modelValue.default_interval_ms"
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">默认间隔 (ms)</label>
+      <FormControl
+        :model-value="modelValue.default_interval_ms"
         type="number"
-        min="0"
-        class="number-input"
-        @input="updateField('default_interval_ms', Number(($event.target as HTMLInputElement).value))"
-      >
+        @update:model-value="updateField('default_interval_ms', Number($event))"
+      />
     </div>
-    <div class="form-field">
-      <label>输入后端</label>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">输入后端</label>
       <BackendSelector
         :model-value="modelValue.backend ?? 'default'"
         @update:model-value="updateField('backend', $event === 'default' ? null : $event)"
       />
     </div>
-    <div class="form-field">
-      <label>按键序列</label>
-      <div class="key-sequence-list">
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">按键序列</label>
+      <div class="flex flex-col gap-2">
         <div
           v-for="(keyItem, index) in modelValue.keys"
           :key="index"
-          class="key-sequence-item"
+          class="flex items-center gap-2"
         >
-          <input
-            :value="keyItem.key"
+          <FormControl
+            :model-value="keyItem.key"
             type="text"
             placeholder="按键"
-            class="text-input key-input"
-            @input="updateKey(index, 'key', ($event.target as HTMLInputElement).value)"
-          >
-          <input
-            :value="keyItem.hold_time_ms"
+            @update:model-value="updateKey(index, 'key', $event)"
+          />
+          <FormControl
+            :model-value="keyItem.hold_time_ms"
             type="number"
-            min="0"
-            class="number-input hold-input"
-            @input="updateKey(index, 'hold_time_ms', Number(($event.target as HTMLInputElement).value))"
-          >
-          <span class="unit-label">ms 按住</span>
-          <input
-            :value="keyItem.interval_ms"
+            @update:model-value="updateKey(index, 'hold_time_ms', Number($event))"
+          />
+          <span class="text-xs text-gray-500 w-12">ms 按住</span>
+          <FormControl
+            :model-value="keyItem.interval_ms"
             type="number"
-            min="0"
-            class="number-input interval-input"
-            @input="updateKey(index, 'interval_ms', Number(($event.target as HTMLInputElement).value))"
-          >
-          <span class="unit-label">ms 间隔</span>
-          <button
-            class="remove-key-btn"
+            @update:model-value="updateKey(index, 'interval_ms', Number($event))"
+          />
+          <span class="text-xs text-gray-500 w-12">ms 间隔</span>
+          <BaseButton
+            :icon="mdiClose"
+            color="whiteDark"
+            small
             @click="removeKey(index)"
-          >
-            ✕
-          </button>
+          />
         </div>
         <button
-          class="add-key-btn"
+          type="button"
+          class="py-2 text-sm text-blue-600 dark:text-blue-400 border border-dashed border-blue-300 dark:border-blue-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer"
           @click="addKey"
         >
           + 添加按键
         </button>
       </div>
-      <span class="field-hint">间隔留空则使用默认间隔</span>
+      <span class="text-xs text-gray-500">间隔留空则使用默认间隔</span>
     </div>
   </div>
 </template>
-
-<style scoped>
-.key-sequence-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.form-field label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-}
-
-.text-input,
-.number-input {
-  padding: 8px 12px;
-  font-size: 13px;
-  background: var(--color-background);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-family: inherit;
-}
-
-.text-input:focus,
-.number-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-
-.key-sequence-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.key-sequence-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.key-input {
-  flex: 1;
-}
-
-.hold-input {
-  width: 70px;
-}
-
-.interval-input {
-  width: 70px;
-}
-
-.unit-label {
-  font-size: 11px;
-  color: var(--color-text-muted);
-}
-
-.remove-key-btn {
-  padding: 4px 8px;
-  font-size: 11px;
-  background: transparent;
-  color: var(--color-text-muted);
-  border: none;
-  cursor: pointer;
-}
-
-.remove-key-btn:hover {
-  color: var(--color-error);
-}
-
-.add-key-btn {
-  padding: 8px;
-  font-size: 12px;
-  background: var(--color-surface-secondary);
-  color: var(--color-primary);
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-
-.add-key-btn:hover {
-  background: var(--color-surface-hover);
-}
-
-.field-hint {
-  font-size: 11px;
-  color: var(--color-text-muted);
-}
-</style>

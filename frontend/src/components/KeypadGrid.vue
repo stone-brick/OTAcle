@@ -42,12 +42,14 @@ function handleComboClick(keys: string[]) {
 </script>
 
 <template>
-  <div class="keypad-grid">
+  <div class="flex flex-col gap-5 p-4">
     <!-- Direction Keys -->
     <div class="key-section">
-      <h4>方向键</h4>
-      <div class="arrow-keys">
-        <div class="arrow-row">
+      <h4 class="m-0 mb-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+        方向键
+      </h4>
+      <div class="flex flex-col items-center gap-1">
+        <div class="flex gap-1">
           <button
             class="key-btn"
             @click="handleKeyClick('up')"
@@ -55,7 +57,7 @@ function handleComboClick(keys: string[]) {
             {{ arrowKeys[0].label }}
           </button>
         </div>
-        <div class="arrow-row">
+        <div class="flex gap-1">
           <button
             class="key-btn"
             @click="handleKeyClick('left')"
@@ -80,8 +82,10 @@ function handleComboClick(keys: string[]) {
 
     <!-- Common Keys -->
     <div class="key-section">
-      <h4>常用键</h4>
-      <div class="common-keys">
+      <h4 class="m-0 mb-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+        常用键
+      </h4>
+      <div class="flex flex-wrap gap-1.5">
         <button
           v-for="item in commonKeys"
           :key="item.key"
@@ -95,8 +99,10 @@ function handleComboClick(keys: string[]) {
 
     <!-- Combo Keys -->
     <div class="key-section">
-      <h4>组合键</h4>
-      <div class="combo-keys">
+      <h4 class="m-0 mb-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+        组合键
+      </h4>
+      <div class="flex flex-wrap gap-1.5">
         <button
           v-for="item in comboKeys"
           :key="item.label"
@@ -110,8 +116,10 @@ function handleComboClick(keys: string[]) {
 
     <!-- Shift Combinations -->
     <div class="key-section">
-      <h4>Shift 组合</h4>
-      <div class="combo-keys">
+      <h4 class="m-0 mb-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+        Shift 组合
+      </h4>
+      <div class="flex flex-wrap gap-1.5">
         <button
           v-for="item in modifierKeys"
           :key="item.label"
@@ -126,34 +134,6 @@ function handleComboClick(keys: string[]) {
 </template>
 
 <style scoped>
-.keypad-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding: 16px;
-}
-
-.key-section h4 {
-  margin: 0 0 10px 0;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.arrow-keys {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.arrow-row {
-  display: flex;
-  gap: 4px;
-}
-
 .key-btn {
   min-width: 48px;
   height: 40px;
@@ -163,9 +143,9 @@ function handleComboClick(keys: string[]) {
   background: var(--color-surface-secondary);
   color: var(--color-text);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: 6px;
   cursor: pointer;
-  transition: all var(--transition-duration);
+  transition: all 0.15s;
 }
 
 .key-btn:hover {
@@ -178,14 +158,7 @@ function handleComboClick(keys: string[]) {
   color: white;
 }
 
-.common-keys,
-.combo-keys {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.combo .key-btn {
+.combo {
   min-width: 60px;
   font-size: 12px;
 }
