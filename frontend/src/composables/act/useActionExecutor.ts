@@ -3,7 +3,7 @@ import { useLog } from '../useLog';
 
 async function executeActionWithParams(
   actionIdx: number,
-  params: Record<string, any>
+  params: Record<string, number | string>
 ): Promise<void> {
   const { addLog } = useLog();
 

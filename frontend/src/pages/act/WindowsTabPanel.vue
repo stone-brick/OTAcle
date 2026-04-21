@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import type { ActionItem, WindowInfo, SearchMode } from '../../types';
-import WindowList from '../../components/WindowList.vue';
-import ActionList from '../../components/ActionList.vue';
-import ActionTestPanel from '../../components/ActionTestPanel.vue';
+import WindowList from '../../components/act/WindowList.vue';
+import ActionList from '../../components/act/ActionList.vue';
+import ActionTestPanel from '../../components/act/ActionTestPanel.vue';
 
 const props = defineProps<{
   windows: WindowInfo[];
@@ -18,7 +18,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   selectWindow: [hwnd: number | null];
   refreshWindows: [];
-  executeAction: [payload: { actionIdx: number; params: Record<string, any> }];
+  executeAction: [payload: { actionIdx: number; params: Record<string, number | string> }];
 }>();
 
 const selectedTestActionIndex = ref<number | null>(null);
@@ -48,7 +48,7 @@ function handleSelectTestAction(index: number) {
   selectedTestActionIndex.value = index;
 }
 
-function handleExecute(payload: { actionIdx: number; params: Record<string, any> }) {
+function handleExecute(payload: { actionIdx: number; params: Record<string, number | string> }) {
   emit('executeAction', payload);
 }
 </script>

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
-import type { ActionItem } from '../../types';
+import type { ActionItem } from '../../../types';
 import {
   isKeyAction, isKeySequenceAction, isMouseClickAction,
   isMouseMoveAction, isMouseScrollAction, isDelayAction, isTextAction
-} from '../../types/act/actionTypes';
+} from '../../../types/act/actionTypes';
 import KeyActionForm from './forms/KeyActionForm.vue';
 import KeySequenceForm from './forms/KeySequenceForm.vue';
 import MouseClickForm from './forms/MouseClickForm.vue';

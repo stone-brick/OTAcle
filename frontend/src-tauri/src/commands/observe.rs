@@ -1,9 +1,9 @@
 use crate::communication;
 use crate::communication::types::{FrameMessage, PubState};
-use crate::observe::types::FullFrameMessage;
 use crate::input;
 use crate::observe;
-use crate::observe::state::{GLOBAL_STATS, SessionHandle};
+use crate::observe::state::{SessionHandle, GLOBAL_STATS};
+use crate::observe::types::FullFrameMessage;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -16,12 +16,13 @@ pub fn observe_start(
 ) -> Result<(), String> {
     // Parse window spec
     let search = input::parse_window_spec(&window);
-    let hwnd = input::find_window(&search)
-        .ok_or_else(|| format!("Window not found: {}", window))?;
+    let hwnd =
+        input::find_window(&search).ok_or_else(|| format!("Window not found: {}", window))?;
 
     // Check if already running
     {
-        let sessions = observe::SESSIONS.lock()
+        let sessions = observe::SESSIONS
+            .lock()
             .map_err(|_| "Failed to lock sessions".to_string())?;
         if sessions.contains_key(&hwnd) {
             return Err("Observe already running for this window".to_string());
@@ -47,6 +48,10 @@ pub fn observe_start(
         pub_state_clone,
         app.clone(),
     )?;
+
+    // 更新全局 PUB 状态
+    communication::state::set_pub_running(Some(running.clone()))?;
+    communication::state::set_pub_state_arc(pub_state)?;
 
     // Create session stats
     let stats = Arc::new(observe::state::SessionStats::new());
@@ -77,7 +82,8 @@ pub fn observe_start(
     );
 
     // Register session
-    let mut sessions = observe::SESSIONS.lock()
+    let mut sessions = observe::SESSIONS
+        .lock()
         .map_err(|_| "Failed to lock sessions".to_string())?;
     sessions.insert(hwnd, session);
 
@@ -92,16 +98,22 @@ pub fn observe_start(
 #[tauri::command]
 pub fn observe_stop() -> Result<(), String> {
     // 获取 sessions 的锁
-    let mut sessions = observe::SESSIONS.lock()
+    let mut sessions = observe::SESSIONS
+        .lock()
         .map_err(|_| "Failed to lock sessions".to_string())?;
 
     // 1. 设置 running = false 通知线程停止
     for (_hwnd, handle) in sessions.iter() {
-        handle.running.store(false, std::sync::atomic::Ordering::SeqCst);
+        handle
+            .running
+            .store(false, std::sync::atomic::Ordering::SeqCst);
     }
 
     // 2. 使用 drain 取出所有 SessionHandle，以便在锁外 join
-    let handles: Vec<(Option<std::thread::JoinHandle<()>>, Option<std::thread::JoinHandle<()>>)> = sessions
+    let handles: Vec<(
+        Option<std::thread::JoinHandle<()>>,
+        Option<std::thread::JoinHandle<()>>,
+    )> = sessions
         .drain()
         .map(|(_hwnd, mut handle)| {
             let capture = handle.capture_handle.take();
@@ -114,6 +126,10 @@ pub fn observe_stop() -> Result<(), String> {
     if let Ok(mut global) = GLOBAL_STATS.lock() {
         global.active_sessions = 0;
     }
+
+    // 清空全局 PUB 状态
+    let _ = communication::state::set_pub_running(None);
+    let _ = communication::state::clear_pub_state_arc();
 
     // 锁在这里自动释放
 
@@ -138,7 +154,10 @@ pub fn observe_get_status() -> Result<observe::status::ObserveStatus, String> {
 }
 
 #[tauri::command]
-pub fn observe_save_config(path: String, config: observe::types::ObserveConfig) -> Result<(), String> {
+pub fn observe_save_config(
+    path: String,
+    config: observe::types::ObserveConfig,
+) -> Result<(), String> {
     observe::config::save_config(&path, &config)
 }
 
@@ -168,8 +187,8 @@ pub fn observe_capture_preview(
     config: observe::types::ObserveConfig,
 ) -> Result<FrameMessage, String> {
     let search = input::parse_window_spec(&window);
-    let hwnd = input::find_window(&search)
-        .ok_or_else(|| format!("Window not found: {}", window))?;
+    let hwnd =
+        input::find_window(&search).ok_or_else(|| format!("Window not found: {}", window))?;
 
     observe::capture::capture_screenshot(hwnd, config)
 }
@@ -180,9 +199,8 @@ pub fn observe_capture_full_frame(
     config: observe::types::ObserveConfig,
 ) -> Result<FullFrameMessage, String> {
     let search = input::parse_window_spec(&window);
-    let hwnd = input::find_window(&search)
-        .ok_or_else(|| format!("Window not found: {}", window))?;
+    let hwnd =
+        input::find_window(&search).ok_or_else(|| format!("Window not found: {}", window))?;
 
     observe::capture::capture_full_frame(hwnd, config)
 }
-

@@ -148,7 +148,7 @@ export function useProject() {
   async function getProjectConfigDir(): Promise<string | null> {
     try {
       return await invoke<string | null>('project_get_config_dir');
-    } catch (e) {
+    } catch {
       return null;
     }
   }
@@ -156,7 +156,7 @@ export function useProject() {
   async function getProjectActionsConfigPath(): Promise<string | null> {
     try {
       return await invoke<string | null>('project_get_actions_config_path');
-    } catch (e) {
+    } catch {
       return null;
     }
   }
@@ -164,7 +164,7 @@ export function useProject() {
   async function getProjectObserveConfigPath(): Promise<string | null> {
     try {
       return await invoke<string | null>('project_get_observe_config_path');
-    } catch (e) {
+    } catch {
       return null;
     }
   }
@@ -172,7 +172,7 @@ export function useProject() {
   async function getProjectCommConfigPath(): Promise<string | null> {
     try {
       return await invoke<string | null>('project_get_comm_config_path');
-    } catch (e) {
+    } catch {
       return null;
     }
   }

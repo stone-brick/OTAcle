@@ -2,11 +2,12 @@
 import { ref } from 'vue';
 import type { ActionItem, InputBackend } from '../../types';
 import EditorTopBar from './EditorTopBar.vue';
-import ActionList from '../../components/ActionList.vue';
-import ActionForm from '../../components/editor/ActionForm.vue';
+import ActionList from '../../components/act/ActionList.vue';
+import ActionForm from '../../components/act/editor/ActionForm.vue';
 import NewActionModal from './NewActionModal.vue';
 
 defineProps<{
+  isProjectLoaded: boolean;
   actions: ActionItem[];
   defaultBackend: InputBackend;
   selectedIndex: number | null;
@@ -85,6 +86,7 @@ function handleDeleteAction(index: number) {
       <!-- 右侧面板：配置与动作表单 -->
       <div class="flex-1 flex flex-col gap-3 min-w-0">
         <EditorTopBar
+          :is-project-loaded="isProjectLoaded"
           :default-backend="defaultBackend"
           :has-changes="hasChanges"
           :can-undo="canUndo"

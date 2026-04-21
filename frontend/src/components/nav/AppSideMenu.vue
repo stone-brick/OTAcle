@@ -46,7 +46,10 @@ function isActive(path: string): boolean {
           : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-gray-200'"
         @click="navigateTo(item.path)"
       >
-        <BaseIcon :path="item.icon" :size="20" />
+        <BaseIcon
+          :path="item.icon"
+          :size="20"
+        />
         <span>{{ item.label }}</span>
       </li>
     </ul>

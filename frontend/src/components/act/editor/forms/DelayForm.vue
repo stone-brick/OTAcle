@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DelayActionItem } from '../../../types';
+import type { DelayActionItem } from '../../../../types';
 import FormControl from '@/components/ui/FormControl.vue';
 
 const props = defineProps<{

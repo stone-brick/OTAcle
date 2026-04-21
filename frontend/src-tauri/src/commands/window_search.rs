@@ -29,7 +29,10 @@ pub fn window_find_one(title: String) -> Result<Option<i64>, String> {
 
 #[tauri::command]
 pub fn window_find_many(title: String) -> Result<Vec<i64>, String> {
-    Ok(input::find_windows_by_title(&title).into_iter().map(|h| h as i64).collect())
+    Ok(input::find_windows_by_title(&title)
+        .into_iter()
+        .map(|h| h as i64)
+        .collect())
 }
 
 #[tauri::command]
@@ -40,7 +43,10 @@ pub fn window_find_one_contains(title: String) -> Result<Option<i64>, String> {
 
 #[tauri::command]
 pub fn window_find_many_contains(title: String) -> Result<Vec<i64>, String> {
-    Ok(input::find_windows_by_title_contains(&title).into_iter().map(|h| h as i64).collect())
+    Ok(input::find_windows_by_title_contains(&title)
+        .into_iter()
+        .map(|h| h as i64)
+        .collect())
 }
 
 #[tauri::command]
@@ -50,12 +56,18 @@ pub fn window_find_by_class(class_name: String) -> Result<Option<i64>, String> {
 
 #[tauri::command]
 pub fn window_find_by_pid(pid: u32) -> Result<Vec<i64>, String> {
-    Ok(input::find_windows_by_pid(pid).into_iter().map(|h| h as i64).collect())
+    Ok(input::find_windows_by_pid(pid)
+        .into_iter()
+        .map(|h| h as i64)
+        .collect())
 }
 
 #[tauri::command]
 pub fn window_find_by_exe(process_name: String) -> Result<Vec<i64>, String> {
-    Ok(input::find_windows_by_exe(&process_name).into_iter().map(|h| h as i64).collect())
+    Ok(input::find_windows_by_exe(&process_name)
+        .into_iter()
+        .map(|h| h as i64)
+        .collect())
 }
 
 #[tauri::command]

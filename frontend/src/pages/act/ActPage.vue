@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import ActTabNav from '../../components/nav/ActTabNav.vue';
-import CommPanel from '../../components/CommPanel.vue';
+import CommPanel from '../../components/act/CommPanel.vue';
 import ConfigPanel from './ConfigPanel.vue';
 import WindowsTabPanel from './WindowsTabPanel.vue';
 import { useWindows } from '../../composables/useWindows';
+import { useProject } from '../../composables/useProject';
 import { useActionEditor } from '../../composables/act/useActionEditor';
 import { useActionHistory } from '../../composables/act/useActionHistory';
 import { useActionExecutor } from '../../composables/act/useActionExecutor';
-import type { InputBackend, SearchMode } from '../../types';
+import type { ActionItem, InputBackend, SearchMode } from '../../types';
 
 const activeTab = ref<'monitor' | 'config' | 'windows'>('config');
+
+const { isProjectLoaded } = useProject();
 
 const {
   windows, selectedWindow, isLoading, refreshWindows, selectWindow,
@@ -55,7 +58,7 @@ function handleSelectAction(index: number | null) {
   actionEditor.selectAction(index);
 }
 
-async function handleUpdateAction(index: number, action: any) {
+async function handleUpdateAction(index: number, action: ActionItem) {
   await actionEditor.updateAction(index, action);
 }
 
@@ -93,7 +96,7 @@ async function handleSelectWindow(hwnd: number | null) {
   await actionExecutor.setTargetWindow(windowSpec);
 }
 
-async function handleExecuteAction(payload: { actionIdx: number; params: Record<string, any> }) {
+async function handleExecuteAction(payload: { actionIdx: number; params: Record<string, number | string> }) {
   await actionExecutor.executeActionWithParams(payload.actionIdx, payload.params);
 }
 </script>
@@ -107,6 +110,7 @@ async function handleExecuteAction(payload: { actionIdx: number; params: Record<
 
       <ConfigPanel
         v-else-if="activeTab === 'config'"
+        :is-project-loaded="isProjectLoaded"
         :actions="actionEditor.actions.value"
         :default-backend="actionEditor.defaultBackend.value"
         :selected-index="actionEditor.selectedIndex.value"

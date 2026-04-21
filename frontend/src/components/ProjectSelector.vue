@@ -107,7 +107,10 @@ function handleRemoveRecent(e: Event, path: string) {
           :disabled="isLoading"
           @click="openProjectDialog"
         >
-          <BaseIcon :path="mdiFolderOpen" :size="16" />
+          <BaseIcon
+            :path="mdiFolderOpen"
+            :size="16"
+          />
           <span>打开项目</span>
         </button>
         <button
@@ -118,7 +121,10 @@ function handleRemoveRecent(e: Event, path: string) {
           :disabled="isLoading"
           @click="handleCreateProject"
         >
-          <BaseIcon :path="mdiPlus" :size="16" />
+          <BaseIcon
+            :path="mdiPlus"
+            :size="16"
+          />
           <span>新建项目</span>
         </button>
       </div>
@@ -134,7 +140,10 @@ function handleRemoveRecent(e: Event, path: string) {
                  hover:bg-gray-50 dark:hover:bg-slate-800"
           @click="showRecentList = !showRecentList"
         >
-          <BaseIcon :path="mdiPin" :size="12" />
+          <BaseIcon
+            :path="mdiPin"
+            :size="12"
+          />
           <span class="flex-1 text-left">最近项目</span>
           <span class="text-[8px] text-gray-400 dark:text-gray-500">{{ showRecentList ? '▲' : '▼' }}</span>
         </button>
@@ -155,7 +164,10 @@ function handleRemoveRecent(e: Event, path: string) {
             @mouseenter="hoveredProject = project.path"
             @mouseleave="hoveredProject = null"
           >
-            <BaseIcon :path="project.pinned ? mdiPin : mdiFolderOpen" :size="16" />
+            <BaseIcon
+              :path="project.pinned ? mdiPin : mdiFolderOpen"
+              :size="16"
+            />
             <div class="flex-1 min-w-0 flex flex-col">
               <span class="text-xs text-gray-700 dark:text-slate-200 truncate">{{ project.name }}</span>
               <span class="text-[10px] text-gray-400 dark:text-gray-500">{{ formatDate(project.last_opened) }}</span>
@@ -171,7 +183,10 @@ function handleRemoveRecent(e: Event, path: string) {
                 :title="project.pinned ? '取消固定' : '固定'"
                 @click="(e) => handleTogglePin(e, project.path)"
               >
-                <BaseIcon :path="project.pinned ? mdiMapMarker : mdiPin" :size="12" />
+                <BaseIcon
+                  :path="project.pinned ? mdiMapMarker : mdiPin"
+                  :size="12"
+                />
               </button>
               <button
                 class="bg-none border-none text-xs cursor-pointer px-1 py-0.5 rounded

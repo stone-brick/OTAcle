@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import SegmentedControl from '@/components/ui/SegmentedControl.vue'
 
-const props = defineProps<{
+defineProps<{
   modelValue: 'default' | 'win32' | 'enigo';
   hideDefault?: boolean;
 }>();

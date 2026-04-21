@@ -1,9 +1,9 @@
 //! 动作配置的 JSON 解析和验证
 
-use crate::input;
 use super::history;
 use super::state;
 use super::types::{Action, ActionData, ActionList, InputBackend};
+use crate::input;
 use serde::Deserialize;
 use std::fs;
 use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
@@ -48,10 +48,11 @@ fn default_win32() -> InputBackend {
 /// }
 /// ```
 pub fn load_config(path: &str) -> Result<(ActionList, InputBackend), String> {
-    let content = fs::read_to_string(path).map_err(|e| format!("Failed to read config file: {}", e))?;
+    let content =
+        fs::read_to_string(path).map_err(|e| format!("Failed to read config file: {}", e))?;
 
-    let config: ActionConfigJson = serde_json::from_str(&content)
-        .map_err(|e| format!("Failed to parse config: {}", e))?;
+    let config: ActionConfigJson =
+        serde_json::from_str(&content).map_err(|e| format!("Failed to parse config: {}", e))?;
 
     let mut action_list: ActionList = Vec::new();
 
@@ -65,7 +66,8 @@ pub fn load_config(path: &str) -> Result<(ActionList, InputBackend), String> {
     validate_config(&action_list)?;
 
     // 保存列表以供后续访问
-    let mut global_list = state::ACTION_CONFIG_LIST.lock()
+    let mut global_list = state::ACTION_CONFIG_LIST
+        .lock()
         .map_err(|_| "Failed to lock action list".to_string())?;
     *global_list = Some(action_list.clone());
 
@@ -132,8 +134,7 @@ pub fn set_target_window(window: Option<String>) -> Result<(), String> {
                 hwnd.0 as isize
             } else {
                 // 将窗口规格解析为 HWND
-                input::find_window(&search)
-                    .ok_or_else(|| format!("Window not found: {}", spec))?
+                input::find_window(&search).ok_or_else(|| format!("Window not found: {}", spec))?
             }
         }
         None => {
@@ -155,10 +156,7 @@ pub fn set_target_window(window: Option<String>) -> Result<(), String> {
 
 /// 获取当前目标窗口（HWND）
 pub fn get_target_window() -> Option<isize> {
-    state::TARGET_WINDOW
-        .lock()
-        .map(|g| *g)
-        .unwrap_or(None)
+    state::TARGET_WINDOW.lock().map(|g| *g).unwrap_or(None)
 }
 
 /// 设置默认后端（带历史跟踪）
@@ -205,10 +203,7 @@ pub fn create_action(action: ActionData, name: Option<String>) -> Result<u32, St
     // 索引是列表的长度（追加到末尾）
     let index = list.as_ref().map(|items| items.len()).unwrap_or(0) as u32;
 
-    let item = Action {
-        name,
-        data: action,
-    };
+    let item = Action { name, data: action };
 
     // 确保列表已初始化
     if list.is_none() {
@@ -277,7 +272,11 @@ pub fn delete_action(index: u32) -> Result<(), String> {
 }
 
 /// 将配置保存到 JSON 文件
-pub fn save_config(path: &str, default_backend: InputBackend, actions: &ActionList) -> Result<(), String> {
+pub fn save_config(
+    path: &str,
+    default_backend: InputBackend,
+    actions: &ActionList,
+) -> Result<(), String> {
     use serde::Serialize;
 
     #[derive(Serialize)]
@@ -294,8 +293,7 @@ pub fn save_config(path: &str, default_backend: InputBackend, actions: &ActionLi
     let json = serde_json::to_string_pretty(&config)
         .map_err(|e| format!("Failed to serialize config: {}", e))?;
 
-    fs::write(path, json)
-        .map_err(|e| format!("Failed to write config file: {}", e))?;
+    fs::write(path, json).map_err(|e| format!("Failed to write config file: {}", e))?;
 
     // 将保存的配置重新加载到全局状态
     load_config_with_backend(path, default_backend)?;

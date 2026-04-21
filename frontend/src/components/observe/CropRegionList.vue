@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import type { CropRegion } from '../types'
+import type { CropRegion } from '../../types'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import CardBox from '@/components/ui/CardBox.vue'
 import CardBoxComponentBody from '@/components/ui/CardBoxComponentBody.vue'
@@ -11,6 +11,7 @@ const props = defineProps<{
   regions: CropRegion[];
   selectedIndex: number | null;
   hasChanges: boolean;
+  isProjectLoaded: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -74,11 +75,12 @@ function handleAdd() {
           <BaseButton
             :icon="mdiContentSave"
             color="whiteDark"
-            :disabled="!hasChanges"
+            :disabled="!isProjectLoaded || !hasChanges"
             @click="emit('save')"
           />
           <BaseButton
             :icon="mdiPlus"
+            :disabled="!isProjectLoaded"
             @click="handleAdd"
           />
         </div>

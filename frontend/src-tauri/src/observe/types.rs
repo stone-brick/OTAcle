@@ -7,14 +7,12 @@ use serde::{Deserialize, Serialize};
 // ============================================================================
 
 /// Observe module configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ObserveConfig {
     pub capture: CaptureConfig,
     #[serde(default)]
     pub crop_regions: Vec<CropRegion>,
 }
-
 
 /// Capture configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]

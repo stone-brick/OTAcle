@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import type { ActionItem, WindowInfo, Variable } from '../types';
+import type { ActionItem, WindowInfo, Variable } from '../../types';
 import CardBox from '@/components/ui/CardBox.vue';
 import CardBoxComponentBody from '@/components/ui/CardBoxComponentBody.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
@@ -14,11 +14,13 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  execute: [payload: { actionIdx: number; params: Record<string, any> }];
+  execute: [payload: ExecutePayload];
 }>();
 
 // Runtime params - key is param_name, value is the override value
 const runtimeParams = ref<Record<string, string>>({});
+
+type ExecutePayload = { actionIdx: number; params: Record<string, number | string> };
 
 const selectedAction = computed(() => {
   if (props.selectedActionIndex === null) return null;
@@ -40,7 +42,7 @@ const variables = computed((): Variable[] => {
 });
 
 // Get the action's current value for a given field_name
-function getFieldValue(fieldName: string): any {
+function getFieldValue(fieldName: string): number | string | undefined {
   if (!selectedAction.value) return undefined;
 
   const action = selectedAction.value;
@@ -81,8 +83,8 @@ watch(selectedAction, () => {
   }
 });
 
-function buildParams(): Record<string, any> {
-  const params: Record<string, any> = {};
+function buildParams(): Record<string, number | string> {
+  const params: Record<string, number | string> = {};
 
   // Only include params that have non-empty values
   for (const [key, value] of Object.entries(runtimeParams.value)) {

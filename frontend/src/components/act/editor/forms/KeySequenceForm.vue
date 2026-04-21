@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { KeySequenceActionItem, KeySequenceItem } from '../../../types';
+import type { KeySequenceActionItem, KeySequenceItem } from '../../../../types';
 import BackendSelector from '../BackendSelector.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import FormControl from '@/components/ui/FormControl.vue';

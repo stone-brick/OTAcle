@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Variable } from '../../types';
+import type { Variable } from '../../../types';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import FormControl from '@/components/ui/FormControl.vue';
 

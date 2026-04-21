@@ -30,7 +30,10 @@ function selectTab(tab: TabItem) {
 <template>
   <nav class="flex items-center gap-6 px-4 h-12 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800">
     <div class="flex items-center gap-2 pr-4 border-r border-gray-200 dark:border-slate-700">
-      <BaseIcon :path="mdiTarget" :size="20" />
+      <BaseIcon
+        :path="mdiTarget"
+        :size="20"
+      />
       <span class="text-base font-bold text-blue-500">Act</span>
     </div>
     <ul class="flex list-none m-0 p-0 gap-1">
@@ -43,7 +46,10 @@ function selectTab(tab: TabItem) {
           : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-gray-200'"
         @click="selectTab(tab)"
       >
-        <BaseIcon :path="tab.icon" :size="18" />
+        <BaseIcon
+          :path="tab.icon"
+          :size="18"
+        />
         <span>{{ tab.label }}</span>
       </li>
     </ul>

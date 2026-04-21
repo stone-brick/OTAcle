@@ -57,11 +57,12 @@ pub fn activate_window(hwnd: isize) -> Result<bool, String> {
             false
         };
 
-        let attached_fore_to_target = if fore_thread != 0 && target_thread != 0 && fore_thread != target_thread {
-            AttachThreadInput(fore_thread, target_thread, true).as_bool()
-        } else {
-            false
-        };
+        let attached_fore_to_target =
+            if fore_thread != 0 && target_thread != 0 && fore_thread != target_thread {
+                AttachThreadInput(fore_thread, target_thread, true).as_bool()
+            } else {
+                false
+            };
 
         // 重试循环 - 最多 5 次尝试，类似 AutoHotkey
         let mut attempted_alt_up = false;

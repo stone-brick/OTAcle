@@ -1,8 +1,10 @@
-use crate::input;
 use crate::get_hwnd_from_spec;
+use crate::input;
 use crate::input::find_window::WindowInfo;
 use windows::Win32::Foundation::{HWND, LPARAM, POINT, WPARAM};
-use windows::Win32::UI::WindowsAndMessaging::{GetCursorPos, GetForegroundWindow, WM_KEYDOWN, WM_KEYUP, WM_MOUSEMOVE, PostMessageW};
+use windows::Win32::UI::WindowsAndMessaging::{
+    GetCursorPos, GetForegroundWindow, PostMessageW, WM_KEYDOWN, WM_KEYUP, WM_MOUSEMOVE,
+};
 
 #[tauri::command]
 pub fn window_activate(hwnd: i64) -> Result<bool, String> {
@@ -21,8 +23,7 @@ pub fn window_get_foreground() -> Result<i64, String> {
 
 #[tauri::command]
 pub fn window_get_info(hwnd: i64) -> Result<WindowInfo, String> {
-    input::get_window_info(hwnd as isize)
-        .ok_or_else(|| "Window not found".to_string())
+    input::get_window_info(hwnd as isize).ok_or_else(|| "Window not found".to_string())
 }
 
 #[tauri::command]
@@ -31,7 +32,11 @@ pub fn window_list() -> Result<Vec<WindowInfo>, String> {
 }
 
 #[tauri::command]
-pub fn window_send_key(key: String, direction: String, window: Option<String>) -> Result<(), String> {
+pub fn window_send_key(
+    key: String,
+    direction: String,
+    window: Option<String>,
+) -> Result<(), String> {
     if let Some(ref spec) = window {
         let hwnd = get_hwnd_from_spec(spec)?;
         input::activate_window(hwnd)?;
@@ -91,18 +96,11 @@ pub fn window_send_move(hwnd: i64, x: i32, y: i32, backend: Option<String>) -> R
             let hwnd = HWND(hwnd as *mut std::ffi::c_void);
             unsafe {
                 let lparam = LPARAM((((y as u32) << 16) | (x as u32)) as isize);
-                let _ = PostMessageW(
-                    hwnd,
-                    WM_MOUSEMOVE,
-                    WPARAM(0),
-                    lparam,
-                );
+                let _ = PostMessageW(hwnd, WM_MOUSEMOVE, WPARAM(0), lparam);
             }
             Ok(())
         }
-        _ => {
-            input::send_mouse_move(x, y)
-        }
+        _ => input::send_mouse_move(x, y),
     }
 }
 
@@ -130,18 +128,15 @@ pub fn window_send_combo(
             for key in &keys {
                 if let Some(vk) = input::win32_input::vk_for_key(key) {
                     unsafe {
-                        let _ = PostMessageW(
-                            hwnd, WM_KEYDOWN, WPARAM(vk as usize), LPARAM(1),
-                        );
+                        let _ = PostMessageW(hwnd, WM_KEYDOWN, WPARAM(vk as usize), LPARAM(1));
                     }
                 }
             }
             for key in keys.iter().rev() {
                 if let Some(vk) = input::win32_input::vk_for_key(key) {
                     unsafe {
-                        let _ = PostMessageW(
-                            hwnd, WM_KEYUP, WPARAM(vk as usize), LPARAM(0xC0000001),
-                        );
+                        let _ =
+                            PostMessageW(hwnd, WM_KEYUP, WPARAM(vk as usize), LPARAM(0xC0000001));
                     }
                 }
             }

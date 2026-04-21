@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { ActionItem } from '../types';
-import { getActionTypeLabel, formatActionDetail } from '../utils/actionHelpers';
+import type { ActionItem } from '../../types';
+import { getActionTypeLabel, formatActionDetail } from '../../utils/actionHelpers';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import CardBox from '@/components/ui/CardBox.vue';
 import CardBoxComponentBody from '@/components/ui/CardBoxComponentBody.vue';

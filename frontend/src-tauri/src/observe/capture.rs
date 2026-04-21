@@ -8,8 +8,8 @@ use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
-use log::error;
 use base64::Engine;
+use log::error;
 use tauri::{AppHandle, Emitter};
 
 use windows_capture::capture::{Context, GraphicsCaptureApiHandler};
@@ -21,11 +21,11 @@ use windows_capture::settings::{
 };
 use windows_capture::window::Window;
 
-use crate::observe::processor::ImageProcessor;
-use crate::observe::types::ObserveConfig;
-use crate::observe::state::SessionStats;
 use crate::communication::types::{CropBlock, FrameMessage};
+use crate::observe::processor::ImageProcessor;
+use crate::observe::state::SessionStats;
 use crate::observe::types::FullFrameMessage;
+use crate::observe::types::ObserveConfig;
 
 /// 限制预览帧发送到前端的频率（毫秒）
 const PREVIEW_THROTTLE_MS: u64 = 200;
@@ -75,18 +75,18 @@ impl GraphicsCaptureApiHandler for WgcFrameHandler {
         }
 
         // 2. 处理帧（使用 process_frame 消除重复代码）
-        let (frame_msg, full_frame_base64) = match process_frame(
-            frame,
-            &self.data.config,
-            &self.data.frame_id,
-        ) {
-            Ok(result) => result,
-            Err(e) => {
-                error!("Frame processing failed: {}", e);
-                let _ = self.data.app.emit("observe:error", &serde_json::json!({ "error": e }));
-                return Ok(());
-            }
-        };
+        let (frame_msg, full_frame_base64) =
+            match process_frame(frame, &self.data.config, &self.data.frame_id) {
+                Ok(result) => result,
+                Err(e) => {
+                    error!("Frame processing failed: {}", e);
+                    let _ = self
+                        .data
+                        .app
+                        .emit("observe:error", &serde_json::json!({ "error": e }));
+                    return Ok(());
+                }
+            };
 
         // 存储完整帧（供前端事件驱动获取）
         let full_frame = FullFrameMessage {
@@ -119,7 +119,10 @@ impl GraphicsCaptureApiHandler for WgcFrameHandler {
             drop(last_time);
             if let Err(e) = self.data.app.emit("observe:full_frame", &full_frame) {
                 error!("Tauri emit error: {}", e);
-                let _ = self.data.app.emit("observe:error", &serde_json::json!({ "error": format!("Full frame emit failed: {}", e) }));
+                let _ = self.data.app.emit(
+                    "observe:error",
+                    &serde_json::json!({ "error": format!("Full frame emit failed: {}", e) }),
+                );
             }
         }
 
@@ -128,7 +131,11 @@ impl GraphicsCaptureApiHandler for WgcFrameHandler {
 }
 
 /// 从帧缓冲区去除行填充，获取干净的 RGBA 数据
-fn remove_padding(width: u32, height: u32, buffer: &mut windows_capture::frame::FrameBuffer) -> Vec<u8> {
+fn remove_padding(
+    width: u32,
+    height: u32,
+    buffer: &mut windows_capture::frame::FrameBuffer,
+) -> Vec<u8> {
     let mut rgba = Vec::new();
     let _clean = buffer.as_nopadding_buffer(&mut rgba);
 
@@ -157,14 +164,13 @@ fn process_frame(
 ) -> Result<(FrameMessage, String), String> {
     let (width, height) = (frame.width(), frame.height());
 
-    let mut buffer = frame.buffer()
+    let mut buffer = frame
+        .buffer()
         .map_err(|e| format!("Failed to get frame buffer: {}", e))?;
 
     let rgba = remove_padding(width, height, &mut buffer);
 
-    let scaled = if config.capture.target_width != width
-        || config.capture.target_height != height
-    {
+    let scaled = if config.capture.target_width != width || config.capture.target_height != height {
         let processor = ImageProcessor {};
         processor.scale(
             &rgba,
@@ -230,8 +236,8 @@ impl GraphicsCaptureApiHandler for OneShotFrameHandler {
         frame: &mut Frame,
         capture_control: InternalCaptureControl,
     ) -> Result<(), Self::Error> {
-        let result = process_frame(frame, &self.data.config, &self.data.frame_id)
-            .map(|(msg, _)| msg); // 只取 FrameMessage，丢弃完整帧 base64
+        let result =
+            process_frame(frame, &self.data.config, &self.data.frame_id).map(|(msg, _)| msg); // 只取 FrameMessage，丢弃完整帧 base64
         let _ = self.data.result_tx.send(result);
         capture_control.stop();
         Ok(())
@@ -355,7 +361,7 @@ pub fn start_capture(
         // 已经调用 capture_control.stop()。
     });
 
-Ok(handle)
+    Ok(handle)
 }
 
 /// 捕获完整帧（不裁切），专供前端预览使用
@@ -366,10 +372,7 @@ Ok(handle)
 ///
 /// # 返回值
 /// 返回 `FullFrameMessage`（包含完整缩放后图像）或错误信息
-pub fn capture_full_frame(
-    hwnd: isize,
-    config: ObserveConfig,
-) -> Result<FullFrameMessage, String> {
+pub fn capture_full_frame(hwnd: isize, config: ObserveConfig) -> Result<FullFrameMessage, String> {
     // 临时清空裁切区域，确保获取完整图像
     let mut full_config = config.clone();
     full_config.crop_regions.clear();

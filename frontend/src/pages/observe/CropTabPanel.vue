@@ -3,11 +3,11 @@ import { ref } from 'vue'
 import { useObserve } from '../../composables/useObserve'
 import { useProject } from '../../composables/useProject'
 import type { CropRegion } from '../../types'
-import CropRegionList from '@/components/CropRegionList.vue'
+import CropRegionList from '@/components/observe/CropRegionList.vue'
 import ObservePanel from './ObservePanel.vue'
 
 const { config, addCropRegion, removeCropRegion, updateCropRegions, saveConfig } = useObserve()
-const { getProjectObserveConfigPath } = useProject()
+const { isProjectLoaded, getProjectObserveConfigPath } = useProject()
 
 const selectedCropIndex = ref<number | null>(null)
 const hasChanges = ref(false)
@@ -54,6 +54,7 @@ async function handleCropSave() {
       :regions="config.crop_regions"
       :selected-index="selectedCropIndex"
       :has-changes="hasChanges"
+      :is-project-loaded="isProjectLoaded"
       @select="handleCropSelect"
       @delete="handleCropDelete"
       @update="handleCropUpdate"

@@ -2,8 +2,10 @@
 import { ref, inject, onMounted, computed, type Ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useObserve } from '../../composables/useObserve'
+import { useProject } from '../../composables/useProject'
 import { useLog } from '../../composables/useLog'
 import { useDialog } from '../../composables/useDialog'
+import { mdiContentSave } from '@mdi/js'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import FormControl from '@/components/ui/FormControl.vue'
 import CardBox from '@/components/ui/CardBox.vue'
@@ -18,7 +20,7 @@ const {
   getFirstSessionStats,
   formatBytes,
 } = useObserve()
-
+const { isProjectLoaded, getProjectObserveConfigPath } = useProject()
 const { addLog } = useLog()
 const { prompt } = useDialog()
 
@@ -82,9 +84,17 @@ onMounted(async () => {
     <CardBox class="flex flex-col flex-1">
       <!-- 标题栏 -->
       <div class="px-3 py-2 border-b border-gray-100 dark:border-slate-800">
-        <h3 class="m-0 text-sm font-semibold text-gray-700 dark:text-slate-200">
-          传输配置
-        </h3>
+        <div class="flex items-center justify-between">
+          <h3 class="m-0 text-sm font-semibold text-gray-700 dark:text-slate-200">
+            传输配置
+          </h3>
+          <BaseButton
+            :icon="mdiContentSave"
+            color="whiteDark"
+            :disabled="!isProjectLoaded"
+            @click="savePubAddress"
+          />
+        </div>
       </div>
 
       <!-- 配置内容 -->
@@ -137,12 +147,14 @@ onMounted(async () => {
               label="保存"
               color="whiteDark"
               class="flex-1"
+              :disabled="!isProjectLoaded"
               @click="handleSave"
             />
             <BaseButton
               label="另存为"
               color="whiteDark"
               class="flex-1"
+              :disabled="!isProjectLoaded"
               @click="handleSaveAs"
             />
           </div>

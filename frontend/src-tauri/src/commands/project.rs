@@ -11,9 +11,9 @@ pub fn project_open(path: String) -> Result<ProjectInfo, String> {
         return Err("Invalid project: project.json not found in .otacle directory".to_string());
     }
 
-    let config = project_module::ProjectConfig::load(
-        &project_module::get_project_config_path(project_path)
-    )?;
+    let config = project_module::ProjectConfig::load(&project_module::get_project_config_path(
+        project_path,
+    ))?;
 
     let project_info = ProjectInfo::from_config(&config, &path);
 
@@ -24,15 +24,19 @@ pub fn project_open(path: String) -> Result<ProjectInfo, String> {
 }
 
 #[command]
-pub fn project_create(path: String, name: String, template: Option<String>) -> Result<ProjectInfo, String> {
+pub fn project_create(
+    path: String,
+    name: String,
+    template: Option<String>,
+) -> Result<ProjectInfo, String> {
     let project_path = Path::new(&path);
     let template_name = template.unwrap_or_else(|| "default".to_string());
 
     project_module::copy_template_to_project(&template_name, project_path, &name)?;
 
-    let config = project_module::ProjectConfig::load(
-        &project_module::get_project_config_path(project_path)
-    )?;
+    let config = project_module::ProjectConfig::load(&project_module::get_project_config_path(
+        project_path,
+    ))?;
 
     let project_info = ProjectInfo::from_config(&config, &path);
 
@@ -84,24 +88,36 @@ pub fn project_list_templates() -> Result<Vec<crate::project::template::Template
 
 #[command]
 pub fn project_get_config_dir() -> Option<String> {
-    project_module::get_current_project_dir()
-        .map(|p| project_module::get_config_dir(&p).to_string_lossy().to_string())
+    project_module::get_current_project_dir().map(|p| {
+        project_module::get_config_dir(&p)
+            .to_string_lossy()
+            .to_string()
+    })
 }
 
 #[command]
 pub fn project_get_actions_config_path() -> Option<String> {
-    project_module::get_current_project_dir()
-        .map(|p| project_module::get_actions_config_path(&p).to_string_lossy().to_string())
+    project_module::get_current_project_dir().map(|p| {
+        project_module::get_actions_config_path(&p)
+            .to_string_lossy()
+            .to_string()
+    })
 }
 
 #[command]
 pub fn project_get_observe_config_path() -> Option<String> {
-    project_module::get_current_project_dir()
-        .map(|p| project_module::get_observe_config_path(&p).to_string_lossy().to_string())
+    project_module::get_current_project_dir().map(|p| {
+        project_module::get_observe_config_path(&p)
+            .to_string_lossy()
+            .to_string()
+    })
 }
 
 #[command]
 pub fn project_get_comm_config_path() -> Option<String> {
-    project_module::get_current_project_dir()
-        .map(|p| project_module::get_comm_config_path(&p).to_string_lossy().to_string())
+    project_module::get_current_project_dir().map(|p| {
+        project_module::get_comm_config_path(&p)
+            .to_string_lossy()
+            .to_string()
+    })
 }

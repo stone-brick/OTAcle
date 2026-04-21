@@ -1,7 +1,7 @@
+use super::config::{get_config_dir, ProjectConfig};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
-use serde::{Deserialize, Serialize};
-use super::config::{ProjectConfig, get_config_dir};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TemplateConfig {
@@ -37,7 +37,11 @@ pub fn list_templates() -> Result<Vec<TemplateConfig>, String> {
     Ok(manifest.templates)
 }
 
-pub fn copy_template_to_project(template_name: &str, project_dir: &Path, project_name: &str) -> Result<(), String> {
+pub fn copy_template_to_project(
+    template_name: &str,
+    project_dir: &Path,
+    project_name: &str,
+) -> Result<(), String> {
     let template_dir = if template_name == "default" {
         get_default_template_dir()
     } else {

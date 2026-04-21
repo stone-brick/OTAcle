@@ -146,7 +146,7 @@ export function useObserve() {
       // 兼容旧逻辑：检查是否有活跃会话
       isObserving.value = Object.values(status.sessions).some(s => s.running)
       return status
-    } catch (e) {
+    } catch {
       addLog('获取观察状态失败', 'error', 'observe')
       return null
     }
@@ -168,7 +168,7 @@ export function useObserve() {
       const loaded = await invoke<ObserveConfig>('observe_load_config', { path })
       config.value = loaded
       addLog(`已加载观察配置: ${path}`, 'success', 'observe')
-    } catch (e) {
+    } catch {
       // 配置文件不存在时使用默认配置（自动加载场景下不抛出错误）
       config.value = {
         capture: { frame_rate: 3, target_width: 640, target_height: 480 },

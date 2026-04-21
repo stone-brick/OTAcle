@@ -3,8 +3,7 @@
 //! 提供完整的撤销/重做功能，包括状态管理和历史栈操作。
 
 use super::state::{
-    ACTION_CONFIG_LIST, DEFAULT_INPUT_BACKEND, UNDO_STACK, REDO_STACK,
-    ORIGINAL_CONFIG_SNAPSHOT,
+    ACTION_CONFIG_LIST, DEFAULT_INPUT_BACKEND, ORIGINAL_CONFIG_SNAPSHOT, REDO_STACK, UNDO_STACK,
 };
 use super::types::HistoryEntry;
 
@@ -72,11 +71,13 @@ pub fn discard() -> Result<(), String> {
 
 /// 将 HistoryEntry 应用到全局状态
 fn apply_entry(entry: HistoryEntry) -> Result<(), String> {
-    let mut list = ACTION_CONFIG_LIST.lock()
+    let mut list = ACTION_CONFIG_LIST
+        .lock()
         .map_err(|_| "Failed to lock action list")?;
     *list = Some(entry.actions);
     drop(list);
-    let mut backend = DEFAULT_INPUT_BACKEND.lock()
+    let mut backend = DEFAULT_INPUT_BACKEND
+        .lock()
         .map_err(|_| "Failed to lock backend")?;
     *backend = entry.default_backend;
     Ok(())
@@ -84,14 +85,17 @@ fn apply_entry(entry: HistoryEntry) -> Result<(), String> {
 
 /// 获取当前动作列表
 fn get_action_list() -> Result<super::types::ActionList, String> {
-    let list = ACTION_CONFIG_LIST.lock()
+    let list = ACTION_CONFIG_LIST
+        .lock()
         .map_err(|_| "Failed to lock action list")?;
-    list.clone().ok_or_else(|| "No action list loaded".to_string())
+    list.clone()
+        .ok_or_else(|| "No action list loaded".to_string())
 }
 
 /// 获取当前默认后端
 fn get_default_backend() -> Result<super::types::InputBackend, String> {
-    let backend = DEFAULT_INPUT_BACKEND.lock()
+    let backend = DEFAULT_INPUT_BACKEND
+        .lock()
         .map_err(|_| "Failed to lock backend")?;
     Ok(backend.clone())
 }
@@ -156,7 +160,9 @@ fn restore_original(
     default_backend: super::types::InputBackend,
 ) -> Result<HistoryEntry, String> {
     // 从原始状态恢复
-    let original = ORIGINAL_CONFIG_SNAPSHOT.lock().map_err(|_| "Failed to lock original")?;
+    let original = ORIGINAL_CONFIG_SNAPSHOT
+        .lock()
+        .map_err(|_| "Failed to lock original")?;
     let entry = original
         .clone()
         .ok_or_else(|| "No original state to discard to".to_string())?;
@@ -174,8 +180,14 @@ fn restore_original(
 
 /// 清除撤销/重做历史
 pub fn clear_history() -> Result<(), String> {
-    UNDO_STACK.lock().map_err(|_| "Failed to lock undo stack")?.clear();
-    REDO_STACK.lock().map_err(|_| "Failed to lock redo stack")?.clear();
+    UNDO_STACK
+        .lock()
+        .map_err(|_| "Failed to lock undo stack")?
+        .clear();
+    REDO_STACK
+        .lock()
+        .map_err(|_| "Failed to lock redo stack")?
+        .clear();
     Ok(())
 }
 
@@ -188,7 +200,9 @@ pub fn get_history_status() -> (usize, usize) {
 
 /// 设置原始条目（供 config 模块在加载配置时调用）
 pub fn set_baseline_snapshot(entry: HistoryEntry) -> Result<(), String> {
-    let mut original = ORIGINAL_CONFIG_SNAPSHOT.lock().map_err(|_| "Failed to lock original")?;
+    let mut original = ORIGINAL_CONFIG_SNAPSHOT
+        .lock()
+        .map_err(|_| "Failed to lock original")?;
     *original = Some(entry);
     Ok(())
 }

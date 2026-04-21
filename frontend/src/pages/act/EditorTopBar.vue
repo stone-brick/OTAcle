@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { InputBackend } from '../../types';
-import BackendSelector from '../../components/editor/BackendSelector.vue';
+import BackendSelector from '../../components/act/editor/BackendSelector.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import BaseLevel from '@/components/ui/BaseLevel.vue';
 import { mdiContentSave, mdiPlus, mdiUndo, mdiRedo, mdiDeleteSweep } from '@mdi/js';
 
 defineProps<{
+  isProjectLoaded: boolean;
   defaultBackend: InputBackend;
   hasChanges: boolean;
   canUndo: boolean;
@@ -37,29 +38,30 @@ const emit = defineEmits<{
       <BaseButton
         :icon="mdiContentSave"
         color="whiteDark"
-        :disabled="!hasChanges"
+        :disabled="!isProjectLoaded || !isLoaded || !hasChanges"
         @click="emit('save')"
       />
       <BaseButton
         :icon="mdiPlus"
+        :disabled="!isProjectLoaded"
         @click="emit('openNewActionModal')"
       />
       <BaseButton
         :icon="mdiDeleteSweep"
         color="whiteDark"
-        :disabled="!hasChanges"
+        :disabled="!isProjectLoaded || !isLoaded || !hasChanges"
         @click="emit('discardAll')"
       />
       <BaseButton
         :icon="mdiUndo"
         color="whiteDark"
-        :disabled="!canUndo"
+        :disabled="!isProjectLoaded || !isLoaded || !canUndo"
         @click="emit('undo')"
       />
       <BaseButton
         :icon="mdiRedo"
         color="whiteDark"
-        :disabled="!canRedo"
+        :disabled="!isProjectLoaded || !isLoaded || !canRedo"
         @click="emit('redo')"
       />
     </BaseLevel>

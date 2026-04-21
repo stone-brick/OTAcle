@@ -2,11 +2,11 @@
 //!
 //! 从 Python 端接收控制命令
 
+use log::{debug, info};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 use zmq::{Context, Socket};
-use log::{debug, info};
 
 use crate::communication::types::Command;
 

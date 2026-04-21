@@ -14,11 +14,11 @@ pub fn load_config(path: &str) -> Result<CommConfig, String> {
         return Ok(default_config);
     }
 
-    let content = fs::read_to_string(path)
-        .map_err(|e| format!("Failed to read config file: {}", e))?;
+    let content =
+        fs::read_to_string(path).map_err(|e| format!("Failed to read config file: {}", e))?;
 
-    let config: CommConfig = serde_json::from_str(&content)
-        .map_err(|e| format!("Failed to parse config: {}", e))?;
+    let config: CommConfig =
+        serde_json::from_str(&content).map_err(|e| format!("Failed to parse config: {}", e))?;
 
     // 验证配置合法性
     validate_config(&config)?;
@@ -36,8 +36,7 @@ pub fn save_config(path: &str, config: &CommConfig) -> Result<(), String> {
     let json = serde_json::to_string_pretty(&config)
         .map_err(|e| format!("Failed to serialize config: {}", e))?;
 
-    fs::write(path, json)
-        .map_err(|e| format!("Failed to write config file: {}", e))?;
+    fs::write(path, json).map_err(|e| format!("Failed to write config file: {}", e))?;
 
     // 更新全局状态
     state::set_config(config.clone())?;
@@ -60,7 +59,10 @@ pub fn validate_config(config: &CommConfig) -> Result<(), String> {
         && !config.pull_address.starts_with("ipc://")
         && !config.pull_address.starts_with("inproc://")
     {
-        return Err(format!("pull_address must be a valid ZMQ address, got: {}", config.pull_address));
+        return Err(format!(
+            "pull_address must be a valid ZMQ address, got: {}",
+            config.pull_address
+        ));
     }
 
     // 验证 pub_address 格式
@@ -71,12 +73,18 @@ pub fn validate_config(config: &CommConfig) -> Result<(), String> {
         && !config.pub_address.starts_with("ipc://")
         && !config.pub_address.starts_with("inproc://")
     {
-        return Err(format!("pub_address must be a valid ZMQ address, got: {}", config.pub_address));
+        return Err(format!(
+            "pub_address must be a valid ZMQ address, got: {}",
+            config.pub_address
+        ));
     }
 
     // 验证 default_backend
     if config.default_backend != "win32" && config.default_backend != "enigo" {
-        return Err(format!("default_backend must be 'win32' or 'enigo', got: {}", config.default_backend));
+        return Err(format!(
+            "default_backend must be 'win32' or 'enigo', got: {}",
+            config.default_backend
+        ));
     }
 
     Ok(())

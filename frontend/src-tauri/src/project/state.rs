@@ -1,6 +1,6 @@
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use lazy_static::lazy_static;
 use std::sync::Mutex;
 
 lazy_static! {

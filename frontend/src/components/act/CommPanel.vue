@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useComm } from '../composables/useComm'
-import { useLog } from '../composables/useLog'
+import { invoke } from '@tauri-apps/api/core'
+import { useComm } from '../../composables/useComm'
+import { useProject } from '../../composables/useProject'
+import { useLog } from '../../composables/useLog'
 import CardBox from '@/components/ui/CardBox.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import FormControl from '@/components/ui/FormControl.vue'
 import { getStatusTextColor } from '@/utils/colors'
+import { mdiPlay, mdiStop, mdiRefresh, mdiContentSave } from '@mdi/js'
 
 const {
   isConnected,
@@ -17,7 +20,8 @@ const {
   cleanup,
 } = useComm()
 
-const { logs } = useLog()
+const { isProjectLoaded } = useProject()
+const { logs, addLog } = useLog()
 
 const commLogs = computed(() =>
   logs.value.filter(log => log.source === 'comm')
@@ -25,8 +29,26 @@ const commLogs = computed(() =>
 
 const inputAddress = ref('tcp://127.0.0.1:5555')
 
+async function loadPullAddress() {
+  try {
+    inputAddress.value = await invoke<string>('comm_get_pull_address')
+  } catch {
+    addLog('加载 pull_address 失败', 'error', 'comm')
+  }
+}
+
+async function savePullAddress() {
+  try {
+    await invoke('comm_set_pull_address', { addr: inputAddress.value })
+    addLog('pull_address 已保存', 'info', 'comm')
+  } catch {
+    addLog('保存 pull_address 失败', 'error', 'comm')
+  }
+}
+
 onMounted(async () => {
   await startListening()
+  await loadPullAddress()
 })
 
 onUnmounted(() => {
@@ -64,20 +86,30 @@ async function handleStop() {
           :disabled="isConnected"
         />
         <BaseButton
+          :icon="mdiContentSave"
+          color="whiteDark"
+          small
+          :disabled="!isProjectLoaded"
+          @click="savePullAddress"
+        />
+        <BaseButton
           v-if="!isConnected"
-          label="连接"
-          color="info"
+          :icon="mdiPlay"
+          color="whiteDark"
+          small
           @click="handleStart"
         />
         <BaseButton
           v-else
-          label="断开"
-          color="danger"
+          :icon="mdiStop"
+          color="whiteDark"
+          small
           @click="handleStop"
         />
         <BaseButton
-          label="刷新"
+          :icon="mdiRefresh"
           color="whiteDark"
+          small
           @click="fetchStatus"
         />
       </div>

@@ -243,7 +243,6 @@ function initProjectEventListener(): void {
           await loadConfig(configPath);
         } catch {
           // 静默忽略（loadConfig 内部已处理）
-          addLog('自动加载动作配置文件失败，使用默认配置', 'warn', 'action');
         }
       }
     } else if (event.type === 'closed') {

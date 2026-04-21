@@ -10,8 +10,8 @@ use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::Instant;
 
+use super::types::{FullFrameMessage, ObserveConfig};
 use crate::communication::types::PubState;
-use super::types::{ObserveConfig, FullFrameMessage};
 
 lazy_static! {
     /// 所有活跃的 Observe 会话，key 为 hwnd
@@ -26,7 +26,8 @@ lazy_static! {
 
 /// 获取全局配置
 pub fn get_config() -> Result<ObserveConfig, String> {
-    OBSERVE_CONFIG.lock()
+    OBSERVE_CONFIG
+        .lock()
         .map_err(|_| "Failed to lock observe config".to_string())?
         .clone()
         .ok_or_else(|| "No configuration loaded".to_string())
@@ -34,7 +35,8 @@ pub fn get_config() -> Result<ObserveConfig, String> {
 
 /// 设置全局配置
 pub fn set_config(config: ObserveConfig) -> Result<(), String> {
-    let mut global = OBSERVE_CONFIG.lock()
+    let mut global = OBSERVE_CONFIG
+        .lock()
         .map_err(|_| "Failed to lock observe config".to_string())?;
     *global = Some(config);
     Ok(())

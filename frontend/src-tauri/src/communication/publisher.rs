@@ -2,15 +2,15 @@
 //!
 //! 向 Python 端发送图像帧数据
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Receiver;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::thread::{self, JoinHandle};
 
+use crate::communication::types::{FrameMessage, PubState};
 use log::error;
 use tauri::Emitter;
-use crate::communication::types::{FrameMessage, PubState};
 
 /// 创建 PUB 发布线程
 ///
@@ -38,7 +38,7 @@ pub fn start_publisher(
             Ok(s) => s,
             Err(e) => {
                 error!("Socket creation failed: {}", e);
-                if let Ok(mut state) = pub_state.lock() {
+                if let Ok(state) = pub_state.lock() {
                     state.set_error(format!("Socket creation failed: {}", e));
                 }
                 return;
@@ -47,14 +47,14 @@ pub fn start_publisher(
 
         if let Err(e) = socket.bind(&addr) {
             error!("Bind failed for {}: {}", addr, e);
-            if let Ok(mut state) = pub_state.lock() {
+            if let Ok(state) = pub_state.lock() {
                 state.set_error(format!("Bind failed: {}", e));
             }
             return;
         }
 
         // 连接成功
-        if let Ok(mut state) = pub_state.lock() {
+        if let Ok(state) = pub_state.lock() {
             state.set_connected();
         }
         let _ = app_handle.emit("observe:pub_started", &addr);
@@ -71,7 +71,7 @@ pub fn start_publisher(
                     let bytes = json.len() as u64;
                     match socket.send(json.as_bytes(), 0) {
                         Ok(_) => {
-                            if let Ok(mut state) = pub_state.lock() {
+                            if let Ok(state) = pub_state.lock() {
                                 state.add_messages_sent(1);
                                 state.add_bytes_sent(bytes);
                             }
@@ -92,7 +92,7 @@ pub fn start_publisher(
         }
 
         // 线程结束，设置断开状态
-        if let Ok(mut state) = pub_state.lock() {
+        if let Ok(state) = pub_state.lock() {
             state.set_disconnected();
         }
     });

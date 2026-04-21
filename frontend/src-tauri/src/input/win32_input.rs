@@ -4,14 +4,13 @@
 //! PostMessage 直接向特定窗口句柄发送输入。
 
 use windows::Win32::Foundation::{HWND, LPARAM, POINT, WPARAM};
-use windows::Win32::UI::WindowsAndMessaging::{
-    PostMessageW, WM_CHAR, WM_KEYDOWN, WM_KEYUP,
-    WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP,
-    WM_RBUTTONDOWN, WM_RBUTTONUP, WM_MOUSEWHEEL,
+use windows::Win32::UI::Input::KeyboardAndMouse::{
+    SendInput, INPUT, INPUT_TYPE, KEYBDINPUT, KEYBD_EVENT_FLAGS, VIRTUAL_KEY,
 };
 use windows::Win32::UI::WindowsAndMessaging::SetCursorPos;
-use windows::Win32::UI::Input::KeyboardAndMouse::{
-    SendInput, INPUT, KEYBDINPUT, INPUT_TYPE, KEYBD_EVENT_FLAGS, VIRTUAL_KEY,
+use windows::Win32::UI::WindowsAndMessaging::{
+    PostMessageW, WM_CHAR, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN,
+    WM_MBUTTONUP, WM_MOUSEWHEEL, WM_RBUTTONDOWN, WM_RBUTTONUP,
 };
 
 /// 虚拟键码映射到特殊键
@@ -92,11 +91,35 @@ fn post_char_event(hwnd: HWND, c: char) -> Result<(), String> {
 }
 
 /// 使用 PostMessage 向窗口发送鼠标点击事件
-fn post_mouse_click(hwnd: HWND, x: i32, y: i32, is_keydown: bool, button: u32) -> Result<(), String> {
+fn post_mouse_click(
+    hwnd: HWND,
+    x: i32,
+    y: i32,
+    is_keydown: bool,
+    button: u32,
+) -> Result<(), String> {
     let msg = match button {
-        0 => if is_keydown { WM_LBUTTONDOWN } else { WM_LBUTTONUP },
-        1 => if is_keydown { WM_RBUTTONDOWN } else { WM_RBUTTONUP },
-        2 => if is_keydown { WM_MBUTTONDOWN } else { WM_MBUTTONUP },
+        0 => {
+            if is_keydown {
+                WM_LBUTTONDOWN
+            } else {
+                WM_LBUTTONUP
+            }
+        }
+        1 => {
+            if is_keydown {
+                WM_RBUTTONDOWN
+            } else {
+                WM_RBUTTONUP
+            }
+        }
+        2 => {
+            if is_keydown {
+                WM_MBUTTONDOWN
+            } else {
+                WM_MBUTTONUP
+            }
+        }
         _ => return Err(format!("Unknown mouse button: {}", button)),
     };
 
@@ -205,9 +228,7 @@ pub fn send_mouse_click(hwnd: isize, x: i32, y: i32, button: MouseButton) -> Res
 
 /// 将鼠标光标移动到指定的屏幕坐标
 pub fn send_mouse_move(x: i32, y: i32) -> Result<(), String> {
-    unsafe {
-        SetCursorPos(x, y)
-    }.map_err(|e| format!("Failed to move mouse: {}", e))
+    unsafe { SetCursorPos(x, y) }.map_err(|e| format!("Failed to move mouse: {}", e))
 }
 
 /// 向窗口发送鼠标滚动事件
@@ -226,8 +247,7 @@ pub fn send_mouse_scroll(hwnd: isize, delta: i32) -> Result<(), String> {
     let mut point = POINT { x: 0, y: 0 };
     unsafe {
         use windows::Win32::UI::WindowsAndMessaging::GetCursorPos;
-        GetCursorPos(&mut point)
-            .map_err(|e| format!("Failed to get cursor position: {}", e))?;
+        GetCursorPos(&mut point).map_err(|e| format!("Failed to get cursor position: {}", e))?;
     }
 
     let lparam = LPARAM((((point.y as u32) << 16) | (point.x as u32)) as isize);
@@ -278,7 +298,11 @@ pub fn send_key_sequence(keys: &[(&str, bool)]) -> Result<(), String> {
     unsafe {
         let result = SendInput(&inputs, std::mem::size_of::<INPUT>() as i32);
         if result as usize != inputs.len() {
-            return Err(format!("SendInput failed, sent {} of {} events", result, inputs.len()));
+            return Err(format!(
+                "SendInput failed, sent {} of {} events",
+                result,
+                inputs.len()
+            ));
         }
     }
 

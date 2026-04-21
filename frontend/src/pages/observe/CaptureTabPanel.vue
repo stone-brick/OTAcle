@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, inject, onMounted, type Ref } from 'vue'
+import { computed, inject, onMounted } from 'vue'
 import { useObserve } from '../../composables/useObserve'
 import { useWindows } from '../../composables/useWindows'
 import { useDialog } from '../../composables/useDialog'
@@ -23,7 +23,6 @@ const sessionStats = computed(() => getFirstSessionStats())
 
 const { windows, selectedWindow, refreshWindows, selectWindow } = useWindows()
 
-const actualFps = inject<Ref<number>>('actualFps', ref(0))
 const resetCanvas = inject<() => void>('resetCanvas', () => {})
 
 const { alert } = useDialog()
@@ -124,39 +123,19 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- 状态和FPS -->
-        <div class="grid grid-cols-2 gap-2">
-          <div class="flex justify-between items-center px-3 py-2 bg-gray-50 dark:bg-slate-800 rounded-lg">
-            <span class="text-xs font-medium text-gray-500 dark:text-slate-400">状态</span>
-            <span :class="['text-xs font-medium', isObserving ? 'text-green-500' : 'text-gray-400']">
-              {{ isObserving ? '采集中' : '已停止' }}
-            </span>
-          </div>
-          <div class="flex justify-between items-center px-3 py-2 bg-gray-50 dark:bg-slate-800 rounded-lg">
-            <span class="text-xs font-medium text-gray-500 dark:text-slate-400">实际帧率</span>
-            <span class="text-xs font-medium text-gray-700 dark:text-slate-200">{{ actualFps }} fps</span>
-          </div>
-        </div>
-
         <!-- 采集统计 -->
         <div class="flex flex-col gap-1.5">
           <label class="text-xs font-medium text-gray-500 dark:text-slate-400">采集统计</label>
           <div class="grid grid-cols-2 gap-2">
             <div class="flex justify-between px-2 py-1.5 bg-gray-50 dark:bg-slate-800 rounded text-xs">
-              <span class="text-gray-500">帧数</span>
-              <span class="font-medium">{{ sessionStats?.frames_captured ?? 0 }}</span>
+              <span class="text-gray-500">状态</span>
+              <span :class="['text-xs font-medium', isObserving ? 'text-green-500' : 'text-gray-400']">
+                {{ isObserving ? '采集中' : '已停止' }}
+              </span>
             </div>
             <div class="flex justify-between px-2 py-1.5 bg-gray-50 dark:bg-slate-800 rounded text-xs">
               <span class="text-gray-500">运行时长</span>
               <span class="font-medium">{{ formatUptime(sessionStats?.uptime_seconds ?? 0) }}</span>
-            </div>
-            <div class="flex justify-between px-2 py-1.5 bg-gray-50 dark:bg-slate-800 rounded text-xs">
-              <span class="text-gray-500">错误</span>
-              <span class="font-medium text-red-500">{{ sessionStats?.errors_count ?? 0 }}</span>
-            </div>
-            <div class="flex justify-between px-2 py-1.5 bg-gray-50 dark:bg-slate-800 rounded text-xs">
-              <span class="text-gray-500">发送数据</span>
-              <span class="font-medium">{{ sessionStats?.bytes_sent ?? 0 }}</span>
             </div>
           </div>
         </div>

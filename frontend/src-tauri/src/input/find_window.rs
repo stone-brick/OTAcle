@@ -27,14 +27,12 @@ pub struct WindowInfo {
 }
 
 /// 窗口标题搜索的标题匹配模式
-#[derive(Debug, Clone, Copy, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum TitleMatchMode {
     #[default]
-    Prefix = 1,  // 标题以指定文本开头（默认）
+    Prefix = 1, // 标题以指定文本开头（默认）
     Contains = 2, // 标题包含指定文本
 }
-
 
 /// 窗口搜索条件
 #[derive(Debug, Clone)]
@@ -547,7 +545,9 @@ pub fn list_windows() -> Vec<WindowInfo> {
     }
 
     // 按标题排序以便浏览
-    windows.sort_by(|a: &WindowInfo, b: &WindowInfo| a.title.to_lowercase().cmp(&b.title.to_lowercase()));
+    windows.sort_by(|a: &WindowInfo, b: &WindowInfo| {
+        a.title.to_lowercase().cmp(&b.title.to_lowercase())
+    });
     windows
 }
 

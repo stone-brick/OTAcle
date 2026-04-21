@@ -1,11 +1,11 @@
 mod act;
+pub mod commands;
 mod communication;
 mod input;
 mod observe;
-pub mod commands;
 mod project;
 
-use tauri_plugin_log::{Target, TargetKind, Builder as LogBuilder};
+use tauri_plugin_log::{Builder as LogBuilder, Target, TargetKind};
 
 use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
 
@@ -42,13 +42,15 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .plugin(LogBuilder::default()
-            .targets([
-                Target::new(TargetKind::Stdout),
-                Target::new(TargetKind::LogDir { file_name: None }),
-                Target::new(TargetKind::Webview),
-            ])
-            .build())
+        .plugin(
+            LogBuilder::default()
+                .targets([
+                    Target::new(TargetKind::Stdout),
+                    Target::new(TargetKind::LogDir { file_name: None }),
+                    Target::new(TargetKind::Webview),
+                ])
+                .build(),
+        )
         .invoke_handler(tauri::generate_handler![
             // Action commands
             commands::action::act_load_config,
@@ -97,6 +99,7 @@ pub fn run() {
             commands::communication::comm_save_config,
             commands::communication::comm_get_config,
             commands::communication::comm_set_pull_address,
+            commands::communication::comm_get_pull_address,
             commands::communication::comm_get_pub_address,
             commands::communication::comm_set_pub_address,
             commands::communication::comm_get_status,

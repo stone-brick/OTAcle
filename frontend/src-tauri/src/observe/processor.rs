@@ -2,11 +2,11 @@
 //!
 //! 提供捕获帧的缩放和裁剪操作。
 
-use log::error;
+use crate::communication::types::CropBlock;
+use crate::observe::types::CropRegion;
 use base64::Engine;
 use image::{ImageBuffer, Rgba};
-use crate::observe::types::CropRegion;
-use crate::communication::types::CropBlock;
+use log::error;
 
 /// 用于缩放和裁剪操作的图像处理器
 pub struct ImageProcessor;
@@ -31,7 +31,11 @@ impl ImageProcessor {
         target_width: u32,
         target_height: u32,
     ) -> Vec<u8> {
-        let img: ImageBuffer<Rgba<u8>, _> = match ImageBuffer::from_raw(src_width, src_height, data.to_vec()) {
+        let img: ImageBuffer<Rgba<u8>, _> = match ImageBuffer::from_raw(
+            src_width,
+            src_height,
+            data.to_vec(),
+        ) {
             Some(img) => img,
             None => {
                 error!("Failed to create image buffer from raw data: expected {} bytes ({}x{}x4), got {} bytes",
@@ -67,13 +71,14 @@ impl ImageProcessor {
         height: u32,
         regions: &[CropRegion],
     ) -> Vec<CropBlock> {
-        let img: ImageBuffer<Rgba<u8>, _> = match ImageBuffer::from_raw(width, height, data.to_vec()) {
-            Some(img) => img,
-            None => {
-                error!("Failed to create image buffer for cropping");
-                return Vec::new();
-            }
-        };
+        let img: ImageBuffer<Rgba<u8>, _> =
+            match ImageBuffer::from_raw(width, height, data.to_vec()) {
+                Some(img) => img,
+                None => {
+                    error!("Failed to create image buffer for cropping");
+                    return Vec::new();
+                }
+            };
 
         regions
             .iter()
@@ -105,13 +110,8 @@ impl ImageProcessor {
                     };
                 }
 
-                let cropped = image::imageops::crop_imm(
-                    &img,
-                    crop_x,
-                    crop_y,
-                    crop_w,
-                    crop_h,
-                ).to_image();
+                let cropped =
+                    image::imageops::crop_imm(&img, crop_x, crop_y, crop_w, crop_h).to_image();
 
                 let encoded = base64::engine::general_purpose::STANDARD.encode(cropped.as_raw());
 

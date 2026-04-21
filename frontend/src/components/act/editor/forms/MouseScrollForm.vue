@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { MouseScrollActionItem } from '../../../types';
-import type { ScrollDirection } from '../../../types';
+import type { MouseScrollActionItem, ScrollDirection } from '../../../../types';
 import BackendSelector from '../BackendSelector.vue';
 import FormControl from '@/components/ui/FormControl.vue';
 

@@ -4,9 +4,9 @@
 
 use crate::act;
 use crate::communication::types::Command;
-use crate::communication::{Puller, PullState, state as comm_state};
-use tauri::Emitter;
+use crate::communication::{state as comm_state, PullState, Puller};
 use std::sync::atomic::Ordering;
+use tauri::Emitter;
 
 #[tauri::command]
 pub fn comm_start_pull(app: tauri::AppHandle) -> Result<(), String> {
@@ -41,14 +41,10 @@ pub fn comm_start_pull(app: tauri::AppHandle) -> Result<(), String> {
 
     // 在独立线程中开始监听
     puller.start(running_for_thread, move |cmd: Command| {
-        let default_backend = act::config::get_default_backend()
-            .unwrap_or(act::types::InputBackend::Win32);
+        let default_backend =
+            act::config::get_default_backend().unwrap_or(act::types::InputBackend::Win32);
 
-        let result = act::executor::execute_actions(
-            cmd.execute,
-            cmd.params,
-            default_backend,
-        );
+        let result = act::executor::execute_actions(cmd.execute, cmd.params, default_backend);
 
         match result {
             Ok(()) => {

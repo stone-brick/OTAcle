@@ -52,17 +52,12 @@ pub struct Command {
 }
 
 /// 连接状态
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Default)]
 pub enum ConnectionState {
+    #[default]
     Disconnected,
     Connected,
     Error,
-}
-
-impl Default for ConnectionState {
-    fn default() -> Self {
-        ConnectionState::Disconnected
-    }
 }
 
 /// PUB 发布者状态（每个会话一个）
@@ -83,7 +78,9 @@ impl Default for PubState {
 impl PubState {
     pub fn new() -> Self {
         Self {
-            connection_state: std::sync::Arc::new(std::sync::Mutex::new(ConnectionState::Disconnected)),
+            connection_state: std::sync::Arc::new(std::sync::Mutex::new(
+                ConnectionState::Disconnected,
+            )),
             messages_sent: std::sync::atomic::AtomicU64::new(0),
             bytes_sent: std::sync::atomic::AtomicU64::new(0),
             last_error: std::sync::Arc::new(std::sync::Mutex::new(None)),
@@ -115,7 +112,9 @@ impl PubState {
     }
 
     pub fn get_connection_state(&self) -> ConnectionState {
-        self.connection_state.lock().ok()
+        self.connection_state
+            .lock()
+            .ok()
             .map(|s| *s)
             .unwrap_or(ConnectionState::Disconnected)
     }
@@ -133,11 +132,13 @@ impl PubState {
     }
 
     pub fn add_messages_sent(&self, count: u64) {
-        self.messages_sent.fetch_add(count, std::sync::atomic::Ordering::SeqCst);
+        self.messages_sent
+            .fetch_add(count, std::sync::atomic::Ordering::SeqCst);
     }
 
     pub fn add_bytes_sent(&self, bytes: u64) {
-        self.bytes_sent.fetch_add(bytes, std::sync::atomic::Ordering::SeqCst);
+        self.bytes_sent
+            .fetch_add(bytes, std::sync::atomic::Ordering::SeqCst);
     }
 }
 

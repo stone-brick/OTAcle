@@ -9,15 +9,13 @@ use std::sync::Mutex;
 
 /// 全局 Enigo 实例 - 创建一次并重复使用
 static ENIGO: Lazy<Mutex<Enigo>> = Lazy::new(|| {
-    Mutex::new(
-        Enigo::new(&Settings::default())
-            .expect("Failed to create Enigo instance")
-    )
+    Mutex::new(Enigo::new(&Settings::default()).expect("Failed to create Enigo instance"))
 });
 
 /// 使用 enigo 的 text() API 发送字符串
 pub fn send_text(text: &str) -> Result<(), String> {
-    let mut enigo = ENIGO.lock()
+    let mut enigo = ENIGO
+        .lock()
         .map_err(|_| "Failed to lock Enigo".to_string())?;
 
     enigo
@@ -31,7 +29,8 @@ pub fn send_text(text: &str) -> Result<(), String> {
 ///
 /// direction: "press"、"release" 或 "click"
 pub fn send_key(key_str: &str, direction: &str) -> Result<(), String> {
-    let mut enigo = ENIGO.lock()
+    let mut enigo = ENIGO
+        .lock()
         .map_err(|_| "Failed to lock Enigo".to_string())?;
 
     let key = parse_key(key_str)?;

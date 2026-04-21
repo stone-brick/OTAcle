@@ -1,7 +1,7 @@
 use crate::act;
 use act::types::{ActionData, ActionList, InputBackend};
-use std::collections::HashMap;
 use serde_json::Value;
+use std::collections::HashMap;
 
 #[tauri::command]
 pub fn act_load_config(path: String, backend: Option<String>) -> Result<(), String> {
@@ -58,8 +58,7 @@ pub fn act_save_config(
 
 #[tauri::command]
 pub fn act_execute_action(action_idx: u32) -> Result<(), String> {
-    let default_backend = act::config::get_default_backend()
-        .unwrap_or(InputBackend::Win32);
+    let default_backend = act::config::get_default_backend().unwrap_or(InputBackend::Win32);
     act::executor::execute_action(action_idx, default_backend)
 }
 
@@ -68,8 +67,7 @@ pub fn act_execute_action_with_params(
     action_idx: u32,
     params: HashMap<String, Value>,
 ) -> Result<(), String> {
-    let default_backend = act::config::get_default_backend()
-        .unwrap_or(InputBackend::Win32);
+    let default_backend = act::config::get_default_backend().unwrap_or(InputBackend::Win32);
     act::executor::execute_action_with_params(action_idx, params, default_backend)
 }
 

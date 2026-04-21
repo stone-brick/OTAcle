@@ -25,7 +25,6 @@ pub enum InputBackend {
     Win32,
 }
 
-
 /// 鼠标按钮变体
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -214,7 +213,6 @@ pub struct Action {
     pub data: ActionData,
 }
 
-
 /// 动作列表（动作配置项）
 pub type ActionList = Vec<Action>;
 
@@ -224,4 +222,3 @@ pub struct HistoryEntry {
     pub actions: ActionList,
     pub default_backend: InputBackend,
 }
-

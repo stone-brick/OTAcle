@@ -3,11 +3,14 @@
 //! 根据动作 ID 执行配置的动作。
 
 use super::config;
-use super::types::{ActionData, DelayAction, InputBackend, KeyAction, KeySequenceAction, MouseButton, MouseClickAction, MouseMoveAction, MouseScrollAction, ScrollDirection, TextAction};
+use super::types::{
+    ActionData, DelayAction, InputBackend, KeyAction, KeySequenceAction, MouseButton,
+    MouseClickAction, MouseMoveAction, MouseScrollAction, ScrollDirection, TextAction,
+};
 use crate::input;
 use enigo::{Axis, Button, Coordinate, Direction, Enigo, Mouse, Settings};
+use log::{error, info};
 use std::collections::HashMap;
-use log::{info, error};
 
 /// 按键事件之间的默认间隔（毫秒）
 const DEFAULT_KEY_INTERVAL_MS: u64 = 2;
@@ -44,7 +47,10 @@ struct ExecContext {
 
 impl ExecContext {
     fn new(backend: InputBackend, target_hwnd: Option<isize>) -> Self {
-        Self { backend, target_hwnd }
+        Self {
+            backend,
+            target_hwnd,
+        }
     }
 }
 
@@ -99,7 +105,8 @@ fn send_key_event(key: &str, direction: &str, ctx: &ExecContext) -> Result<(), S
         }
         InputBackend::Win32 => {
             // Win32 模式：直接发送到目标窗口
-            let hwnd = ctx.target_hwnd
+            let hwnd = ctx
+                .target_hwnd
                 .ok_or("Win32 backend requires target window")?;
             input::send_key_to_window(hwnd, key, direction)
         }
@@ -117,7 +124,8 @@ fn send_text_event(text: &str, ctx: &ExecContext) -> Result<(), String> {
             input::enigo::send_text(text)
         }
         InputBackend::Win32 => {
-            let hwnd = ctx.target_hwnd
+            let hwnd = ctx
+                .target_hwnd
                 .ok_or("Win32 backend requires target window")?;
             input::send_text_to_window(hwnd, text)
         }
@@ -131,14 +139,12 @@ fn send_text_event(text: &str, ctx: &ExecContext) -> Result<(), String> {
 /// * `default_backend` - 加载的配置中的默认后端（当动作没有后端时使用）
 ///
 /// 目标窗口和执行后端从全局配置读取。
-pub fn execute_action(
-    action_idx: u32,
-    default_backend: InputBackend,
-) -> Result<(), String> {
+pub fn execute_action(action_idx: u32, default_backend: InputBackend) -> Result<(), String> {
     // 获取配置
     let actions = config::get_action_list()?;
 
-    let action_item = actions.get(action_idx as usize)
+    let action_item = actions
+        .get(action_idx as usize)
         .ok_or_else(|| format!("Action {} not found in configuration", action_idx))?;
     let action = &action_item.data;
 
@@ -187,7 +193,8 @@ pub fn execute_action_with_params(
     // 获取配置
     let actions = config::get_action_list()?;
 
-    let action_item = actions.get(action_idx as usize)
+    let action_item = actions
+        .get(action_idx as usize)
         .ok_or_else(|| format!("Action {} not found in configuration", action_idx))?;
 
     // 如果提供了则应用动态参数
@@ -251,7 +258,10 @@ pub fn execute_actions(
 
     let total = actions_to_execute.len();
     for &action_idx in &actions_to_execute {
-        let action = &actions.get(action_idx as usize).expect("action not found").data;
+        let action = &actions
+            .get(action_idx as usize)
+            .expect("action not found")
+            .data;
         // 如果提供了则应用动态参数
         let resolved_action = if !params.is_empty() {
             apply_params(action, &params)?
@@ -280,7 +290,10 @@ pub fn execute_actions(
 ///
 /// 每个 Variable 条目将 param_name（来自 ZMQ params）映射到 field_name（动作结构字段）。
 /// 只有在 variables 中明确列出的字段才能在运行时覆盖。
-fn apply_params(action: &ActionData, params: &HashMap<String, serde_json::Value>) -> Result<ActionData, String> {
+fn apply_params(
+    action: &ActionData,
+    params: &HashMap<String, serde_json::Value>,
+) -> Result<ActionData, String> {
     let mut resolved = action.clone();
 
     match &mut resolved {
@@ -508,7 +521,8 @@ fn execute_mouse_click(action: &MouseClickAction, ctx: &ExecContext) -> Result<(
 
     match ctx.backend {
         InputBackend::Win32 => {
-            let hwnd = ctx.target_hwnd
+            let hwnd = ctx
+                .target_hwnd
                 .ok_or("Win32 backend requires target window for mouse click")?;
             for i in 0..count {
                 input::win32_input::send_mouse_click(hwnd, 0, 0, button)?;
@@ -532,14 +546,16 @@ fn execute_mouse_click(action: &MouseClickAction, ctx: &ExecContext) -> Result<(
             };
 
             for i in 0..count {
-                enigo.button(btn, Direction::Press)
+                enigo
+                    .button(btn, Direction::Press)
                     .map_err(|e| format!("Failed to press mouse button: {:?}", e))?;
 
                 if hold_time > 0 {
                     std::thread::sleep(std::time::Duration::from_millis(hold_time));
                 }
 
-                enigo.button(btn, Direction::Release)
+                enigo
+                    .button(btn, Direction::Release)
                     .map_err(|e| format!("Failed to release mouse button: {:?}", e))?;
 
                 if i < count - 1 && interval > 0 {
@@ -569,7 +585,8 @@ fn execute_mouse_move(action: &MouseMoveAction, ctx: &ExecContext) -> Result<(),
                 // 使用 enigo 瞬间移动
                 let mut enigo = Enigo::new(&Settings::default())
                     .map_err(|e| format!("Failed to create Enigo: {:?}", e))?;
-                enigo.move_mouse(x, y, Coordinate::Abs)
+                enigo
+                    .move_mouse(x, y, Coordinate::Abs)
                     .map_err(|e| format!("Failed to move mouse: {:?}", e))?;
             } else {
                 // 平滑移动：获取当前位置然后插值
@@ -589,7 +606,8 @@ fn execute_mouse_scroll(action: &MouseScrollAction, ctx: &ExecContext) -> Result
 
     match ctx.backend {
         InputBackend::Win32 => {
-            let hwnd = ctx.target_hwnd
+            let hwnd = ctx
+                .target_hwnd
                 .ok_or("Win32 backend requires target window for mouse scroll")?;
             input::win32_input::send_mouse_scroll(hwnd, delta)?;
         }
@@ -605,7 +623,8 @@ fn execute_mouse_scroll(action: &MouseScrollAction, ctx: &ExecContext) -> Result
                 ScrollDirection::Right => (action.amount as i32, Axis::Horizontal),
             };
 
-            enigo.scroll(length, axis)
+            enigo
+                .scroll(length, axis)
                 .map_err(|e| format!("Failed to scroll: {:?}", e))?;
         }
     }

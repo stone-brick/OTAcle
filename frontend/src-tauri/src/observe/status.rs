@@ -2,12 +2,12 @@
 //!
 //! 提供 observe_get_status 及相关查询函数
 
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
-use crate::communication::types::ConnectionState;
-use super::state::{GLOBAL_STATS, SESSIONS, ObserveGlobalStats, SessionHandle};
+use super::state::{ObserveGlobalStats, SessionHandle, GLOBAL_STATS, SESSIONS};
 use super::types::ObserveConfig;
+use crate::communication::types::ConnectionState;
 
 /// 会话状态详情
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -48,7 +48,9 @@ pub struct ObserveStatus {
 
 /// 获取完整的状态信息
 pub fn get_full_status() -> Result<ObserveStatus, String> {
-    let sessions = SESSIONS.lock().map_err(|_| "Failed to lock sessions".to_string())?;
+    let sessions = SESSIONS
+        .lock()
+        .map_err(|_| "Failed to lock sessions".to_string())?;
 
     let mut session_statuses = HashMap::new();
     for (hwnd, handle) in sessions.iter() {
@@ -66,12 +68,3 @@ pub fn get_full_status() -> Result<ObserveStatus, String> {
     })
 }
 
-/// 获取简化的状态映射（兼容旧 API）
-pub fn get_status_map() -> Result<HashMap<isize, bool>, String> {
-    let sessions = SESSIONS.lock().map_err(|_| "Failed to lock sessions".to_string())?;
-
-    Ok(sessions
-        .iter()
-        .map(|(hwnd, handle)| (*hwnd, handle.is_running()))
-        .collect())
-}

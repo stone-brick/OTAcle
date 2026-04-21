@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import type { WindowInfo, SearchMode } from '../types';
+import type { WindowInfo, SearchMode } from '../../types';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import FormControl from '@/components/ui/FormControl.vue';
 import CardBox from '@/components/ui/CardBox.vue';

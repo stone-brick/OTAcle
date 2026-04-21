@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TextActionItem } from '../../../types';
+import type { TextActionItem } from '../../../../types';
 import BackendSelector from '../BackendSelector.vue';
 import FormControl from '@/components/ui/FormControl.vue';
 

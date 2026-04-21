@@ -1,48 +1,60 @@
 <script setup lang="ts">
-import type { MouseMoveActionItem } from '../../../types';
+import type { MouseClickActionItem } from '../../../../types';
 import BackendSelector from '../BackendSelector.vue';
 import VariableEditor from '../VariableEditor.vue';
 import FormControl from '@/components/ui/FormControl.vue';
 
 const props = defineProps<{
-  modelValue: MouseMoveActionItem;
+  modelValue: MouseClickActionItem;
 }>();
 
 const emit = defineEmits<{
-  'update:modelValue': [action: MouseMoveActionItem];
+  'update:modelValue': [action: MouseClickActionItem];
 }>();
 
-function updateField<K extends keyof MouseMoveActionItem>(field: K, value: MouseMoveActionItem[K]) {
+function updateField<K extends keyof MouseClickActionItem>(field: K, value: MouseClickActionItem[K]) {
   emit('update:modelValue', { ...props.modelValue, [field]: value });
 }
 
-const availableFields = ['x', 'y'];
+const availableFields = ['count'];
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
     <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">X 坐标</label>
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">鼠标按钮</label>
       <FormControl
-        :model-value="modelValue.x"
-        type="number"
-        @update:model-value="updateField('x', Number($event))"
+        :model-value="modelValue.button"
+        :options="[
+          { value: 'left', label: '左键' },
+          { value: 'right', label: '右键' },
+          { value: 'middle', label: '中键' },
+        ]"
+        @update:model-value="updateField('button', $event as 'left' | 'right' | 'middle')"
       />
     </div>
     <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">Y 坐标</label>
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">点击次数</label>
       <FormControl
-        :model-value="modelValue.y"
+        :model-value="modelValue.count"
         type="number"
-        @update:model-value="updateField('y', Number($event))"
+        @update:model-value="updateField('count', Number($event))"
       />
     </div>
     <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">移动时长 (ms，可选)</label>
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">间隔 (ms，可选)</label>
       <FormControl
-        :model-value="modelValue.duration_ms"
+        :model-value="modelValue.interval_ms"
         type="number"
-        @update:model-value="updateField('duration_ms', Number($event))"
+        @update:model-value="updateField('interval_ms', Number($event))"
+      />
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">按住时间 (ms)</label>
+      <FormControl
+        :model-value="modelValue.hold_time_ms"
+        type="number"
+        @update:model-value="updateField('hold_time_ms', Number($event))"
       />
     </div>
     <div class="flex flex-col gap-1.5">

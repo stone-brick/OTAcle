@@ -1,8 +1,8 @@
+use chrono::Utc;
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use chrono::Utc;
-use lazy_static::lazy_static;
 use std::sync::Mutex;
 
 const RECENT_FILE_NAME: &str = "recent_projects.json";
@@ -32,8 +32,8 @@ impl RecentProject {
 }
 
 fn get_recent_file_path() -> Result<PathBuf, String> {
-    let app_dir = dirs::data_local_dir()
-        .ok_or_else(|| "Failed to get app data directory".to_string())?;
+    let app_dir =
+        dirs::data_local_dir().ok_or_else(|| "Failed to get app data directory".to_string())?;
     Ok(app_dir.join("OTAcle").join(RECENT_FILE_NAME))
 }
 
@@ -42,8 +42,8 @@ pub fn load_recent_projects() -> Result<(), String> {
     if !path.exists() {
         return Ok(());
     }
-    let content = fs::read_to_string(&path)
-        .map_err(|e| format!("Failed to read recent projects: {}", e))?;
+    let content =
+        fs::read_to_string(&path).map_err(|e| format!("Failed to read recent projects: {}", e))?;
     let projects: Vec<RecentProject> = serde_json::from_str(&content)
         .map_err(|e| format!("Failed to parse recent projects: {}", e))?;
     *RECENT_PROJECTS.lock().unwrap() = projects;
@@ -59,8 +59,7 @@ pub fn save_recent_projects() -> Result<(), String> {
     let projects = RECENT_PROJECTS.lock().unwrap();
     let content = serde_json::to_string_pretty(&*projects)
         .map_err(|e| format!("Failed to serialize recent projects: {}", e))?;
-    fs::write(&path, content)
-        .map_err(|e| format!("Failed to write recent projects: {}", e))
+    fs::write(&path, content).map_err(|e| format!("Failed to write recent projects: {}", e))
 }
 
 pub fn get_recent_projects() -> Vec<RecentProject> {
@@ -90,11 +89,16 @@ pub fn add_recent_project(path: String, name: String) -> Result<(), String> {
         let keep_unpinned_count = MAX_RECENT_COUNT - keep_pinned_count;
 
         let mut kept = Vec::new();
+        let mut pinned_added = 0;
+        let mut unpinned_added = 0;
+
         for p in projects.iter() {
-            if p.pinned && kept.len() < keep_pinned_count {
+            if p.pinned && pinned_added < keep_pinned_count {
                 kept.push(p.clone());
-            } else if !p.pinned && kept.len() < MAX_RECENT_COUNT && kept.len() < keep_pinned_count + keep_unpinned_count {
+                pinned_added += 1;
+            } else if !p.pinned && unpinned_added < keep_unpinned_count && kept.len() < MAX_RECENT_COUNT {
                 kept.push(p.clone());
+                unpinned_added += 1;
             }
         }
         *projects = kept;

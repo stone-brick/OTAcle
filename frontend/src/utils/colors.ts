@@ -100,6 +100,9 @@ export const getButtonColor = (color: ButtonColor, isOutlined: boolean, hasHover
       info: 'border-blue-500 dark:border-blue-600',
     },
     text: {
+      white: 'text-black dark:text-white',
+      whiteDark: 'text-black dark:text-white',
+      lightDark: 'text-gray-700 dark:text-slate-300',
       contrast: 'dark:text-slate-100',
       success: 'text-emerald-500 dark:text-emerald-400',
       danger: 'text-red-600 dark:text-red-500',
@@ -107,6 +110,9 @@ export const getButtonColor = (color: ButtonColor, isOutlined: boolean, hasHover
       info: 'text-blue-600 dark:text-blue-500',
     },
     outlineHover: {
+      white: 'hover:bg-gray-100 dark:hover:bg-slate-700',
+      whiteDark: 'hover:bg-gray-100 dark:hover:bg-slate-800',
+      lightDark: 'hover:bg-gray-200 dark:hover:bg-slate-700',
       contrast:
         'hover:bg-gray-800 hover:text-gray-100 dark:hover:bg-slate-100 dark:hover:text-black',
       success:

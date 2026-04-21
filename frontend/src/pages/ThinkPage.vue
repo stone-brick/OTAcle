@@ -7,7 +7,10 @@ import BaseIcon from '../components/ui/BaseIcon.vue'
   <div class="think-page">
     <div class="think-placeholder">
       <div class="placeholder-icon">
-        <BaseIcon :path="mdiBrain" :size="48" />
+        <BaseIcon
+          :path="mdiBrain"
+          :size="48"
+        />
       </div>
       <h2>Think 模块</h2>
       <p>模型训练数据展示（待实现）</p>

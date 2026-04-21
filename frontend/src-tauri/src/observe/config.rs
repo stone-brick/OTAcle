@@ -1,8 +1,8 @@
 //! Observe 模块的配置加载和保存
 
-use std::fs;
-use crate::observe::types::{ObserveConfig, CropRegion};
 use super::state;
+use crate::observe::types::{CropRegion, ObserveConfig};
+use std::fs;
 
 /// 获取当前全局配置
 pub fn get_config() -> Result<ObserveConfig, String> {
@@ -57,9 +57,7 @@ pub fn add_crop_region(region: CropRegion) -> Result<(), String> {
 
     let mut new_config = config.clone();
     new_config.crop_regions.push(region);
-    if let Err(e) = validate_config(&new_config) {
-        return Err(e);
-    }
+    validate_config(&new_config)?;
     state::set_config(new_config)
 }
 
@@ -73,9 +71,7 @@ pub fn remove_crop_region(index: usize) -> Result<(), String> {
 
     let mut new_config = config.clone();
     new_config.crop_regions.remove(index);
-    if let Err(e) = validate_config(&new_config) {
-        return Err(e);
-    }
+    validate_config(&new_config)?;
     state::set_config(new_config)
 }
 
@@ -88,11 +84,11 @@ pub fn load_config(path: &str) -> Result<ObserveConfig, String> {
         return Ok(default_config);
     }
 
-    let content = fs::read_to_string(path)
-        .map_err(|e| format!("Failed to read config file: {}", e))?;
+    let content =
+        fs::read_to_string(path).map_err(|e| format!("Failed to read config file: {}", e))?;
 
-    let config: ObserveConfig = serde_json::from_str(&content)
-        .map_err(|e| format!("Failed to parse config: {}", e))?;
+    let config: ObserveConfig =
+        serde_json::from_str(&content).map_err(|e| format!("Failed to parse config: {}", e))?;
 
     // 验证配置合法性
     validate_config(&config)?;
@@ -110,11 +106,9 @@ pub fn save_config(path: &str, config: &ObserveConfig) -> Result<(), String> {
     let json = serde_json::to_string_pretty(config)
         .map_err(|e| format!("Failed to serialize config: {}", e))?;
 
-    fs::write(path, json)
-        .map_err(|e| format!("Failed to write config file: {}", e))?;
+    fs::write(path, json).map_err(|e| format!("Failed to write config file: {}", e))?;
 
     state::set_config(config.clone())?;
 
     Ok(())
 }
-

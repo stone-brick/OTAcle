@@ -1,5 +1,4 @@
 {
   "pull_address": "tcp://127.0.0.1:5555",
-  "pub_address": "tcp://127.0.0.1:5556",
-  "default_backend": "win32"
+  "pub_address": "tcp://127.0.0.1:5556"
 }
