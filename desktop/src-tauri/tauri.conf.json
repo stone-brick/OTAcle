@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "frontend",
+  "productName": "desktop",
   "version": "0.1.0",
-  "identifier": "com.otacle.frontend",
+  "identifier": "com.otacle.desktop",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",

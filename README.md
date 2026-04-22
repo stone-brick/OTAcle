@@ -299,8 +299,8 @@ send_command([0, 2], {"target_x": 100})
 
 ```bash
 # 前端开发
-cd frontend && pnpm tauri dev
+cd desktop && pnpm tauri dev
 
 # Rust 检查
-cd frontend/src-tauri && cargo check
+cd desktop/src-tauri && cargo check
 ```

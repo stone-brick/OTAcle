@@ -1,4 +1,4 @@
-package com.otacle.backend;
+package com.otacle.remote;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
