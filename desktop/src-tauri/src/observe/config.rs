@@ -107,8 +107,6 @@ pub fn save_config(path: &str, config: &ObserveConfig) -> Result<(), String> {
         .map_err(|e| format!("Failed to serialize config: {}", e))?;
 
     fs::write(path, json).map_err(|e| format!("Failed to write config file: {}", e))?;
-
-    state::set_config(config.clone())?;
-
+    let _ = load_config(path);
     Ok(())
 }

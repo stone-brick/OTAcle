@@ -7,36 +7,36 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CommConfig {
     /// PULL 接收地址（Act 模块从 Python 接收命令）
-    #[serde(default = "default_pull_address")]
-    pub pull_address: String,
+    #[serde(default = "default_act_pull_address")]
+    pub act_pull_address: String,
     /// PUB 发布地址（Observe 模块向 Python 发送图像）
-    #[serde(default = "default_pub_address")]
-    pub pub_address: String,
-    /// 默认输入后端
-    #[serde(default = "default_backend")]
-    pub default_backend: String,
+    #[serde(default = "default_observe_pub_address")]
+    pub observe_pub_address: String,
+    /// PULL 接收地址（Think 模块从 Python 接收决策日志）
+    #[serde(default = "default_think_pull_address")]
+    pub think_pull_address: String,
 }
 
 impl Default for CommConfig {
     fn default() -> Self {
         Self {
-            pull_address: default_pull_address(),
-            pub_address: default_pub_address(),
-            default_backend: default_backend(),
+            act_pull_address: default_act_pull_address(),
+            observe_pub_address: default_observe_pub_address(),
+            think_pull_address: default_think_pull_address(),
         }
     }
 }
 
-fn default_pull_address() -> String {
+fn default_act_pull_address() -> String {
     "tcp://127.0.0.1:5555".to_string()
 }
 
-fn default_pub_address() -> String {
+fn default_observe_pub_address() -> String {
     "tcp://127.0.0.1:5556".to_string()
 }
 
-fn default_backend() -> String {
-    "win32".to_string()
+fn default_think_pull_address() -> String {
+    "tcp://127.0.0.1:5557".to_string()
 }
 
 /// 命令消息格式（Act 模块使用）

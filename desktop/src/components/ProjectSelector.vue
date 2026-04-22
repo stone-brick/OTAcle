@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue';
 import { mdiFolderOpen, mdiPlus, mdiPin, mdiMapMarker } from '@mdi/js'
 import BaseIcon from './ui/BaseIcon.vue'
 import { useProject, type RecentProject } from '../composables/useProject';
+import { useActionEditor } from '../composables/act/useActionEditor';
 import { useDialog } from '../composables/useDialog';
 
 const {
@@ -19,7 +20,8 @@ const {
   openProject,
 } = useProject();
 
-const { prompt } = useDialog();
+const { hasChanges } = useActionEditor();
+const { prompt, confirm } = useDialog();
 
 const showRecentList = ref(false);
 const hoveredProject = ref<string | null>(null);
@@ -30,6 +32,13 @@ onMounted(() => {
 });
 
 async function handleCreateProject() {
+  if (hasChanges.value) {
+    const confirmed = await confirm(
+      '当前有未保存的更改，切换项目将丢失这些更改。确定要继续吗？',
+      '警告：未保存的更改'
+    );
+    if (!confirmed) return;
+  }
   const name = await prompt('输入项目名称:', 'my-otacle-project');
   if (name) {
     await createProjectDialog(name);
@@ -51,9 +60,27 @@ function formatDate(dateStr: string): string {
 const pinnedProjects = computed(() => recentProjects.value.filter(p => p.pinned));
 const unpinnedProjects = computed(() => recentProjects.value.filter(p => !p.pinned));
 
-function handleOpenRecent(project: RecentProject) {
-  openProject(project.path);
+async function handleOpenRecent(project: RecentProject) {
+  if (hasChanges.value) {
+    const confirmed = await confirm(
+      '当前有未保存的更改，切换项目将丢失这些更改。确定要继续吗？',
+      '警告：未保存的更改'
+    );
+    if (!confirmed) return;
+  }
+  await openProject(project.path);
   showRecentList.value = false;
+}
+
+async function handleOpenProjectDialog() {
+  if (hasChanges.value) {
+    const confirmed = await confirm(
+      '当前有未保存的更改，切换项目将丢失这些更改。确定要继续吗？',
+      '警告：未保存的更改'
+    );
+    if (!confirmed) return;
+  }
+  await openProjectDialog();
 }
 
 function handleTogglePin(e: Event, path: string) {
@@ -105,7 +132,7 @@ function handleRemoveRecent(e: Event, path: string) {
                  hover:bg-gray-50 dark:hover:bg-slate-800 hover:border-blue-400
                  disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="isLoading"
-          @click="openProjectDialog"
+          @click="handleOpenProjectDialog"
         >
           <BaseIcon
             :path="mdiFolderOpen"

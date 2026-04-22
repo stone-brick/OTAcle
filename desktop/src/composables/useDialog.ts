@@ -14,6 +14,12 @@ interface InputState {
   placeholder: string
 }
 
+interface ConfirmState {
+  show: boolean
+  title: string
+  message: string
+}
+
 const alertState = ref<AlertState>({
   show: false,
   title: '',
@@ -28,8 +34,15 @@ const inputState = ref<InputState>({
   placeholder: '',
 })
 
+const confirmState = ref<ConfirmState>({
+  show: false,
+  title: '',
+  message: '',
+})
+
 let alertResolve: (() => void) | null = null
 let inputResolve: ((value: string | null) => void) | null = null
+let confirmResolve: ((confirmed: boolean) => void) | null = null
 
 function showAlert(message: string, title?: string): Promise<void> {
   alertState.value = { show: true, title: title ?? '', message }
@@ -74,14 +87,37 @@ function handleInputCancel() {
   inputResolve = null
 }
 
+function showConfirm(message: string, title?: string): Promise<boolean> {
+  confirmState.value = { show: true, title: title ?? '', message }
+  return new Promise<boolean>((resolve) => {
+    confirmResolve = resolve
+  })
+}
+
+function handleConfirmOk() {
+  confirmState.value.show = false
+  confirmResolve?.(true)
+  confirmResolve = null
+}
+
+function handleConfirmCancel() {
+  confirmState.value.show = false
+  confirmResolve?.(false)
+  confirmResolve = null
+}
+
 export function useDialog() {
   return {
     alert: showAlert,
     prompt: showInput,
+    confirm: showConfirm,
     alertState: readonly(alertState),
     inputState: readonly(inputState),
+    confirmState: readonly(confirmState),
     handleAlertOk,
     handleInputConfirm,
     handleInputCancel,
+    handleConfirmOk,
+    handleConfirmCancel,
   }
 }

@@ -22,22 +22,22 @@ pub fn comm_get_config() -> Result<CommConfig, String> {
 
 #[tauri::command]
 pub fn comm_set_pull_address(addr: String) -> Result<(), String> {
-    comm::config::set_pull_address(addr)
+    comm::config::set_act_pull_address(addr)
 }
 
 #[tauri::command]
 pub fn comm_get_pub_address() -> Result<String, String> {
-    comm::config::get_pub_address()
+    comm::config::get_observe_pub_address()
 }
 
 #[tauri::command]
 pub fn comm_get_pull_address() -> Result<String, String> {
-    comm::config::get_pull_address()
+    comm::config::get_act_pull_address()
 }
 
 #[tauri::command]
 pub fn comm_set_pub_address(addr: String) -> Result<(), String> {
-    comm::config::set_pub_address(addr)
+    comm::config::set_observe_pub_address(addr)
 }
 
 #[derive(serde::Serialize)]
@@ -84,8 +84,8 @@ pub fn comm_get_status() -> Result<CommStatus, String> {
     Ok(CommStatus {
         pull_running,
         pub_running,
-        pull_address: config.pull_address,
-        pub_address: config.pub_address,
+        pull_address: config.act_pull_address,
+        pub_address: config.observe_pub_address,
         pub_connected,
         pub_messages_sent,
         pub_bytes_sent,

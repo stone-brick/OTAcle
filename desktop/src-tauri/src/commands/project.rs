@@ -1,5 +1,12 @@
+use crate::act::types::InputBackend;
+use crate::communication::types::CommConfig;
+use crate::communication::config as comm_config;
+use crate::observe::types::ObserveConfig;
+use crate::observe::config as observe_config;
 use crate::project as project_module;
 use crate::project::{ProjectInfo, RecentProject};
+use crate::think::types::ThinkConfig;
+use crate::think::config as think_config;
 use std::path::Path;
 use tauri::command;
 
@@ -18,7 +25,34 @@ pub fn project_open(path: String) -> Result<ProjectInfo, String> {
     let project_info = ProjectInfo::from_config(&config, &path);
 
     project_module::set_current_project_dir(Some(project_path.to_path_buf()));
-    project_module::add_recent_project(path, config.name.clone())?;
+    project_module::add_recent_project(path.clone(), config.name.clone())?;
+
+    // 检查并补全缺失的配置文件
+    let config_dir = project_module::get_config_dir(project_path);
+
+    // comm.json
+    let comm_path = config_dir.join("comm.json");
+    if !comm_path.exists() {
+        let _ = comm_config::save_config(comm_path.to_str().unwrap(), &CommConfig::default());
+    }
+
+    // observe.json
+    let observe_path = config_dir.join("observe.json");
+    if !observe_path.exists() {
+        let _ = observe_config::save_config(observe_path.to_str().unwrap(), &ObserveConfig::default());
+    }
+
+    // think.json
+    let think_path = config_dir.join("think.json");
+    if !think_path.exists() {
+        let _ = think_config::save_config(think_path.to_str().unwrap(), &ThinkConfig::default());
+    }
+
+    // actions.json
+    let actions_path = config_dir.join("actions.json");
+    if !actions_path.exists() {
+        let _ = crate::act::config::save_config(actions_path.to_str().unwrap(), InputBackend::Win32, &Vec::new());
+    }
 
     Ok(project_info)
 }
@@ -117,6 +151,15 @@ pub fn project_get_observe_config_path() -> Option<String> {
 pub fn project_get_comm_config_path() -> Option<String> {
     project_module::get_current_project_dir().map(|p| {
         project_module::get_comm_config_path(&p)
+            .to_string_lossy()
+            .to_string()
+    })
+}
+
+#[command]
+pub fn project_get_think_config_path() -> Option<String> {
+    project_module::get_current_project_dir().map(|p| {
+        project_module::get_think_config_path(&p)
             .to_string_lossy()
             .to_string()
     })

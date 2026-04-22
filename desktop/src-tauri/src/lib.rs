@@ -4,6 +4,7 @@ mod communication;
 mod input;
 mod observe;
 mod project;
+mod think;
 
 use tauri_plugin_log::{Builder as LogBuilder, Target, TargetKind};
 
@@ -37,6 +38,9 @@ pub fn run() {
 
     // 初始化通信模块的默认配置
     let _ = communication::state::set_config(communication::types::CommConfig::default());
+
+    // 初始化 Think 模块的默认配置
+    let _ = think::config::set_config(think::types::ThinkConfig::default());
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -129,6 +133,15 @@ pub fn run() {
             commands::project::project_get_actions_config_path,
             commands::project::project_get_observe_config_path,
             commands::project::project_get_comm_config_path,
+            commands::project::project_get_think_config_path,
+            // Think commands
+            commands::think::think_start,
+            commands::think::think_stop,
+            commands::think::think_get_status,
+            commands::think::think_load_config,
+            commands::think::think_save_config,
+            commands::think::think_get_config,
+            commands::think::think_get_logs,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

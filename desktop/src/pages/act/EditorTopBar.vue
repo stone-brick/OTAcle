@@ -7,6 +7,7 @@ import { mdiContentSave, mdiPlus, mdiUndo, mdiRedo, mdiDeleteSweep } from '@mdi/
 
 defineProps<{
   isProjectLoaded: boolean;
+  isLoaded: boolean;
   defaultBackend: InputBackend;
   hasChanges: boolean;
   canUndo: boolean;

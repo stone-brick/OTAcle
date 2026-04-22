@@ -60,6 +60,10 @@ pub fn get_comm_config_path(project_dir: &Path) -> PathBuf {
     get_config_dir(project_dir).join("comm.json")
 }
 
+pub fn get_think_config_path(project_dir: &Path) -> PathBuf {
+    get_config_dir(project_dir).join("think.json")
+}
+
 pub fn is_valid_project(path: &Path) -> bool {
     get_project_config_path(path).exists()
 }

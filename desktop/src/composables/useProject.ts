@@ -177,6 +177,14 @@ export function useProject() {
     }
   }
 
+  async function getProjectThinkConfigPath(): Promise<string | null> {
+    try {
+      return await invoke<string | null>('project_get_think_config_path');
+    } catch {
+      return null;
+    }
+  }
+
   async function checkCurrentProject(): Promise<void> {
     try {
       const project = await invoke<ProjectInfo | null>('project_get_current');
@@ -215,6 +223,7 @@ export function useProject() {
     getProjectActionsConfigPath,
     getProjectObserveConfigPath,
     getProjectCommConfigPath,
+    getProjectThinkConfigPath,
     checkCurrentProject,
   };
 }

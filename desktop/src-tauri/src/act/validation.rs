@@ -47,8 +47,9 @@ pub fn validate_action(action: &ActionData) -> Result<(), String> {
 
 /// 验证整个配置
 pub fn validate_config(config: &ActionList) -> Result<(), String> {
+    // 空配置是有效的起始状态（新项目），不进行检查
     if config.is_empty() {
-        return Err("Configuration is empty".to_string());
+        return Ok(());
     }
 
     for (idx, item) in config.iter().enumerate() {

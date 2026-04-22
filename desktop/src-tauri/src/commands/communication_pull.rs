@@ -14,7 +14,7 @@ pub fn comm_start_pull(app: tauri::AppHandle) -> Result<(), String> {
     let addr = {
         let config = comm_state::get_config()
             .map_err(|_| "Communication config not loaded. Call comm_load_config first.")?;
-        config.pull_address
+        config.act_pull_address
     };
 
     // 停止现有的接收者（如果有）

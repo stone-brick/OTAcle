@@ -1,51 +1,125 @@
 <script setup lang="ts">
-import { mdiBrain } from '@mdi/js'
-import BaseIcon from '../components/ui/BaseIcon.vue'
+import { onMounted, onUnmounted, ref } from 'vue'
+import ThinkTabNav from '../components/nav/ThinkTabNav.vue'
+import StatusTabPanel from '../components/think/StatusTabPanel.vue'
+import ConfigTabPanel from '../components/think/ConfigTabPanel.vue'
+import AddFieldDialog from '../components/think/AddFieldDialog.vue'
+import { useThink } from '../composables/useThink'
+import type { DisplayField, ThinkConfig } from '../types'
+
+const {
+  isThinking,
+  decisionLogs,
+  config,
+  status,
+  start,
+  stop,
+  getLogs,
+  fetchStatus,
+  startListening,
+  stopListening,
+} = useThink()
+
+const activeTab = ref<'status' | 'config'>('status')
+const showAddFieldDialog = ref(false)
+
+onMounted(async () => {
+  await startListening()
+  await fetchStatus()
+})
+
+onUnmounted(() => {
+  stopListening()
+})
+
+async function handleStart() {
+  await start()
+}
+
+async function handleStop() {
+  await stop()
+}
+
+async function handleRefresh() {
+  await getLogs(100)
+}
+
+function handleLoadDemoConfig() {
+  const demoConfig: ThinkConfig = {
+    max_data_points: 500,
+    display_fields: [
+      { name: 'reward', title: '奖励', chart_type: 'line' },
+      { name: 'loss', title: '损失', chart_type: 'area' },
+      { name: 'epsilon', title: '探索率', chart_type: 'line' },
+    ],
+  }
+  config.value = demoConfig
+}
+
+function handleAddField() {
+  showAddFieldDialog.value = true
+}
+
+function handleConfirmAddField(field: DisplayField) {
+  config.value.display_fields.push(field)
+  showAddFieldDialog.value = false
+}
+
+function handleDeleteField(name: string) {
+  const index = config.value.display_fields.findIndex(f => f.name === name)
+  if (index !== -1) {
+    config.value.display_fields.splice(index, 1)
+  }
+}
 </script>
 
 <template>
   <div class="think-page">
-    <div class="think-placeholder">
-      <div class="placeholder-icon">
-        <BaseIcon
-          :path="mdiBrain"
-          :size="48"
-        />
-      </div>
-      <h2>Think 模块</h2>
-      <p>模型训练数据展示（待实现）</p>
+    <ThinkTabNav v-model:active-tab="activeTab" />
+
+    <div class="think-content">
+      <StatusTabPanel
+        v-if="activeTab === 'status'"
+        :is-thinking="isThinking"
+        :status="status"
+        @start="handleStart"
+        @stop="handleStop"
+        @refresh="handleRefresh"
+      />
+
+      <ConfigTabPanel
+        v-else-if="activeTab === 'config'"
+        :config="config"
+        :logs="decisionLogs"
+        @add-field="handleAddField"
+        @delete-field="handleDeleteField"
+        @load-demo="handleLoadDemoConfig"
+      />
     </div>
+
+    <AddFieldDialog
+      :show="showAddFieldDialog"
+      @confirm="handleConfirmAddField"
+      @cancel="showAddFieldDialog = false"
+    />
   </div>
 </template>
 
 <style scoped>
 .think-page {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
   height: 100%;
-  background: var(--color-background);
+  overflow: hidden;
 }
 
-.think-placeholder {
-  text-align: center;
-  color: var(--color-text-muted);
+.think-content {
+  flex: 1;
+  overflow: hidden;
 }
 
-.placeholder-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-}
-
-.think-placeholder h2 {
-  margin: 0 0 8px 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.think-placeholder p {
-  margin: 0;
-  font-size: 14px;
+.think-content > :deep(*) {
+  height: 100%;
+  overflow: auto;
 }
 </style>

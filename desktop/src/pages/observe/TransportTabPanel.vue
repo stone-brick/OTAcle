@@ -20,7 +20,7 @@ const {
   getFirstSessionStats,
   formatBytes,
 } = useObserve()
-const { isProjectLoaded, getProjectObserveConfigPath } = useProject()
+const { isProjectLoaded } = useProject()
 const { addLog } = useLog()
 const { prompt } = useDialog()
 

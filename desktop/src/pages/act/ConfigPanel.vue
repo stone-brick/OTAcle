@@ -87,6 +87,7 @@ function handleDeleteAction(index: number) {
       <div class="flex-1 flex flex-col gap-3 min-w-0">
         <EditorTopBar
           :is-project-loaded="isProjectLoaded"
+          :is-loaded="isLoaded"
           :default-backend="defaultBackend"
           :has-changes="hasChanges"
           :can-undo="canUndo"

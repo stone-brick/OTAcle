@@ -56,11 +56,21 @@ async function loadConfig(path: string): Promise<void> {
 
     addLog(`已加载配置文件: ${path}`, 'success', 'action');
   } catch {
-    // 配置文件不存在时使用默认配置（自动加载场景下不抛出错误）
+    // 配置文件不存在时创建默认配置
     actions.value = [];
     baselineActions.value = [];
-    isLoaded.value = false;
+    defaultBackend.value = 'win32';
+    baselineDefaultBackend.value = 'win32';
+    isLoaded.value = true;
     configPath.value = path;
+
+    // 保存默认配置
+    await invoke('act_save_config', {
+      path,
+      defaultBackend: defaultBackend.value,
+      actions: [],
+    });
+    addLog(`已创建默认动作配置文件: ${path}`, 'info', 'action');
   }
 }
 

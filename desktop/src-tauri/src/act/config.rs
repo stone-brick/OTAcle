@@ -48,6 +48,18 @@ fn default_win32() -> InputBackend {
 /// }
 /// ```
 pub fn load_config(path: &str) -> Result<(ActionList, InputBackend), String> {
+    if !std::path::Path::new(path).exists() {
+        let action_list: ActionList = Vec::new();
+        let mut global_list = state::ACTION_CONFIG_LIST
+            .lock()
+            .map_err(|_| "Failed to lock action list".to_string())?;
+        *global_list = Some(action_list.clone());
+        let mut global_backend = state::DEFAULT_INPUT_BACKEND
+            .lock()
+            .map_err(|_| "Failed to lock default backend".to_string())?;
+        *global_backend = InputBackend::Win32;
+        return Ok((action_list, InputBackend::Win32));
+    }
     let content =
         fs::read_to_string(path).map_err(|e| format!("Failed to read config file: {}", e))?;
 

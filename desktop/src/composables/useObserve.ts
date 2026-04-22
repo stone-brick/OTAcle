@@ -169,12 +169,13 @@ export function useObserve() {
       config.value = loaded
       addLog(`已加载观察配置: ${path}`, 'success', 'observe')
     } catch {
-      // 配置文件不存在时使用默认配置（自动加载场景下不抛出错误）
+      // 配置文件不存在时创建默认配置
       config.value = {
         capture: { frame_rate: 3, target_width: 640, target_height: 480 },
         crop_regions: []
       }
-      addLog('观察配置文件不存在，使用默认配置', 'info', 'observe')
+      await invoke('observe_save_config', { path, config: config.value })
+      addLog(`已创建默认观察配置文件: ${path}`, 'info', 'observe')
     }
   }
 

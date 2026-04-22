@@ -37,10 +37,7 @@ pub fn save_config(path: &str, config: &CommConfig) -> Result<(), String> {
         .map_err(|e| format!("Failed to serialize config: {}", e))?;
 
     fs::write(path, json).map_err(|e| format!("Failed to write config file: {}", e))?;
-
-    // 更新全局状态
-    state::set_config(config.clone())?;
-
+    let _ = load_config(path);
     Ok(())
 }
 
@@ -51,69 +48,89 @@ pub fn get_config() -> Result<CommConfig, String> {
 
 /// 验证 CommConfig 的合法性
 pub fn validate_config(config: &CommConfig) -> Result<(), String> {
-    // 验证 pull_address 格式
-    if config.pull_address.is_empty() {
-        return Err("pull_address cannot be empty".to_string());
+    // 验证 act_pull_address 格式
+    if config.act_pull_address.is_empty() {
+        return Err("act_pull_address cannot be empty".to_string());
     }
-    if !config.pull_address.starts_with("tcp://")
-        && !config.pull_address.starts_with("ipc://")
-        && !config.pull_address.starts_with("inproc://")
+    if !config.act_pull_address.starts_with("tcp://")
+        && !config.act_pull_address.starts_with("ipc://")
+        && !config.act_pull_address.starts_with("inproc://")
     {
         return Err(format!(
-            "pull_address must be a valid ZMQ address, got: {}",
-            config.pull_address
+            "act_pull_address must be a valid ZMQ address, got: {}",
+            config.act_pull_address
         ));
     }
 
-    // 验证 pub_address 格式
-    if config.pub_address.is_empty() {
-        return Err("pub_address cannot be empty".to_string());
+    // 验证 observe_pub_address 格式
+    if config.observe_pub_address.is_empty() {
+        return Err("observe_pub_address cannot be empty".to_string());
     }
-    if !config.pub_address.starts_with("tcp://")
-        && !config.pub_address.starts_with("ipc://")
-        && !config.pub_address.starts_with("inproc://")
+    if !config.observe_pub_address.starts_with("tcp://")
+        && !config.observe_pub_address.starts_with("ipc://")
+        && !config.observe_pub_address.starts_with("inproc://")
     {
         return Err(format!(
-            "pub_address must be a valid ZMQ address, got: {}",
-            config.pub_address
+            "observe_pub_address must be a valid ZMQ address, got: {}",
+            config.observe_pub_address
         ));
     }
 
-    // 验证 default_backend
-    if config.default_backend != "win32" && config.default_backend != "enigo" {
+    // 验证 think_pull_address 格式
+    if config.think_pull_address.is_empty() {
+        return Err("think_pull_address cannot be empty".to_string());
+    }
+    if !config.think_pull_address.starts_with("tcp://")
+        && !config.think_pull_address.starts_with("ipc://")
+        && !config.think_pull_address.starts_with("inproc://")
+    {
         return Err(format!(
-            "default_backend must be 'win32' or 'enigo', got: {}",
-            config.default_backend
+            "think_pull_address must be a valid ZMQ address, got: {}",
+            config.think_pull_address
         ));
     }
 
     Ok(())
 }
 
-/// 设置 PULL 地址
-pub fn set_pull_address(addr: String) -> Result<(), String> {
+/// 设置 Act PULL 地址
+pub fn set_act_pull_address(addr: String) -> Result<(), String> {
     let mut config = state::get_config()?;
-    config.pull_address = addr;
+    config.act_pull_address = addr;
     validate_config(&config)?;
     state::set_config(config)
 }
 
-/// 获取 PULL 地址
-pub fn get_pull_address() -> Result<String, String> {
+/// 获取 Act PULL 地址
+pub fn get_act_pull_address() -> Result<String, String> {
     let config = state::get_config()?;
-    Ok(config.pull_address)
+    Ok(config.act_pull_address)
 }
 
-/// 设置 PUB 地址
-pub fn set_pub_address(addr: String) -> Result<(), String> {
+/// 设置 Observe PUB 地址
+pub fn set_observe_pub_address(addr: String) -> Result<(), String> {
     let mut config = state::get_config()?;
-    config.pub_address = addr;
+    config.observe_pub_address = addr;
     validate_config(&config)?;
     state::set_config(config)
 }
 
-/// 获取 PUB 地址
-pub fn get_pub_address() -> Result<String, String> {
+/// 获取 Observe PUB 地址
+pub fn get_observe_pub_address() -> Result<String, String> {
     let config = state::get_config()?;
-    Ok(config.pub_address)
+    Ok(config.observe_pub_address)
+}
+
+/// 设置 Think PULL 地址
+pub fn set_think_pull_address(addr: String) -> Result<(), String> {
+    let mut config = state::get_config()?;
+    config.think_pull_address = addr;
+    validate_config(&config)?;
+    state::set_config(config)
+}
+
+/// 获取 Think PULL 地址
+pub fn get_think_pull_address() -> Result<String, String> {
+    let config = state::get_config()?;
+    Ok(config.think_pull_address)
 }

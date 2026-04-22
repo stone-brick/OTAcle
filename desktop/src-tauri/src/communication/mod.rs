@@ -10,7 +10,7 @@ pub mod puller;
 pub mod state;
 pub mod types;
 
-pub use config::get_pub_address;
+pub use config::get_observe_pub_address;
 pub use publisher::start_publisher;
 pub use puller::Puller;
 pub use state::PullState;

@@ -206,3 +206,40 @@ export interface ObserveStatus {
   sessions: Record<number, SessionStatus>;
   global_stats: ObserveGlobalStats;
 }
+
+// =============================================================================
+// Think 模块类型
+// =============================================================================
+
+export interface DecisionLog {
+  step: number;
+  episode?: number;
+  timestamp: number;
+  q_values?: Record<string, number>;
+  reward?: number;
+  cumulative_reward?: number;
+  progress?: number;
+  loss?: number;
+  learning_rate?: number;
+  epsilon?: number;
+  custom?: Record<string, unknown>;
+}
+
+export interface DisplayField {
+  name: string;
+  title: string;
+  chart_type: 'line' | 'bar' | 'area' | 'gauge';
+}
+
+export interface ThinkConfig {
+  max_data_points: number;
+  display_fields: DisplayField[];
+}
+
+export interface ThinkStatus {
+  running: boolean;
+  logs_count: number;
+  connected: boolean;
+  messages_received: number;
+  uptime_seconds: number;
+}

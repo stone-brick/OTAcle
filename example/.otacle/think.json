@@ -1,0 +1,11 @@
+{
+  "pull_address": "tcp://127.0.0.1:5557",
+  "max_data_points": 1000,
+  "display_fields": [
+    {
+      "name": "step",
+      "title": "训练步数",
+      "chart_type": "line"
+    }
+  ]
+}

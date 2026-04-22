@@ -1,5 +1,5 @@
 {
-  "pull_address": "tcp://127.0.0.1:5555",
-  "pub_address": "tcp://127.0.0.1:5556",
-  "default_backend": "win32"
+  "act_pull_address": "tcp://127.0.0.1:5555",
+  "observe_pub_address": "tcp://127.0.0.1:5556",
+  "think_pull_address": "tcp://127.0.0.1:5557"
 }

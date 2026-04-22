@@ -40,7 +40,7 @@ pub fn observe_start(
 
     // 创建帧通道和发布线程
     let (frame_tx, frame_rx) = std::sync::mpsc::channel();
-    let pub_addr = communication::get_pub_address()?;
+    let pub_addr = communication::get_observe_pub_address()?;
     let publisher_handle = communication::start_publisher(
         &pub_addr,
         running_for_pub,

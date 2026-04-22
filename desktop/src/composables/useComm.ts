@@ -2,6 +2,14 @@ import { ref, effectScope } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { useLog } from './useLog'
+import { useProjectEvents, type ProjectEvent } from './useProjectEvents'
+import { useProject } from './useProject'
+
+export interface CommConfig {
+  act_pull_address: string
+  observe_pub_address: string
+  think_pull_address: string
+}
 
 export interface CommStatus {
   pull_running: boolean
@@ -16,11 +24,17 @@ export interface CommStatus {
 
 const isConnected = ref(false)
 const address = ref('')
+const config = ref<CommConfig>({
+  act_pull_address: 'tcp://127.0.0.1:5555',
+  observe_pub_address: 'tcp://127.0.0.1:5556',
+  think_pull_address: 'tcp://127.0.0.1:5557',
+})
 
 const scope = effectScope()
 
 let unlistenLog: UnlistenFn | null = null
 let unlistenError: UnlistenFn | null = null
+let unsubscribeProject: (() => void) | null = null
 
 export function useComm() {
   const { addLog } = useLog()
@@ -78,17 +92,74 @@ export function useComm() {
 
   function cleanup() {
     stopListening()
+    if (unsubscribeProject) {
+      unsubscribeProject()
+      unsubscribeProject = null
+    }
     scope.stop()
+  }
+
+  async function loadConfig(path: string) {
+    try {
+      const loaded = await invoke<CommConfig>('comm_load_config', { path })
+      config.value = loaded
+      addLog(`已加载通信配置: ${path}`, 'success', 'comm')
+    } catch {
+      // 使用默认配置并保存
+      config.value = {
+        act_pull_address: 'tcp://127.0.0.1:5555',
+        observe_pub_address: 'tcp://127.0.0.1:5556',
+        think_pull_address: 'tcp://127.0.0.1:5557',
+      }
+      await invoke('comm_save_config', { path, config: config.value })
+      addLog(`已创建默认通信配置文件: ${path}`, 'info', 'comm')
+    }
+  }
+
+  async function saveConfig(path: string) {
+    try {
+      await invoke('comm_save_config', { path, config: config.value })
+      addLog(`已保存通信配置: ${path}`, 'success', 'comm')
+    } catch (e) {
+      addLog(`保存通信配置失败: ${e}`, 'error', 'comm')
+      throw e
+    }
+  }
+
+  function initProjectEventListener() {
+    if (unsubscribeProject) {
+      unsubscribeProject()
+    }
+
+    const { onProjectEvent } = useProjectEvents()
+    const { getProjectCommConfigPath } = useProject()
+
+    unsubscribeProject = onProjectEvent(async (event: ProjectEvent) => {
+      if (event.type === 'opened' && event.project) {
+        const cfgPath = await getProjectCommConfigPath()
+        if (cfgPath) {
+          try {
+            await loadConfig(cfgPath)
+          } catch {
+            // 静默处理
+          }
+        }
+      }
+    })
   }
 
   return {
     isConnected,
     address,
+    config,
     fetchStatus,
     start,
     stop,
     startListening,
     stopListening,
     cleanup,
+    loadConfig,
+    saveConfig,
+    initProjectEventListener,
   }
 }
