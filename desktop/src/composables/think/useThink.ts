@@ -1,9 +1,10 @@
 import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
-import type { DecisionLog, ThinkConfig, ThinkStatus } from '../types'
-import { useProjectEvents, type ProjectEvent } from './useProjectEvents'
-import { useProject } from './useProject'
+import type { DecisionLog, ThinkConfig, ThinkStatus } from '../../types'
+import { useProjectEvents, type ProjectEvent } from '../useProjectEvents'
+import { useProject } from '../useProject'
+import { useLog } from '../useLog'
 
 const isThinking = ref(false)
 const decisionLogs = ref<DecisionLog[]>([])
@@ -16,6 +17,8 @@ let isListeningActive = false
 let unsubscribeProject: (() => void) | null = null
 
 export function useThink() {
+  const { addLog } = useLog()
+
   async function start() {
     await invoke('think_start')
     isThinking.value = true
@@ -33,6 +36,7 @@ export function useThink() {
     try {
       const cfg = await invoke<ThinkConfig>('think_load_config', { path })
       config.value = cfg
+      addLog(`已加载 think 配置: ${path}`, 'success', 'think')
       return cfg
     } catch {
       // 配置文件不存在时创建默认配置
@@ -42,7 +46,7 @@ export function useThink() {
       }
       await invoke('think_save_config', { path, config: defaultConfig })
       config.value = defaultConfig
-      console.warn(`已创建默认 think 配置文件: ${path}`)
+      addLog(`已创建默认 think 配置文件: ${path}`, 'info', 'think')
       return defaultConfig
     }
   }

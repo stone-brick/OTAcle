@@ -50,7 +50,6 @@ pub fn observe_start(
     )?;
 
     // 更新全局 PUB 状态
-    communication::state::set_pub_running(Some(running.clone()))?;
     communication::state::set_pub_state_arc(pub_state)?;
 
     // Create session stats
@@ -128,7 +127,6 @@ pub fn observe_stop() -> Result<(), String> {
     }
 
     // 清空全局 PUB 状态
-    let _ = communication::state::set_pub_running(None);
     let _ = communication::state::clear_pub_state_arc();
 
     // 锁在这里自动释放

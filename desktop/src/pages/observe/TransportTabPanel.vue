@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, inject, onMounted, computed, type Ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
-import { useObserve } from '../../composables/useObserve'
+import { useObserve } from '../../composables/observe/useObserve'
 import { useProject } from '../../composables/useProject'
 import { useLog } from '../../composables/useLog'
 import { useDialog } from '../../composables/useDialog'

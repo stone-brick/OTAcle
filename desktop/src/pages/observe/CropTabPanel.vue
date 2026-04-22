@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useObserve } from '../../composables/useObserve'
+import { useObserve } from '../../composables/observe/useObserve'
 import { useProject } from '../../composables/useProject'
 import type { CropRegion } from '../../types'
 import CropRegionList from '@/components/observe/CropRegionList.vue'

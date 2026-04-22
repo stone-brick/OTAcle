@@ -26,7 +26,7 @@ pub fn comm_start_pull(app: tauri::AppHandle) -> Result<(), String> {
     }
 
     // 创建新的 PULL 状态
-    let pull_state = PullState::new(addr.clone());
+    let pull_state = PullState::new();
     let running = pull_state.running.clone();
     let running_for_thread = running.clone();
 
@@ -40,20 +40,22 @@ pub fn comm_start_pull(app: tauri::AppHandle) -> Result<(), String> {
     let puller = Puller::new(&addr)?;
 
     // 在独立线程中开始监听
-    puller.start(running_for_thread, move |cmd: Command| {
-        let default_backend =
-            act::config::get_default_backend().unwrap_or(act::types::InputBackend::Win32);
+    let _handle = puller.start(running_for_thread, move |data: String| {
+        if let Ok(cmd) = serde_json::from_str::<Command>(&data) {
+            let default_backend =
+                act::config::get_default_backend().unwrap_or(act::types::InputBackend::Win32);
 
-        let result = act::executor::execute_actions(cmd.execute, cmd.params, default_backend);
+            let result = act::executor::execute_actions(cmd.execute, cmd.params, default_backend);
 
-        match result {
-            Ok(()) => {
-                let msg = "[COMM] Actions executed successfully".to_string();
-                let _ = app_for_callback.emit("comm:log", msg);
-            }
-            Err(e) => {
-                let msg = format!("[COMM] Error: {}", e);
-                let _ = app_for_callback.emit("comm:error", msg);
+            match result {
+                Ok(()) => {
+                    let msg = "[COMM] Actions executed successfully".to_string();
+                    let _ = app_for_callback.emit("comm:log", msg);
+                }
+                Err(e) => {
+                    let msg = format!("[COMM] Error: {}", e);
+                    let _ = app_for_callback.emit("comm:error", msg);
+                }
             }
         }
     })?;

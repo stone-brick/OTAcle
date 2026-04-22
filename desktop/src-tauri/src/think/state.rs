@@ -3,7 +3,8 @@
 use super::types::{DecisionLog, ThinkConfig};
 use lazy_static::lazy_static;
 use std::sync::atomic::{AtomicBool, AtomicU64};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::Instant;
 
 lazy_static! {
@@ -13,12 +14,28 @@ lazy_static! {
     /// Think 模块配置
     pub static ref THINK_CONFIG: Mutex<Option<ThinkConfig>> = Mutex::new(None);
 
-    /// Think PULL 运行标志
-    pub static ref THINK_PULL_RUNNING: Mutex<Option<Arc<AtomicBool>>> = Mutex::new(None);
+    /// 运行启动时间
+    pub static ref UPTIME_START: Mutex<Option<Instant>> = Mutex::new(None);
+
+    /// 收到的消息计数
+    pub static ref RECEIVED_COUNT: AtomicU64 = AtomicU64::new(0);
 }
 
-/// 收到的消息计数
-pub static RECEIVED_COUNT: AtomicU64 = AtomicU64::new(0);
+/// PULL 状态（地址和运行标志）
+#[derive(Clone)]
+pub struct PullState {
+    pub running: Arc<AtomicBool>,
+}
 
-/// 运行启动时间
-pub static UPTIME_START: Mutex<Option<Instant>> = Mutex::new(None);
+impl PullState {
+    pub fn new() -> Self {
+        Self {
+            running: Arc::new(AtomicBool::new(false)),
+        }
+    }
+}
+
+lazy_static! {
+    /// Think PULL 运行时状态
+    pub static ref PULL_STATE: Mutex<Option<PullState>> = Mutex::new(None);
+}

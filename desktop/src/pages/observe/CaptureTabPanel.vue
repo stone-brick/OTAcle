@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, onMounted } from 'vue'
-import { useObserve } from '../../composables/useObserve'
+import { useObserve } from '../../composables/observe/useObserve'
 import { useWindows } from '../../composables/useWindows'
 import { useDialog } from '../../composables/useDialog'
 import BaseButton from '@/components/ui/BaseButton.vue'

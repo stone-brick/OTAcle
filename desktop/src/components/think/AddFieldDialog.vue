@@ -55,7 +55,7 @@ function resetForm() {
       <div class="dialog-panel">
         <div class="dialog-header">
           <h3 class="text-base font-semibold">
-            添加图表字段
+            添加图表
           </h3>
           <button
             class="p-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700"
@@ -104,16 +104,16 @@ function resetForm() {
         </div>
 
         <div class="dialog-footer">
-          <BaseButton @click="handleCancel">
-            取消
-          </BaseButton>
           <BaseButton
+            label="取消"
+            @click="handleCancel"
+          />
+          <BaseButton
+            label="添加"
             variant="primary"
             :disabled="!isValid"
             @click="handleConfirm"
-          >
-            添加
-          </BaseButton>
+          />
         </div>
       </div>
     </div>
@@ -124,7 +124,7 @@ function resetForm() {
 .dialog-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--color-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -132,11 +132,11 @@ function resetForm() {
 }
 
 .dialog-panel {
-  background: var(--color-base-100, white);
+  background: var(--color-surface);
   border-radius: 12px;
   width: 400px;
   max-width: 90vw;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 20px 40px var(--color-shadow);
 }
 
 .dialog-header {
@@ -144,7 +144,7 @@ function resetForm() {
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--color-base-300, #e5e7eb);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .dialog-body {
@@ -159,7 +159,7 @@ function resetForm() {
   justify-content: flex-end;
   gap: 8px;
   padding: 16px 20px;
-  border-top: 1px solid var(--color-base-300, #e5e7eb);
+  border-top: 1px solid var(--color-border-light);
 }
 
 .form-group {
@@ -171,12 +171,12 @@ function resetForm() {
 .form-label {
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-text, #374151);
+  color: var(--color-text);
 }
 
 .form-hint {
   font-size: 11px;
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-muted);
   margin: 0;
 }
 
@@ -188,9 +188,9 @@ function resetForm() {
 
 .chart-type-btn {
   padding: 8px 12px;
-  border: 1px solid var(--color-base-300, #d1d5db);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: var(--color-base-100, white);
+  background: var(--color-surface);
   font-size: 13px;
   text-transform: capitalize;
   cursor: pointer;
@@ -198,12 +198,12 @@ function resetForm() {
 }
 
 .chart-type-btn:hover {
-  border-color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary);
 }
 
 .chart-type-btn.active {
-  background: var(--color-primary, #3b82f6);
+  background: var(--color-primary);
   color: white;
-  border-color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary);
 }
 </style>

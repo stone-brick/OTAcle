@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { inject, onMounted, onUnmounted, provide, computed, type Ref } from 'vue'
-import { useObserve } from '../../composables/useObserve'
+import { useObserve } from '../../composables/observe/useObserve'
 import { useObserveCanvas } from '../../composables/useObserveCanvas'
 
 const { startListening, stopListening, fullPreviewFrame, config } = useObserve()
@@ -35,7 +35,7 @@ onUnmounted(() => {
     <!-- 左侧占位，由父级 canvas-wrapper 覆盖 -->
 
     <!-- 插槽：右侧配置面板 -->
-    <div class="w-72 flex flex-coly flex-shrink-0 border-l border-gray-100 dark:border-slate-800 overflow-y-auto">
+    <div class="w-72 flex flex-col flex-shrink-0 border-l border-gray-100 dark:border-slate-800 overflow-y-auto">
       <slot />
     </div>
   </div>

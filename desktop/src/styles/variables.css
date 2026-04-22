@@ -43,6 +43,10 @@
   --scrollbar-width: 6px;
   --scrollbar-radius: 3px;
 
+  /* Overlay & Shadow */
+  --color-overlay: rgba(0, 0, 0, 0.5);
+  --color-shadow: rgba(0, 0, 0, 0.2);
+
   /* Action type colors */
   --color-action-key: #3b82f6;
   --color-action-key_sequence: #8b5cf6;
@@ -74,4 +78,7 @@
   --color-success: #4caf50;
   --color-warning: #ff9800;
   --color-error: #f44336;
+
+  --color-overlay: rgba(0, 0, 0, 0.3);
+  --color-shadow: rgba(0, 0, 0, 0.1);
 }

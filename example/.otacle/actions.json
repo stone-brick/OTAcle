@@ -1,4 +1,12 @@
 {
-  "default_backend": "win32",
-  "actions": []
+  "default_backend": "enigo",
+  "actions": [
+    {
+      "name": null,
+      "type": "key",
+      "key": "space",
+      "hold_time_ms": 5,
+      "backend": null
+    }
+  ]
 }

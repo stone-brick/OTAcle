@@ -45,12 +45,6 @@ pub fn validate_config(config: &ObserveConfig) -> Result<(), String> {
     Ok(())
 }
 
-/// 更新全局配置（不保存到文件）
-pub fn update_config(config: ObserveConfig) -> Result<(), String> {
-    validate_config(&config)?;
-    state::set_config(config)
-}
-
 /// 添加裁剪区域到当前配置
 pub fn add_crop_region(region: CropRegion) -> Result<(), String> {
     let config = state::get_config()?;

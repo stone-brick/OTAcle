@@ -4,5 +4,18 @@
     "target_width": 640,
     "target_height": 480
   },
-  "crop_regions": []
+  "crop_regions": [
+    {
+      "x": 200,
+      "y": 300,
+      "w": 100,
+      "h": 100
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "w": 100,
+      "h": 100
+    }
+  ]
 }

@@ -53,7 +53,7 @@ provide('globalCanvasRef', globalCanvasRef)
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f3f4f6;
+  background: var(--color-background);
   padding: 1rem;
   min-width: 0;
 }

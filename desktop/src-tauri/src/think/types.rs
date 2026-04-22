@@ -28,11 +28,7 @@ impl Default for ThinkConfig {
     fn default() -> Self {
         Self {
             max_data_points: default_max_data_points(),
-            display_fields: vec![DisplayField {
-                name: "step".to_string(),
-                title: "训练步数".to_string(),
-                chart_type: ChartType::Line,
-            }],
+            display_fields: vec![],
         }
     }
 }

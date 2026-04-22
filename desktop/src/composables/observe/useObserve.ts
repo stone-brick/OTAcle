@@ -1,10 +1,10 @@
 import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
-import type { ObserveConfig, CropRegion, FrameMessage, FullFrameMessage, ObserveStatus, SessionStatus, ObserveGlobalStats } from '../types'
-import { useLog } from './useLog'
-import { useProjectEvents, type ProjectEvent } from './useProjectEvents'
-import { useProject } from './useProject'
+import type { ObserveConfig, CropRegion, FrameMessage, FullFrameMessage, ObserveStatus, SessionStatus, ObserveGlobalStats } from '../../types'
+import { useLog } from '../useLog'
+import { useProjectEvents, type ProjectEvent } from '../useProjectEvents'
+import { useProject } from '../useProject'
 
 // 状态
 const isObserving = ref(false)

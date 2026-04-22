@@ -121,14 +121,6 @@ pub fn get_observe_pub_address() -> Result<String, String> {
     Ok(config.observe_pub_address)
 }
 
-/// 设置 Think PULL 地址
-pub fn set_think_pull_address(addr: String) -> Result<(), String> {
-    let mut config = state::get_config()?;
-    config.think_pull_address = addr;
-    validate_config(&config)?;
-    state::set_config(config)
-}
-
 /// 获取 Think PULL 地址
 pub fn get_think_pull_address() -> Result<String, String> {
     let config = state::get_config()?;

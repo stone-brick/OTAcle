@@ -17,9 +17,9 @@ interface TabItem {
 }
 
 const tabs: TabItem[] = [
+  { id: 'monitor', label: '状态监控', icon: mdiAccessPoint },
   { id: 'config', label: '动作配置', icon: mdiCog },
   { id: 'windows', label: '窗口选择', icon: mdiWindowMaximize },
-  { id: 'monitor', label: '状态监控', icon: mdiAccessPoint },
 ]
 
 function selectTab(tab: TabItem) {

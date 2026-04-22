@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import ObservePage from '../pages/observe/ObservePage.vue'
-import ThinkPage from '../pages/ThinkPage.vue'
+import ThinkPage from '../pages/think/ThinkPage.vue'
 import ActPage from '../pages/act/ActPage.vue'
 
 const router = createRouter({

@@ -8,8 +8,6 @@ use std::sync::Arc;
 use std::thread;
 use zmq::{Context, Socket};
 
-use crate::communication::types::Command;
-
 /// PULL 接收者
 pub struct Puller {
     socket: Socket,
@@ -32,10 +30,10 @@ impl Puller {
 
     /// 启动监听循环
     /// running: 原子布尔标志，用于控制线程停止
-    /// on_message: 收到消息时的回调
-    pub fn start<F>(self, running: Arc<AtomicBool>, on_message: F) -> Result<(), String>
+    /// on_message: 收到消息时的回调，接收原始 JSON 字符串
+    pub fn start<F>(self, running: Arc<AtomicBool>, on_message: F) -> Result<thread::JoinHandle<()>, String>
     where
-        F: Fn(Command) + Send + 'static,
+        F: Fn(String) + Send + 'static,
     {
         running.store(true, Ordering::SeqCst);
         info!("PULL listener started");
@@ -43,15 +41,13 @@ impl Puller {
         let socket = self.socket;
         let running_clone = running.clone();
 
-        thread::spawn(move || {
+        let handle = thread::spawn(move || {
             while running_clone.load(Ordering::SeqCst) {
                 // 尝试接收消息
                 match socket.recv_string(zmq::DONTWAIT) {
                     Ok(Ok(data)) => {
-                        if let Ok(cmd) = serde_json::from_str::<Command>(&data) {
-                            debug!("PULL received command: {} actions", cmd.execute.len());
-                            on_message(cmd);
-                        }
+                        debug!("PULL received message: {} bytes", data.len());
+                        on_message(data);
                     }
                     Ok(Err(_)) => {
                         // 空消息，忽略
@@ -68,6 +64,6 @@ impl Puller {
             info!("PULL listener stopped");
         });
 
-        Ok(())
+        Ok(handle)
     }
 }

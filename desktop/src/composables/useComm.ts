@@ -5,13 +5,13 @@ import { useLog } from './useLog'
 import { useProjectEvents, type ProjectEvent } from './useProjectEvents'
 import { useProject } from './useProject'
 
-export interface CommConfig {
+interface CommConfig {
   act_pull_address: string
   observe_pub_address: string
   think_pull_address: string
 }
 
-export interface CommStatus {
+interface CommStatus {
   pull_running: boolean
   pub_running: boolean
   pull_address: string

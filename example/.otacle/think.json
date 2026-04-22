@@ -1,6 +1,5 @@
 {
-  "pull_address": "tcp://127.0.0.1:5557",
-  "max_data_points": 1000,
+  "max_data_points": 500,
   "display_fields": [
     {
       "name": "step",

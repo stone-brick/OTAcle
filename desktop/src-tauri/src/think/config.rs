@@ -4,7 +4,7 @@ use std::fs;
 use std::sync::atomic::Ordering;
 use std::time::Instant;
 
-use super::state::{DECISION_LOGS, RECEIVED_COUNT, THINK_CONFIG, THINK_PULL_RUNNING, UPTIME_START};
+use super::state::{DECISION_LOGS, RECEIVED_COUNT, PULL_STATE, THINK_CONFIG, UPTIME_START};
 use super::types::{DecisionLog, ThinkConfig, ThinkStatus};
 
 /// 加载配置文件
@@ -79,8 +79,11 @@ pub fn get_status() -> ThinkStatus {
         .map(|l| l.len())
         .unwrap_or(0) as u64;
 
-    let running = match THINK_PULL_RUNNING.lock() {
-        Ok(guard) => guard.as_ref().map(|a| a.load(Ordering::SeqCst)).unwrap_or(false),
+    let running = match PULL_STATE.lock() {
+        Ok(guard) => guard
+            .as_ref()
+            .map(|s| s.running.load(Ordering::SeqCst))
+            .unwrap_or(false),
         Err(_) => false,
     };
 
@@ -103,9 +106,6 @@ pub fn get_status() -> ThinkStatus {
 fn validate_config(config: &ThinkConfig) -> Result<(), String> {
     if config.max_data_points == 0 {
         return Err("max_data_points must be greater than 0".to_string());
-    }
-    if config.display_fields.is_empty() {
-        return Err("display_fields must have at least one field".to_string());
     }
     let mut names = std::collections::HashSet::new();
     for field in &config.display_fields {

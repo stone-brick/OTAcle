@@ -5,7 +5,7 @@ import BaseButton from '../ui/BaseButton.vue'
 import CardBox from '../ui/CardBox.vue'
 import CardBoxComponentBody from '../ui/CardBoxComponentBody.vue'
 import MetricsChart from './MetricsChart.vue'
-import type { DecisionLog, DisplayField, ThinkConfig } from '../../types'
+import type { DecisionLog, ThinkConfig } from '../../types'
 
 defineProps<{
   config: ThinkConfig
@@ -13,9 +13,9 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  addField: [field: DisplayField]
-  deleteField: [name: string]
-  loadDemo: []
+  (e: 'addField'): void
+  (e: 'deleteField', name: string): void
+  (e: 'loadDemo'): void
 }>()
 </script>
 
@@ -112,8 +112,8 @@ const emit = defineEmits<{
   z-index: 10;
   padding: 4px;
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.5);
-  color: white;
+  background: var(--color-overlay);
+  color: var(--color-text);
   border: none;
   cursor: pointer;
   opacity: 0;
@@ -125,6 +125,6 @@ const emit = defineEmits<{
 }
 
 .delete-btn:hover {
-  background: rgba(239, 68, 68, 0.8);
+  background: var(--color-error);
 }
 </style>

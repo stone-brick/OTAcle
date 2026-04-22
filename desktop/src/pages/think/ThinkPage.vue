@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
-import ThinkTabNav from '../components/nav/ThinkTabNav.vue'
-import StatusTabPanel from '../components/think/StatusTabPanel.vue'
-import ConfigTabPanel from '../components/think/ConfigTabPanel.vue'
-import AddFieldDialog from '../components/think/AddFieldDialog.vue'
-import { useThink } from '../composables/useThink'
-import type { DisplayField, ThinkConfig } from '../types'
+import ThinkTabNav from '../../components/nav/ThinkTabNav.vue'
+import StatusTabPanel from '../../components/think/StatusTabPanel.vue'
+import ConfigTabPanel from '../../components/think/ConfigTabPanel.vue'
+import AddFieldDialog from '../../components/think/AddFieldDialog.vue'
+import { useThink } from '../../composables/think/useThink'
+import type { DisplayField, ThinkConfig } from '../../types'
 
 const {
   isThinking,

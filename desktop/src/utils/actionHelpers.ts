@@ -52,10 +52,3 @@ export function formatActionDetail(item: ActionItem | undefined): string {
   }
 }
 
-/**
- * 获取动作类型对应的 CSS 类名
- */
-export function getTypeClass(item: ActionItem | undefined): string {
-  if (!item) return 'unknown';
-  return item.type;
-}

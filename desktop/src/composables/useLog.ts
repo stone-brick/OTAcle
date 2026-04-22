@@ -72,18 +72,3 @@ export function useLog() {
   return logService;
 }
 
-// ============================================================================
-// 命名导出 - 可选的直接访问方式
-// ============================================================================
-
-/**
- * LogService - 无需 composable 包装的直接单例访问。
- *
- * 在不需要 composable 模式时使用 useLog() 的替代方案。
- * 提供与 useLog() 相同的接口。
- *
- * @example
- * import { LogService } from '@/composables/useLog'
- * LogService.addLog('直接调用', 'info')
- */
-export const LogService = logService;

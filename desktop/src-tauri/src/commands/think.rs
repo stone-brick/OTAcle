@@ -3,25 +3,40 @@
 use std::sync::atomic::Ordering;
 
 use crate::communication::config as comm_config;
+use crate::communication::Puller;
 use crate::think;
-use crate::think::types::ThinkConfig;
+use crate::think::types::{DecisionLog, ThinkConfig};
+use crate::think::PullState;
+use tauri::Emitter;
 
 #[tauri::command]
 pub fn think_start(app: tauri::AppHandle) -> Result<(), String> {
-    let mut running = think::THINK_PULL_RUNNING
+    let mut pull_state = think::PULL_STATE
         .lock()
         .map_err(|e| e.to_string())?;
 
-    if running.is_some() {
+    if pull_state.is_some() {
         return Err("Think module is already running".to_string());
     }
 
-    let addr = &comm_config::get_think_pull_address()?;
-    let puller = think::DecisionPuller::new(addr)?;
+    let addr = comm_config::get_think_pull_address()?;
+    let puller = Puller::new(&addr)?;
     let running_flag = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let app_for_callback = app.clone();
 
-    let handle = puller.start(running_flag.clone(), app)?;
-    *running = Some(running_flag);
+    let handle = puller.start(running_flag.clone(), move |data: String| {
+        if let Ok(log) = serde_json::from_str::<DecisionLog>(&data) {
+            if let Err(e) = think::config::add_log(log.clone()) {
+                log::error!("Failed to add decision log: {}", e);
+            }
+            let _ = app_for_callback.emit("think:decision_log", &log);
+        }
+    })?;
+
+    // 记录启动时间（用于 uptime 计算）
+    think::config::set_uptime_start();
+
+    *pull_state = Some(PullState::new());
 
     // 注意：handle 被忽略，线程在后台运行
     let _ = handle;
@@ -31,15 +46,15 @@ pub fn think_start(app: tauri::AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 pub fn think_stop() -> Result<(), String> {
-    let mut running = think::THINK_PULL_RUNNING
+    let mut pull_state = think::PULL_STATE
         .lock()
         .map_err(|e| e.to_string())?;
 
-    if let Some(flag) = running.as_ref() {
-        flag.store(false, Ordering::SeqCst);
+    if let Some(state) = pull_state.as_ref() {
+        state.running.store(false, Ordering::SeqCst);
     }
 
-    *running = None;
+    *pull_state = None;
 
     think::config::reset_state();
 

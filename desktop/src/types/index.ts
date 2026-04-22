@@ -102,17 +102,9 @@ export type ActionItem =
   | DelayActionItem
   | TextActionItem;
 
-// ActionItem 类型用于编辑器（与 ActionItem 相同 - 保持向后兼容）
-export type ActionType = ActionItem['type'];
-
-// 动作配置数据（完整配置结构）
-export interface ActionConfigData {
-  default_backend: InputBackend;
-  actions: ActionItem[];
-}
 
 // 日志来源
-export type LogSource = 'system' | 'comm' | 'observe' | 'action' | 'window';
+export type LogSource = 'system' | 'comm' | 'observe' | 'action' | 'window' | 'think';
 
 // 日志条目
 export interface LogEntry {
@@ -122,8 +114,6 @@ export interface LogEntry {
   source: LogSource;
 }
 
-// 应用状态
-export type AppStatus = 'ready' | 'sending' | 'error';
 
 // 窗口搜索模式
 export type SearchMode = 'title' | 'title_contains' | 'class' | 'pid' | 'exe' | 'hwnd';

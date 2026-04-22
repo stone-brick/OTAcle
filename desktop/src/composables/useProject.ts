@@ -4,12 +4,6 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { useLog } from './useLog';
 import { useProjectEvents } from './useProjectEvents';
 
-export interface ProjectInfo {
-  path: string;
-  name: string;
-  description?: string;
-}
-
 export interface RecentProject {
   path: string;
   name: string;
@@ -17,7 +11,13 @@ export interface RecentProject {
   pinned: boolean;
 }
 
-export interface TemplateConfig {
+interface ProjectInfo {
+  path: string;
+  name: string;
+  description?: string;
+}
+
+interface TemplateConfig {
   name: string;
   description: string;
 }
