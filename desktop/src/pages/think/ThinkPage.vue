@@ -5,12 +5,18 @@ import StatusTabPanel from '../../components/think/StatusTabPanel.vue'
 import ConfigTabPanel from '../../components/think/ConfigTabPanel.vue'
 import AddFieldDialog from '../../components/think/AddFieldDialog.vue'
 import { useThink } from '../../composables/think/useThink'
+import { useProject } from '../../composables/useProject'
+import { useLog } from '../../composables/useLog'
 import type { DisplayField, ThinkConfig } from '../../types'
 
 const {
   decisionLogs,
   config,
+  saveConfig,
 } = useThink()
+
+const { getProjectThinkConfigPath } = useProject()
+const { addLog } = useLog()
 
 const activeTab = ref<'status' | 'config'>('status')
 const showAddFieldDialog = ref(false)
@@ -42,6 +48,18 @@ function handleDeleteField(name: string) {
     config.value.display_fields.splice(index, 1)
   }
 }
+
+async function handleSaveConfig() {
+  try {
+    const path = await getProjectThinkConfigPath()
+    if (path) {
+      await saveConfig(path)
+      addLog('Think 配置已保存', 'success', 'think')
+    }
+  } catch {
+    addLog('保存 Think 配置失败', 'error', 'think')
+  }
+}
 </script>
 
 <template>
@@ -60,6 +78,7 @@ function handleDeleteField(name: string) {
         @add-field="handleAddField"
         @delete-field="handleDeleteField"
         @load-demo="handleLoadDemoConfig"
+        @save-config="handleSaveConfig"
       />
     </div>
 

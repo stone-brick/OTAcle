@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "otacle"
+version = "0.1.0"
+description = "OTAcle Python SDK for reinforcement learning control"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [
+    { name = "OTAcle Project" }
+]
+keywords = ["otacle", "reinforcement-learning", "zmq", "automation"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = ["pyzmq"]
+
+[project.urls]
+Homepage = "https://github.com/yourname/otacle"
+
+[tool.setuptools.packages.find]
+where = ["src"]

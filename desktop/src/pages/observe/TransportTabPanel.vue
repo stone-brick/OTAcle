@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, inject, computed, onMounted, type Ref } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
 import { useObserve } from '../../composables/observe/useObserve'
 import { useComm } from '../../composables/useComm'
 import { useProject } from '../../composables/useProject'
@@ -22,7 +21,7 @@ const {
   formatBytes,
 } = useObserve()
 
-const { config: commConfig } = useComm()
+const { config: commConfig, setPubAddress } = useComm()
 const { isProjectLoaded } = useProject()
 const { addLog } = useLog()
 const { prompt } = useDialog()
@@ -38,7 +37,7 @@ const actualFps = inject<Ref<number>>('actualFps', ref(0))
 
 async function savePubAddress() {
   try {
-    await invoke('comm_set_pub_address', { addr: commConfig.value.observe_pub_address })
+    await setPubAddress(commConfig.value.observe_pub_address)
   } catch (e) {
     addLog('保存发布地址失败', 'error', 'comm')
     throw e
@@ -74,7 +73,7 @@ async function handleSaveAs() {
 onMounted(async () => {
   // 初始化时同步 Rust 后端的地址
   try {
-    await invoke('comm_set_pub_address', { addr: commConfig.value.observe_pub_address })
+    await setPubAddress(commConfig.value.observe_pub_address)
   } catch {
     // 静默处理
   }

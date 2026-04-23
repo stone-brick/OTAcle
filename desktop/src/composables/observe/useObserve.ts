@@ -1,5 +1,4 @@
 import { ref } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import type { ObserveConfig, CropRegion, FrameMessage, FullFrameMessage, ObserveStatus, SessionStatus, ObserveGlobalStats } from '../../types'
 import { useLog } from '../useLog'
@@ -80,11 +79,9 @@ export function useObserve() {
 
   // 捕获单帧预览
   async function capturePreview(windowId: string): Promise<void> {
+    const comm = useComm();
     try {
-      const frame = await invoke<FrameMessage>('observe_capture_preview', {
-        window: windowId,
-        config: config.value,
-      })
+      const frame = await comm.observeCapturePreview(windowId, config.value) as FrameMessage;
       previewFrame.value = frame
       addLog(`预览已捕获: ${frame.width}x${frame.height}`, 'success', 'observe')
     } catch (e) {
@@ -94,11 +91,9 @@ export function useObserve() {
 
   // 捕获完整帧预览（用于前端展示完整窗口 + ROI 遮罩）
   async function captureFullFrame(windowId: string): Promise<void> {
+    const comm = useComm();
     try {
-      const frame = await invoke<FullFrameMessage>('observe_capture_full_frame', {
-        window: windowId,
-        config: config.value,
-      })
+      const frame = await comm.observeCaptureFullFrame(windowId, config.value) as FullFrameMessage;
       fullPreviewFrame.value = frame
       addLog(`完整帧预览已捕获: ${frame.width}x${frame.height}`, 'success', 'observe')
     } catch (e) {
@@ -140,8 +135,9 @@ export function useObserve() {
 
   // 获取观察状态
   async function fetchStatus(): Promise<ObserveStatus | null> {
+    const comm = useComm();
     try {
-      const status = await invoke<ObserveStatus>('observe_get_status')
+      const status = await comm.observeGetStatus() as ObserveStatus;
       fullStatus.value = status
       // 兼容旧逻辑：检查是否有活跃会话
       isObserving.value = Object.values(status.sessions).some(s => s.running)
@@ -164,25 +160,27 @@ export function useObserve() {
 
   // 加载配置
   async function loadConfig(path: string): Promise<void> {
+    const comm = useComm();
     try {
-      const loaded = await invoke<ObserveConfig>('observe_load_config', { path })
+      const loaded = await comm.observeLoadConfig(path) as ObserveConfig;
       config.value = loaded
-      addLog(`已加载观察配置: ${path}`, 'success', 'observe')
+      addLog(`Observe 配置已加载: ${path}`, 'success', 'observe')
     } catch {
       // 配置文件不存在时创建默认配置
       config.value = {
         capture: { frame_rate: 3, target_width: 640, target_height: 480 },
         crop_regions: []
       }
-      await invoke('observe_save_config', { path, config: config.value })
+      await comm.observeSaveConfig(path, config.value)
       addLog(`已创建默认观察配置文件: ${path}`, 'info', 'observe')
     }
   }
 
   // 保存配置
   async function saveConfig(path: string): Promise<void> {
+    const comm = useComm();
     try {
-      await invoke('observe_save_config', { path, config: config.value })
+      await comm.observeSaveConfig(path, config.value)
       addLog(`已保存观察配置: ${path}`, 'success', 'observe')
     } catch (e) {
       addLog(`保存观察配置失败: ${e}`, 'error', 'observe')

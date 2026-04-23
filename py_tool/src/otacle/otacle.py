@@ -45,6 +45,85 @@ DEFAULT_ACTION_COUNT = 10  # 默认动作数组长度
 
 
 # =============================================================================
+# 配置管理
+# =============================================================================
+
+import os
+from pathlib import Path
+
+DEFAULT_OTACLE_DIR = ".otacle"
+DEFAULT_COMM_CONFIG = "comm.json"
+
+
+def find_project_root(start_path: Optional[str] = None) -> Optional[Path]:
+    """
+    向上搜索项目根目录（包含 .otacle 目录）
+
+    Args:
+        start_path: 起始搜索路径，默认为当前工作目录
+
+    Returns:
+        项目根目录 Path 或 None
+    """
+    cwd = Path(start_path) if start_path else Path.cwd()
+    current = cwd.resolve()
+
+    # 向上搜索最多 10 层
+    for _ in range(10):
+        if (current / DEFAULT_OTACLE_DIR).is_dir():
+            return current
+        parent = current.parent
+        if parent == current:
+            break
+        current = parent
+    return None
+
+
+def load_comm_config(project_root: Optional[str] = None) -> dict:
+    """
+    从 .otacle/comm.json 加载通信配置
+
+    Args:
+        project_root: 项目根目录，默认为自动搜索
+
+    Returns:
+        通信配置字典，包含:
+        - act_pull_address: Act 模块 PULL 地址
+        - observe_pub_address: Observe 模块 PUB 地址
+        - think_pull_address: Think 模块 PULL 地址
+        若文件不存在或读取失败，返回空字典
+    """
+    root = Path(project_root) if project_root else find_project_root()
+    if not root:
+        return {}
+
+    config_path = root / DEFAULT_OTACLE_DIR / DEFAULT_COMM_CONFIG
+    if not config_path.exists():
+        return {}
+
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError):
+        return {}
+
+
+def get_default_addresses() -> tuple[str, str, str]:
+    """
+    获取默认通信地址，优先从配置文件读取
+
+    Returns:
+        (act_addr, observe_addr, think_addr) 元组
+    """
+    config = load_comm_config()
+    return (
+        config.get("act_pull_address", ZMQ_ACT_ADDR),
+        config.get("observe_pub_address", ZMQ_OBSERVE_ADDR),
+        config.get("think_pull_address", ZMQ_THINK_ADDR),
+    )
+
+
+# =============================================================================
 # 数据类
 # =============================================================================
 
@@ -130,9 +209,11 @@ class OTAcleCommand:
 
         Args:
             action_count: 动作数组长度，默认为 10
-            address: ZMQ 地址，默认为 tcp://127.0.0.1:5555
+            address: ZMQ 地址，默认为从 .otacle/comm.json 读取或硬编码默认值
         """
-        self._address = address or ZMQ_ACT_ADDR
+        if address is None:
+            address = get_default_addresses()[0]
+        self._address = address
         self._execute: list[bool] = [False] * action_count
         self._params: dict = {}
         self._ctx: Optional[zmq.Context] = None
@@ -266,7 +347,7 @@ class OTAcleCommand:
 def send_command(
     execute_indices: list[int],
     params: Optional[dict] = None,
-    address: str = ZMQ_ACT_ADDR,
+    address: Optional[str] = None,
 ) -> None:
     """
     便捷函数：发送简单命令
@@ -274,7 +355,7 @@ def send_command(
     Args:
         execute_indices: 要执行的动作索引列表
         params: 动态参数字典，键名对应 variables 中的 param_name
-        address: ZMQ 地址
+        address: ZMQ 地址，默认为从配置文件读取
     """
     cmd = OTAcleCommand(address=address)
     cmd.execute(execute_indices)
@@ -296,9 +377,11 @@ class OTAcleObserver:
         初始化图像帧接收器
 
         Args:
-            address: ZMQ SUB 地址，默认为 tcp://127.0.0.1:5556
+            address: ZMQ SUB 地址，默认为从 .otacle/comm.json 读取或硬编码默认值
         """
-        self._address = address or ZMQ_OBSERVE_ADDR
+        if address is None:
+            address = get_default_addresses()[1]
+        self._address = address
         self._ctx: Optional[zmq.Context] = None
         self._sock: Optional[zmq.Socket] = None
         self._running = False
@@ -462,9 +545,11 @@ class OTAcleThinkSender:
         初始化决策日志发送器
 
         Args:
-            address: ZMQ PUSH 地址，默认为 tcp://127.0.0.1:5557
+            address: ZMQ PUSH 地址，默认为从 .otacle/comm.json 读取或硬编码默认值
         """
-        self._address = address or ZMQ_THINK_ADDR
+        if address is None:
+            address = get_default_addresses()[2]
+        self._address = address
         self._ctx: Optional[zmq.Context] = None
         self._sock: Optional[zmq.Socket] = None
         self._sent_count = 0

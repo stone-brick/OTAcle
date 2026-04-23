@@ -1,11 +1,12 @@
 import { ref } from 'vue';
-import { invoke } from '@tauri-apps/api/core';
 import { useLog } from '../useLog';
+import { useComm } from '../useComm';
 
 const isExecuting = ref(false);
 
 export function useActionExecutor() {
   const { addLog } = useLog();
+  const comm = useComm();
 
   async function executeActionWithParams(
     actionIdx: number,
@@ -13,10 +14,7 @@ export function useActionExecutor() {
   ): Promise<void> {
     isExecuting.value = true;
     try {
-      await invoke('act_execute_action_with_params', {
-        actionIdx,
-        params,
-      });
+      await comm.actExecuteActionWithParams(actionIdx, params);
       addLog(`执行动作 #${actionIdx} 成功`, 'success', 'action');
     } catch (e) {
       addLog(`执行动作 #${actionIdx} 失败: ${e}`, 'error', 'action');
@@ -28,7 +26,7 @@ export function useActionExecutor() {
 
   async function setTargetWindow(window: string | null): Promise<void> {
     try {
-      await invoke('window_set_target', { window });
+      await comm.windowSetTarget(window);
       addLog(`目标窗口已设置为: ${window ?? '(空)'}`, 'success', 'action');
     } catch (e) {
       addLog(`设置目标窗口失败: ${e}`, 'error', 'action');

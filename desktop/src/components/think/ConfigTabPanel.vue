@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { mdiChartLine, mdiPlus, mdiClose } from '@mdi/js'
+import { mdiChartLine, mdiPlus, mdiClose, mdiContentSave } from '@mdi/js'
 import BaseIcon from '../ui/BaseIcon.vue'
 import BaseButton from '../ui/BaseButton.vue'
 import CardBox from '../ui/CardBox.vue'
@@ -16,6 +16,7 @@ const emit = defineEmits<{
   (e: 'addField'): void
   (e: 'deleteField', name: string): void
   (e: 'loadDemo'): void
+  (e: 'saveConfig'): void
 }>()
 </script>
 
@@ -27,6 +28,12 @@ const emit = defineEmits<{
           图表配置 ({{ config.display_fields.length }})
         </span>
         <div class="flex gap-2">
+          <BaseButton
+            :icon="mdiContentSave"
+            color="whiteDark"
+            title="保存配置"
+            @click="emit('saveConfig')"
+          />
           <BaseButton
             :icon="mdiChartLine"
             color="whiteDark"

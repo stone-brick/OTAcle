@@ -13,9 +13,7 @@ Usage:
 import sys
 import os
 
-# 添加 python 目录到路径以便导入 otacle
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "python"))
-
+# 导入 otacle 包（通过 pip install -e py_tool/ 安装）
 from otacle import (
     OTAcleThinkSender,
     DecisionLog,

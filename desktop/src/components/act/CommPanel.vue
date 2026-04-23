@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
 import { useComm } from '../../composables/useComm'
 import { useProject } from '../../composables/useProject'
 import { useLog } from '../../composables/useLog'
@@ -12,13 +11,13 @@ import { mdiPlay, mdiStop, mdiRefresh, mdiContentSave } from '@mdi/js'
 
 const {
   isConnected,
-  address,
   config,
   fetchStatus,
   start,
   stop,
   startListening,
   cleanup,
+  setPullAddress,
 } = useComm()
 
 const { isProjectLoaded } = useProject()
@@ -35,7 +34,7 @@ const inputAddress = computed({
 
 async function savePullAddress() {
   try {
-    await invoke('comm_set_pull_address', { addr: config.value.act_pull_address })
+    await setPullAddress(config.value.act_pull_address)
     addLog('pull_address 已保存', 'info', 'comm')
   } catch {
     addLog('保存 pull_address 失败', 'error', 'comm')
@@ -63,15 +62,10 @@ async function handleStop() {
   <CardBox class="flex flex-col gap-4">
     <!-- Connection Status -->
     <div class="flex items-center gap-6 flex-wrap">
-      <div class="flex flex-col gap-1">
-        <span class="text-xs text-gray-500 uppercase tracking-wide">连接状态</span>
+      <div class="flex flex-col pl-4">
         <span :class="['text-sm font-semibold', isConnected ? 'text-green-500' : 'text-gray-600']">
           {{ isConnected ? '已连接' : '未连接' }}
         </span>
-      </div>
-      <div class="flex flex-col gap-1">
-        <span class="text-xs text-gray-500 uppercase tracking-wide">地址</span>
-        <span class="text-sm font-mono text-gray-600">{{ address || '-' }}</span>
       </div>
       <div class="flex items-center gap-2 ml-auto">
         <FormControl
@@ -112,7 +106,7 @@ async function handleStop() {
 
     <!-- Message Log -->
     <div class="flex flex-col flex-1 overflow-hidden rounded-xl bg-white dark:bg-slate-900/70">
-      <div class="flex justify-between items-center px-4 py-3 border-b border-gray-100 dark:border-slate-800">
+      <div class="px-4 py-3 border-b border-gray-100 dark:border-slate-800">
         <h4 class="m-0 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">
           消息日志
         </h4>

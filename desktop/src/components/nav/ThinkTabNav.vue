@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { mdiBrain, mdiChartLine, mdiCog } from '@mdi/js'
+import { mdiMessageTextOutline, mdiChartLine, mdiCog } from '@mdi/js'
 import BaseIcon from '../ui/BaseIcon.vue'
 
 defineProps<{
@@ -30,7 +30,7 @@ function selectTab(tab: TabItem) {
   <nav class="flex items-center gap-6 px-4 h-12 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800">
     <div class="flex items-center gap-2 pr-4 border-r border-gray-200 dark:border-slate-700">
       <BaseIcon
-        :path="mdiBrain"
+        :path="mdiMessageTextOutline"
         :size="20"
       />
       <span class="text-base font-bold text-blue-500">Think</span>

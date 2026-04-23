@@ -11,7 +11,7 @@ import { useActionHistory } from '../../composables/act/useActionHistory';
 import { useActionExecutor } from '../../composables/act/useActionExecutor';
 import type { ActionItem, InputBackend, SearchMode } from '../../types';
 
-const activeTab = ref<'monitor' | 'config' | 'windows'>('config');
+const activeTab = ref<'monitor' | 'config' | 'windows'>('monitor');
 
 const { isProjectLoaded } = useProject();
 

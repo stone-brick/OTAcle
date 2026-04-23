@@ -1,5 +1,4 @@
 import { ref } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import type { DecisionLog, ThinkConfig, ThinkStatus } from '../../types'
 import { useProjectEvents, type ProjectEvent } from '../useProjectEvents'
@@ -9,7 +8,7 @@ import { useComm } from '../useComm'
 
 const isThinking = ref(false)
 const decisionLogs = ref<DecisionLog[]>([])
-const config = ref<ThinkConfig>({ max_data_points: 500, display_fields: [] })
+const config = ref<ThinkConfig>({ max_data_points: 1000, display_fields: [] })
 const status = ref<ThinkStatus | null>(null)
 
 let unlistenDecisionLog: UnlistenFn | null = null
@@ -19,6 +18,11 @@ let unsubscribeProject: (() => void) | null = null
 
 export function useThink() {
   const { addLog } = useLog()
+
+  async function setThinkPullAddress(addr: string) {
+    const comm = useComm()
+    comm.setThinkPullAddress(addr)
+  }
 
   async function start() {
     const comm = useComm()
@@ -36,18 +40,19 @@ export function useThink() {
   }
 
   async function loadConfig(path: string) {
+    const comm = useComm();
     try {
-      const cfg = await invoke<ThinkConfig>('think_load_config', { path })
+      const cfg = await comm.thinkLoadConfig(path);
       config.value = cfg
-      addLog(`已加载 think 配置: ${path}`, 'success', 'think')
+      addLog(`Think 配置已加载: ${path}`, 'success', 'think')
       return cfg
     } catch {
       // 配置文件不存在时创建默认配置
       const defaultConfig: ThinkConfig = {
-        max_data_points: 500,
+        max_data_points: 1000,
         display_fields: []
       }
-      await invoke('think_save_config', { path, config: defaultConfig })
+      await comm.thinkSaveConfig(path, defaultConfig);
       config.value = defaultConfig
       addLog(`已创建默认 think 配置文件: ${path}`, 'info', 'think')
       return defaultConfig
@@ -55,17 +60,20 @@ export function useThink() {
   }
 
   async function saveConfig(path: string) {
-    await invoke('think_save_config', { path, config: config.value })
+    const comm = useComm();
+    await comm.thinkSaveConfig(path, config.value);
   }
 
   async function getLogs(limit?: number) {
-    const logs = await invoke<DecisionLog[]>('think_get_logs', { limit })
+    const comm = useComm();
+    const logs = await comm.thinkGetLogs(limit);
     decisionLogs.value = logs
     return logs
   }
 
   async function fetchStatus() {
-    status.value = await invoke<ThinkStatus>('think_get_status')
+    const comm = useComm();
+    status.value = await comm.thinkGetStatus() as ThinkStatus;
   }
 
   async function startListening() {
@@ -116,7 +124,7 @@ export function useThink() {
           }
         }
       } else if (event.type === 'closed') {
-        config.value = { max_data_points: 500, display_fields: [] }
+        config.value = { max_data_points: 1000, display_fields: [] }
       }
     })
   }
@@ -128,6 +136,7 @@ export function useThink() {
     status,
     start,
     stop,
+    setThinkPullAddress,
     loadConfig,
     saveConfig,
     getLogs,

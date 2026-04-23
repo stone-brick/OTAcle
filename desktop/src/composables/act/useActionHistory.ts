@@ -1,16 +1,17 @@
 import { ref, computed } from 'vue';
-import { invoke } from '@tauri-apps/api/core';
 import { useLog } from '../useLog';
+import { useComm } from '../useComm';
 
 export function useActionHistory(onMutated?: () => Promise<void>) {
   const { addLog } = useLog();
+  const comm = useComm();
 
   const historyCount = ref({ undo: 0, redo: 0 });
 
   // 从后端刷新历史计数
   async function refreshHistoryCount(): Promise<void> {
     try {
-      const [undo, redo] = await invoke<[number, number]>('act_get_history_status');
+      const [undo, redo] = await comm.actGetHistoryStatus();
       historyCount.value = { undo, redo };
     } catch {
       historyCount.value = { undo: 0, redo: 0 };
@@ -20,7 +21,7 @@ export function useActionHistory(onMutated?: () => Promise<void>) {
   // 撤销 - 恢复之前的状态（调用后端）
   async function undo(): Promise<void> {
     try {
-      await invoke('act_undo');
+      await comm.actUndo();
       await refreshHistoryCount();
       addLog(`撤销 (${historyCount.value.undo} 步可用)`, 'info', 'action');
       await onMutated?.();
@@ -32,7 +33,7 @@ export function useActionHistory(onMutated?: () => Promise<void>) {
   // 重做 - 恢复下一个状态（调用后端）
   async function redo(): Promise<void> {
     try {
-      await invoke('act_redo');
+      await comm.actRedo();
       await refreshHistoryCount();
       addLog(`重做 (${historyCount.value.redo} 步可用)`, 'info', 'action');
       await onMutated?.();

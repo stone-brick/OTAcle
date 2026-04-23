@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue';
-import { invoke } from '@tauri-apps/api/core';
 import type { ActionItem, InputBackend } from '../../types';
 import { useLog } from '../useLog';
+import { useComm } from '../useComm';
 import { useActionHistory } from './useActionHistory';
 import { useProjectEvents, type ProjectEvent } from '../useProjectEvents';
 import { useProject } from '../useProject';
@@ -22,39 +22,38 @@ let unsubscribeProject: (() => void) | null = null;
 
 // 从后端刷新动作列表（导出供 undo/redo 使用）
 async function refreshActionList(): Promise<void> {
-  const actionList = await invoke<ActionItem[]>('act_get_list');
-  const backend = await invoke<InputBackend>('act_get_default_backend');
+  const comm = useComm();
+  const actionList = await comm.actGetList();
+  const backend = await comm.actGetDefaultBackend();
   actions.value = actionList;
   defaultBackend.value = backend;
 }
 
 async function loadConfig(path: string): Promise<void> {
   const { addLog } = useLog();
+  const comm = useComm();
 
   try {
-    await invoke('act_load_config', {
-      path,
-      backend: defaultBackend.value,
-    });
+    await comm.actLoadConfig(path, defaultBackend.value);
     configPath.value = path;
 
     // 获取带名称的动作列表
-    const actionList = await invoke<ActionItem[]>('act_get_list');
+    const actionList = await comm.actGetList();
     actions.value = actionList;
     baselineActions.value = JSON.parse(JSON.stringify(actionList));
 
     // 获取默认后端
-    const backend = await invoke<InputBackend>('act_get_default_backend');
+    const backend = await comm.actGetDefaultBackend();
     defaultBackend.value = backend;
     baselineDefaultBackend.value = backend;
 
     isLoaded.value = true;
 
     // 加载时清除后端历史
-    await invoke('act_clear_history');
+    await comm.actClearHistory();
     await refreshHistoryCount();
 
-    addLog(`已加载配置文件: ${path}`, 'success', 'action');
+    addLog(`Act 配置已加载: ${path}`, 'success', 'action');
   } catch {
     // 配置文件不存在时创建默认配置
     actions.value = [];
@@ -65,17 +64,14 @@ async function loadConfig(path: string): Promise<void> {
     configPath.value = path;
 
     // 保存默认配置
-    await invoke('act_save_config', {
-      path,
-      defaultBackend: defaultBackend.value,
-      actions: [],
-    });
+    await comm.actSaveConfig(path, defaultBackend.value, []);
     addLog(`已创建默认动作配置文件: ${path}`, 'info', 'action');
   }
 }
 
 async function saveConfig(path?: string): Promise<void> {
   const { addLog } = useLog();
+  const comm = useComm();
   const savePath = path || configPath.value;
 
   if (!savePath) {
@@ -83,11 +79,7 @@ async function saveConfig(path?: string): Promise<void> {
   }
 
   try {
-    await invoke('act_save_config', {
-      path: savePath,
-      defaultBackend: defaultBackend.value,
-      actions: actions.value,
-    });
+    await comm.actSaveConfig(savePath, defaultBackend.value, actions.value);
     configPath.value = savePath;
 
     // 保存成功 - 更新原始快照
@@ -105,16 +97,14 @@ async function saveConfig(path?: string): Promise<void> {
 
 async function createAction(type: string, name?: string): Promise<number> {
   const { addLog } = useLog();
+  const comm = useComm();
 
   // 根据类型创建默认动作
   const action = createDefaultAction(type);
 
   try {
     // 调用后端创建动作（会保存到历史）
-    const index = await invoke<number>('act_create', {
-      action,
-      name: name || null,
-    });
+    const index = await comm.actCreate(action, name || null);
 
     // Refresh state from backend
     await refreshActionList();
@@ -130,14 +120,11 @@ async function createAction(type: string, name?: string): Promise<number> {
 
 async function updateAction(index: number, action: ActionItem, name?: string): Promise<void> {
   const { addLog } = useLog();
+  const comm = useComm();
 
   try {
     // 调用后端更新动作（会保存到历史）
-    await invoke('act_update', {
-      index,
-      action,
-      name: name || null,
-    });
+    await comm.actUpdate(index, action, name || null);
 
     // 从后端刷新状态
     await refreshActionList();
@@ -152,10 +139,11 @@ async function updateAction(index: number, action: ActionItem, name?: string): P
 
 async function deleteAction(index: number): Promise<void> {
   const { addLog } = useLog();
+  const comm = useComm();
 
   try {
     // 调用后端删除动作（会保存到历史）
-    await invoke('act_delete', { index });
+    await comm.actDelete(index);
 
     // 从后端刷新状态（索引由后端重建）
     await refreshActionList();
@@ -174,7 +162,8 @@ async function deleteAction(index: number): Promise<void> {
 }
 
 async function getNextIndex(): Promise<number> {
-  return await invoke<number>('act_get_next_index');
+  const comm = useComm();
+  return await comm.actGetNextIndex();
 }
 
 function selectAction(index: number | null): void {
@@ -183,10 +172,11 @@ function selectAction(index: number | null): void {
 
 async function setDefaultBackend(backend: InputBackend): Promise<void> {
   const { addLog } = useLog();
+  const comm = useComm();
 
   try {
     // 调用后端设置默认后端（会保存到历史）
-    await invoke('act_set_default_backend', { backend });
+    await comm.actSetDefaultBackend(backend);
     defaultBackend.value = backend;
     await refreshHistoryCount();
   } catch (e) {
@@ -228,8 +218,9 @@ function syncBaselineActions(): void {
 
 // 丢弃所有更改 - 恢复到原始状态（调用后端以支持撤销/重做）
 async function discardChanges(): Promise<void> {
-  const { addLog } = useLog()
-  await invoke('act_discard_all');
+  const { addLog } = useLog();
+  const comm = useComm();
+  await comm.actDiscardAll();
   await refreshActionList();
   await refreshHistoryCount();
   syncBaselineActions();

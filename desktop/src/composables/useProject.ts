@@ -72,7 +72,7 @@ export function useProject() {
       currentProject.value = project;
       projectEvents._emit({ type: 'opened', project });
       await refreshRecentProjects();
-      addLog(`已打开项目: ${project.name}`, 'success', 'system');
+      addLog(`Project 已打开: ${project.name}`, 'success', 'system');
     } catch (e) {
       addLog(`打开项目失败: ${e}`, 'error', 'system');
       throw e;
