@@ -5,6 +5,7 @@ import type { DecisionLog, ThinkConfig, ThinkStatus } from '../../types'
 import { useProjectEvents, type ProjectEvent } from '../useProjectEvents'
 import { useProject } from '../useProject'
 import { useLog } from '../useLog'
+import { useComm } from '../useComm'
 
 const isThinking = ref(false)
 const decisionLogs = ref<DecisionLog[]>([])
@@ -20,14 +21,16 @@ export function useThink() {
   const { addLog } = useLog()
 
   async function start() {
-    await invoke('think_start')
+    const comm = useComm()
+    await comm.startThinkPull()
     isThinking.value = true
     await fetchStatus()
     await getLogs()
   }
 
   async function stop() {
-    await invoke('think_stop')
+    const comm = useComm()
+    await comm.stopThinkPull()
     isThinking.value = false
     await fetchStatus()
   }

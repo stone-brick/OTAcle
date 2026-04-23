@@ -36,25 +36,38 @@ pub fn think_start(app: tauri::AppHandle) -> Result<(), String> {
     // 记录启动时间（用于 uptime 计算）
     think::config::set_uptime_start();
 
-    *pull_state = Some(PullState::new());
-
-    // 注意：handle 被忽略，线程在后台运行
-    let _ = handle;
+    // 关键修复：使用相同的 running 标志和 JoinHandle 创建 PullState
+    *pull_state = Some(PullState::new(running_flag, handle));
 
     Ok(())
 }
 
 #[tauri::command]
 pub fn think_stop() -> Result<(), String> {
+    // 获取锁
     let mut pull_state = think::PULL_STATE
         .lock()
         .map_err(|e| e.to_string())?;
 
+    // 1. 设置 running = false 通知线程停止
     if let Some(state) = pull_state.as_ref() {
         state.running.store(false, Ordering::SeqCst);
     }
 
+    // 2. 使用 take() 取出 JoinHandle，以便在锁外 join
+    let join_handle = pull_state
+        .as_mut()
+        .and_then(|state| state.join_handle.take());
+
+    // 3. 清空 pull_state
     *pull_state = None;
+
+    // 锁在这里自动释放
+
+    // 4. 等待线程结束（不在持有锁时调用，避免死锁）
+    if let Some(h) = join_handle {
+        let _ = h.join();
+    }
 
     think::config::reset_state();
 

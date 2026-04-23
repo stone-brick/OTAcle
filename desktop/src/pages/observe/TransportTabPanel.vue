@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, inject, onMounted, computed, type Ref } from 'vue'
+import { ref, inject, computed, onMounted, type Ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useObserve } from '../../composables/observe/useObserve'
+import { useComm } from '../../composables/useComm'
 import { useProject } from '../../composables/useProject'
 import { useLog } from '../../composables/useLog'
 import { useDialog } from '../../composables/useDialog'
@@ -20,28 +21,24 @@ const {
   getFirstSessionStats,
   formatBytes,
 } = useObserve()
+
+const { config: commConfig } = useComm()
 const { isProjectLoaded } = useProject()
 const { addLog } = useLog()
 const { prompt } = useDialog()
 
-const pubAddress = ref('tcp://127.0.0.1:5556')
+const pubAddress = computed({
+  get: () => commConfig.value.observe_pub_address,
+  set: (val: string) => { commConfig.value.observe_pub_address = val }
+})
 
 const sessionStats = computed(() => getFirstSessionStats())
 
 const actualFps = inject<Ref<number>>('actualFps', ref(0))
 
-async function loadPubAddress() {
-  try {
-    const addr = await invoke<string>('comm_get_pub_address')
-    pubAddress.value = addr
-  } catch {
-    addLog('加载发布地址失败', 'error', 'comm')
-  }
-}
-
 async function savePubAddress() {
   try {
-    await invoke('comm_set_pub_address', { addr: pubAddress.value })
+    await invoke('comm_set_pub_address', { addr: commConfig.value.observe_pub_address })
   } catch (e) {
     addLog('保存发布地址失败', 'error', 'comm')
     throw e
@@ -75,7 +72,12 @@ async function handleSaveAs() {
 }
 
 onMounted(async () => {
-  await loadPubAddress()
+  // 初始化时同步 Rust 后端的地址
+  try {
+    await invoke('comm_set_pub_address', { addr: commConfig.value.observe_pub_address })
+  } catch {
+    // 静默处理
+  }
 })
 </script>
 
@@ -164,12 +166,6 @@ onMounted(async () => {
         <div class="flex flex-col gap-1.5">
           <label class="text-xs font-medium text-gray-500 dark:text-slate-400">传输统计</label>
           <div class="grid grid-cols-2 gap-2">
-            <div class="flex justify-between px-2 py-1.5 bg-gray-50 dark:bg-slate-800 rounded text-xs">
-              <span class="text-gray-500">连接状态</span>
-              <span :class="['font-medium', sessionStats?.sender_connected ? 'text-green-500' : 'text-red-500']">
-                {{ sessionStats?.sender_connected ? '已连接' : '未连接' }}
-              </span>
-            </div>
             <div class="flex justify-between px-2 py-1.5 bg-gray-50 dark:bg-slate-800 rounded text-xs">
               <span class="text-gray-500">发送消息</span>
               <span class="font-medium">{{ sessionStats?.messages_sent ?? 0 }}</span>

@@ -4,6 +4,7 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { useLog } from './useLog'
 import { useProjectEvents, type ProjectEvent } from './useProjectEvents'
 import { useProject } from './useProject'
+import type { ObserveConfig } from '../types'
 
 interface CommConfig {
   act_pull_address: string
@@ -36,6 +37,11 @@ let unlistenLog: UnlistenFn | null = null
 let unlistenError: UnlistenFn | null = null
 let unsubscribeProject: (() => void) | null = null
 
+// 各通信通道运行状态
+const actPullRunning = ref(false)
+const observePubRunning = ref(false)
+const thinkPullRunning = ref(false)
+
 export function useComm() {
   const { addLog } = useLog()
 
@@ -49,26 +55,80 @@ export function useComm() {
     }
   }
 
-  async function start(address_: string) {
+  // Act PULL 通信
+  async function startActPull() {
     try {
-      await invoke('comm_set_pull_address', { addr: address_ })
+      await invoke('comm_set_pull_address', { addr: config.value.act_pull_address })
       await invoke('comm_start_pull')
-      address.value = address_
-      addLog(`通信连接已启动: ${address_}`, 'success', 'comm')
+      actPullRunning.value = true
+      addLog(`Act PULL 已启动: ${config.value.act_pull_address}`, 'success', 'comm')
       await fetchStatus()
     } catch (e) {
-      addLog('启动通信接收失败，请检查端口是否被占用', 'error', 'comm')
+      addLog('启动 Act PULL 失败', 'error', 'comm')
       throw e
     }
   }
 
-  async function stop() {
+  async function stopActPull() {
     try {
       await invoke('comm_stop_pull')
+      actPullRunning.value = false
       await fetchStatus()
     } catch (e) {
-      addLog(`停止通信连接失败: ${e}`, 'error', 'comm')
+      addLog(`停止 Act PULL 失败: ${e}`, 'error', 'comm')
     }
+  }
+
+  // Observe PUB 通信
+  async function startObserve(windowId: string, observeConfig: ObserveConfig) {
+    try {
+      await invoke('observe_start', { window: windowId, config: observeConfig })
+      observePubRunning.value = true
+      addLog(`Observe PUB 已启动, 窗口: ${windowId}`, 'success', 'observe')
+    } catch (e) {
+      addLog(`启动 Observe PUB 失败: ${e}`, 'error', 'observe')
+      throw e
+    }
+  }
+
+  async function stopObserve() {
+    try {
+      await invoke('observe_stop')
+      observePubRunning.value = false
+    } catch (e) {
+      addLog(`停止 Observe PUB 失败: ${e}`, 'error', 'observe')
+    }
+  }
+
+  // Think PULL 通信
+  async function startThinkPull() {
+    try {
+      await invoke('think_start')
+      thinkPullRunning.value = true
+      addLog(`Think PULL 已启动: ${config.value.think_pull_address}`, 'success', 'think')
+    } catch (e) {
+      addLog('启动 Think PULL 失败', 'error', 'think')
+      throw e
+    }
+  }
+
+  async function stopThinkPull() {
+    try {
+      await invoke('think_stop')
+      thinkPullRunning.value = false
+    } catch (e) {
+      addLog(`停止 Think PULL 失败: ${e}`, 'error', 'think')
+    }
+  }
+
+  // 向后兼容：原有 start/stop 方法委托给 startActPull/stopActPull
+  async function start(address_: string) {
+    config.value.act_pull_address = address_
+    await startActPull()
+  }
+
+  async function stop() {
+    await stopActPull()
   }
 
   async function startListening() {
@@ -105,7 +165,6 @@ export function useComm() {
       config.value = loaded
       addLog(`已加载通信配置: ${path}`, 'success', 'comm')
     } catch {
-      // 使用默认配置并保存
       config.value = {
         act_pull_address: 'tcp://127.0.0.1:5555',
         observe_pub_address: 'tcp://127.0.0.1:5556',
@@ -161,5 +220,15 @@ export function useComm() {
     loadConfig,
     saveConfig,
     initProjectEventListener,
+    // 新增：各通信通道控制
+    actPullRunning,
+    observePubRunning,
+    thinkPullRunning,
+    startActPull,
+    stopActPull,
+    startObserve,
+    stopObserve,
+    startThinkPull,
+    stopThinkPull,
   }
 }

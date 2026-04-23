@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useComm } from '../../composables/useComm'
 import { useProject } from '../../composables/useProject'
@@ -13,6 +13,7 @@ import { mdiPlay, mdiStop, mdiRefresh, mdiContentSave } from '@mdi/js'
 const {
   isConnected,
   address,
+  config,
   fetchStatus,
   start,
   stop,
@@ -27,19 +28,14 @@ const commLogs = computed(() =>
   logs.value.filter(log => log.source === 'comm')
 )
 
-const inputAddress = ref('tcp://127.0.0.1:5555')
-
-async function loadPullAddress() {
-  try {
-    inputAddress.value = await invoke<string>('comm_get_pull_address')
-  } catch {
-    addLog('加载 pull_address 失败', 'error', 'comm')
-  }
-}
+const inputAddress = computed({
+  get: () => config.value.act_pull_address,
+  set: (val: string) => { config.value.act_pull_address = val }
+})
 
 async function savePullAddress() {
   try {
-    await invoke('comm_set_pull_address', { addr: inputAddress.value })
+    await invoke('comm_set_pull_address', { addr: config.value.act_pull_address })
     addLog('pull_address 已保存', 'info', 'comm')
   } catch {
     addLog('保存 pull_address 失败', 'error', 'comm')
@@ -48,7 +44,6 @@ async function savePullAddress() {
 
 onMounted(async () => {
   await startListening()
-  await loadPullAddress()
 })
 
 onUnmounted(() => {
@@ -56,7 +51,7 @@ onUnmounted(() => {
 })
 
 async function handleStart() {
-  await start(inputAddress.value)
+  await start(config.value.act_pull_address)
 }
 
 async function handleStop() {

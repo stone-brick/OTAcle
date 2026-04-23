@@ -5,6 +5,7 @@ import type { ObserveConfig, CropRegion, FrameMessage, FullFrameMessage, Observe
 import { useLog } from '../useLog'
 import { useProjectEvents, type ProjectEvent } from '../useProjectEvents'
 import { useProject } from '../useProject'
+import { useComm } from '../useComm'
 
 // 状态
 const isObserving = ref(false)
@@ -109,10 +110,8 @@ export function useObserve() {
   async function startObserve(windowId: string): Promise<void> {
     previewFrame.value = null
     try {
-      await invoke('observe_start', {
-        window: windowId,
-        config: config.value
-      })
+      const comm = useComm()
+      await comm.startObserve(windowId, config.value)
       isObserving.value = true
       await fetchStatus()
       startStatusPolling()
@@ -127,7 +126,8 @@ export function useObserve() {
   // 停止观察
   async function stopObserve(): Promise<void> {
     try {
-      await invoke('observe_stop')
+      const comm = useComm()
+      await comm.stopObserve()
     } catch (e) {
       addLog(`停止观察失败: ${e}`, 'error', 'observe')
     } finally {

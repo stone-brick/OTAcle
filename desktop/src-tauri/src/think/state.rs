@@ -22,15 +22,17 @@ lazy_static! {
 }
 
 /// PULL 状态（地址和运行标志）
-#[derive(Clone)]
 pub struct PullState {
     pub running: Arc<AtomicBool>,
+    pub join_handle: Option<std::thread::JoinHandle<()>>,
 }
 
 impl PullState {
-    pub fn new() -> Self {
+    /// 使用外部提供的 running 和 join_handle 创建
+    pub fn new(running: Arc<AtomicBool>, join_handle: std::thread::JoinHandle<()>) -> Self {
         Self {
-            running: Arc::new(AtomicBool::new(false)),
+            running,
+            join_handle: Some(join_handle),
         }
     }
 }

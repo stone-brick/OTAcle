@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { ref } from 'vue'
 import ThinkTabNav from '../../components/nav/ThinkTabNav.vue'
 import StatusTabPanel from '../../components/think/StatusTabPanel.vue'
 import ConfigTabPanel from '../../components/think/ConfigTabPanel.vue'
@@ -8,41 +8,12 @@ import { useThink } from '../../composables/think/useThink'
 import type { DisplayField, ThinkConfig } from '../../types'
 
 const {
-  isThinking,
   decisionLogs,
   config,
-  status,
-  start,
-  stop,
-  getLogs,
-  fetchStatus,
-  startListening,
-  stopListening,
 } = useThink()
 
 const activeTab = ref<'status' | 'config'>('status')
 const showAddFieldDialog = ref(false)
-
-onMounted(async () => {
-  await startListening()
-  await fetchStatus()
-})
-
-onUnmounted(() => {
-  stopListening()
-})
-
-async function handleStart() {
-  await start()
-}
-
-async function handleStop() {
-  await stop()
-}
-
-async function handleRefresh() {
-  await getLogs(100)
-}
 
 function handleLoadDemoConfig() {
   const demoConfig: ThinkConfig = {
@@ -80,11 +51,6 @@ function handleDeleteField(name: string) {
     <div class="think-content">
       <StatusTabPanel
         v-if="activeTab === 'status'"
-        :is-thinking="isThinking"
-        :status="status"
-        @start="handleStart"
-        @stop="handleStop"
-        @refresh="handleRefresh"
       />
 
       <ConfigTabPanel

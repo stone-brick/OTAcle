@@ -7,7 +7,6 @@ use std::collections::HashMap;
 
 use super::state::{ObserveGlobalStats, SessionHandle, GLOBAL_STATS, SESSIONS};
 use super::types::ObserveConfig;
-use crate::communication::types::ConnectionState;
 
 /// 会话状态详情
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -19,7 +18,6 @@ pub struct SessionStatus {
     pub frames_captured: u64,
     pub bytes_sent: u64,
     pub errors_count: u64,
-    pub sender_connected: bool,
     pub messages_sent: u64,
 }
 
@@ -33,7 +31,6 @@ impl SessionStatus {
             frames_captured: handle.stats.frames_captured(),
             bytes_sent: handle.stats.bytes_sent(),
             errors_count: handle.stats.errors_count(),
-            sender_connected: handle.pub_state.get_connection_state() == ConnectionState::Connected,
             messages_sent: handle.pub_state.messages_sent(),
         }
     }

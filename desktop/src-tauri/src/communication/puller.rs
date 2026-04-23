@@ -2,7 +2,7 @@
 //!
 //! 从 Python 端接收控制命令
 
-use log::{debug, info};
+use log::{debug, info, trace};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
@@ -54,8 +54,8 @@ impl Puller {
                         debug!("Empty message received, ignored");
                     }
                     Err(e) => {
-                        // 没有消息，忽略（EAGAIN 是正常情况）
-                        debug!("ZMQ receive would block: {}", e);
+                        // EAGAIN 是 DONTWAIT 模式的正常行为，跳过
+                        trace!("ZMQ receive would block: {}", e);
                     }
                 }
 

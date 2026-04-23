@@ -179,7 +179,6 @@ export interface SessionStatus {
   frames_captured: number;
   bytes_sent: number;
   errors_count: number;
-  sender_connected: boolean;
   messages_sent: number;
 }
 
@@ -203,15 +202,6 @@ export interface ObserveStatus {
 
 export interface DecisionLog {
   step: number;
-  episode?: number;
-  timestamp: number;
-  q_values?: Record<string, number>;
-  reward?: number;
-  cumulative_reward?: number;
-  progress?: number;
-  loss?: number;
-  learning_rate?: number;
-  epsilon?: number;
   custom?: Record<string, unknown>;
 }
 
