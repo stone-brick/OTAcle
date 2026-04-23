@@ -22,25 +22,29 @@
 
 OTAcle 由三个核心模块组成，形成 **Observe-Think-Act** 闭环：
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         OTAcle 桌面应用                          │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌─────────────┐     ┌─────────────┐     ┌─────────────┐      │
-│  │   Observe   │ --> │    Think    │ --> │     Act     │      │
-│  │   模块      │     │    模块      │     │     模块     │      │
-│  └─────────────┘     └─────────────┘     └─────────────┘      │
-│        │                   │                   │               │
-│        │ ZMQ PUB           │ ZMQ PULL          │ ZMQ PULL      │
-│        ↓                   ↑                   ↑               │
-│  ┌─────────────┐     ┌─────────────┐     ┌─────────────┐      │
-│  │ Python SUB  │     │ Python PUSH │     │ Python PUSH │      │
-│  │ 接收图像帧   │     │ 发送决策日志 │     │ 发送动作命令 │      │
-│  └─────────────┘     └─────────────┘     └─────────────┘      │
-│                                                                  │
-│  Python 端（用户自行实现）                                        │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Desktop["OTAcle 桌面应用"]
+        Observe["Observe 模块"]
+        Think["Think 模块"]
+        Act["Act 模块"]
+
+        Observe -->|决策输入| Think
+        Think -->|动作指令| Act
+    end
+
+    subgraph Python["Python 端（用户自行实现）"]
+        Observer["OTAcleObserver"]
+        ThinkSender["OTAcleThinkSender"]
+        Command["OTAcleCommand"]
+
+        Observer -->|ZMQ SUB| Observe
+        Think -->|ZMQ PULL| ThinkSender
+        Act -->|ZMQ PULL| Command
+    end
+
+    style Desktop fill:#f9f,stroke:#333,stroke-width:2px
+    style Python fill:#bbf,stroke:#333,stroke-width:2px
 ```
 
 ### Observe 模块 — 视觉输入
