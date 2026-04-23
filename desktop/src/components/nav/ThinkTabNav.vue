@@ -1,24 +1,25 @@
 <script setup lang="ts">
-import { mdiMessageTextOutline, mdiChartLine, mdiCog } from '@mdi/js'
+import { mdiMessageTextOutline, mdiCog, mdiAccessPoint, mdiChartLine } from '@mdi/js'
 import BaseIcon from '../ui/BaseIcon.vue'
 
 defineProps<{
-  activeTab: 'status' | 'config'
+  activeTab: 'comm' | 'config' | 'monitor'
 }>()
 
 const emit = defineEmits<{
-  'update:activeTab': [tab: 'status' | 'config']
+  'update:activeTab': [tab: 'comm' | 'config' | 'monitor']
 }>()
 
 interface TabItem {
-  id: 'status' | 'config'
+  id: 'comm' | 'config' | 'monitor'
   label: string
   icon: string
 }
 
 const tabs: TabItem[] = [
-  { id: 'status', label: '状态监控', icon: mdiChartLine },
+  { id: 'monitor', label: '状态监控', icon: mdiChartLine },
   { id: 'config', label: '图表配置', icon: mdiCog },
+  { id: 'comm', label: '通信日志', icon: mdiAccessPoint },
 ]
 
 function selectTab(tab: TabItem) {

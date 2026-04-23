@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import ActTabNav from '../../components/nav/ActTabNav.vue';
-import CommPanel from '../../components/act/CommPanel.vue';
+import ActCommPanel from '../../components/act/ActCommPanel.vue';
 import ConfigPanel from './ConfigPanel.vue';
 import WindowsTabPanel from './WindowsTabPanel.vue';
 import { useWindows } from '../../composables/useWindows';
@@ -11,7 +11,7 @@ import { useActionHistory } from '../../composables/act/useActionHistory';
 import { useActionExecutor } from '../../composables/act/useActionExecutor';
 import type { ActionItem, InputBackend, SearchMode } from '../../types';
 
-const activeTab = ref<'monitor' | 'config' | 'windows'>('monitor');
+const activeTab = ref<'comm' | 'config' | 'windows'>('comm');
 
 const { isProjectLoaded } = useProject();
 
@@ -106,7 +106,7 @@ async function handleExecuteAction(payload: { actionIdx: number; params: Record<
     <ActTabNav v-model:active-tab="activeTab" />
 
     <div class="act-content">
-      <CommPanel v-if="activeTab === 'monitor'" />
+      <ActCommPanel v-if="activeTab === 'comm'" />
 
       <ConfigPanel
         v-else-if="activeTab === 'config'"

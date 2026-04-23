@@ -51,8 +51,14 @@ pub struct CropRegion {
 /// 完整帧消息（用于前端预览，包含完整图像数据）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FullFrameMessage {
+    /// 缩放后的宽度
     pub width: u32,
+    /// 缩放后的高度
     pub height: u32,
+    /// 原始窗口宽度
+    pub original_width: u32,
+    /// 原始窗口高度
+    pub original_height: u32,
     pub timestamp: u64,
     pub frame_id: u64,
     pub image: String, // Base64 编码的完整 RGBA 图像

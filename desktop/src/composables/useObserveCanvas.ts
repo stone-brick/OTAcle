@@ -4,12 +4,14 @@ import { useLog } from './useLog'
 
 const PREVIEW_INTERVAL_MS = 100
 
+// 最大显示尺寸（按原图比例放大）
+const MAX_DISPLAY_WIDTH = 800
+const MAX_DISPLAY_HEIGHT = 600
+
 export function useObserveCanvas(
   canvasRef: Ref<HTMLCanvasElement | null>,
   fullPreviewFrame: Ref<FullFrameMessage | null>,
-  cropRegions: ComputedRef<CropRegion[]>,
-  targetWidth: ComputedRef<number>,
-  targetHeight: ComputedRef<number>
+  cropRegions: ComputedRef<CropRegion[]>
 ) {
   const { addLog } = useLog()
   const lastUpdateTime = ref(0)
@@ -40,25 +42,25 @@ export function useObserveCanvas(
     const canvas = canvasRef.value
     if (!canvas) return
 
-    const tw = targetWidth.value
-    const th = targetHeight.value
+    // 计算显示尺寸：按原图比例放大到填满最大尺寸
+    const scale = Math.max(
+      MAX_DISPLAY_WIDTH / frame.width,
+      MAX_DISPLAY_HEIGHT / frame.height
+    )
+    const displayWidth = Math.round(frame.width * scale)
+    const displayHeight = Math.round(frame.height * scale)
 
     try {
       const ctx = canvas.getContext('2d')
       if (!ctx) return
 
-      // Canvas 尺寸固定为目标分辨率
-      canvas.width = tw
-      canvas.height = th
+      // Canvas 尺寸设为计算出的显示尺寸
+      canvas.width = displayWidth
+      canvas.height = displayHeight
 
-      // 计算缩放比例（最长边等长）
-      const scaleX = tw / frame.width
-      const scaleY = th / frame.height
-      const scale = Math.min(scaleX, scaleY)
-
-      // 居中偏移
-      const offsetX = (tw - frame.width * scale) / 2
-      const offsetY = (th - frame.height * scale) / 2
+      // 偏移为 0，居中由 CSS 处理
+      const offsetX = 0
+      const offsetY = 0
 
       // 绘制黑色背景
       ctx.fillStyle = '#000000'
@@ -81,22 +83,51 @@ export function useObserveCanvas(
         offscreen,
         0, 0, frame.width, frame.height,
         offsetX, offsetY,
-        frame.width * scale, frame.height * scale
+        displayWidth, displayHeight
       )
 
-      // 绘制 ROI 遮罩：非选中区域叠加半透明灰色，选中区域绘制绿色边框
       const regions = cropRegions.value
 
       if (regions.length === 0) {
-        // 无 ROI 配置，不做遮罩
+        // 无 ROI 配置，只绘制图像
         return
       }
 
-      // 绘制 ROI 区域绿色边框
+      // 创建临时 canvas 绘制遮罩
+      const maskCanvas = document.createElement('canvas')
+      maskCanvas.width = canvas.width
+      maskCanvas.height = canvas.height
+      const maskCtx = maskCanvas.getContext('2d')
+      if (!maskCtx) return
+
+      // 整个区域填充半透明灰色
+      maskCtx.fillStyle = 'rgba(128, 128, 128, 0.5)'
+      maskCtx.fillRect(
+        offsetX,
+        offsetY,
+        displayWidth,
+        displayHeight
+      )
+
+      // 用 destination-out 挖出 ROI 区域（ROI 变透明）
+      maskCtx.globalCompositeOperation = 'destination-out'
+      maskCtx.fillStyle = 'rgba(0, 0, 0, 1)'
+      for (const region of regions) {
+        maskCtx.fillRect(
+          offsetX + region.x * scale,
+          offsetY + region.y * scale,
+          region.w * scale,
+          region.h * scale
+        )
+      }
+
+      // 将遮罩叠加到主 canvas
+      ctx.drawImage(maskCanvas, 0, 0)
+
+      // 绘制 ROI 边框
       ctx.strokeStyle = '#00ff00'
       ctx.lineWidth = 2 / scale
       ctx.setLineDash([5 / scale, 5 / scale])
-
       for (const region of regions) {
         ctx.strokeRect(
           offsetX + region.x * scale,
@@ -105,59 +136,7 @@ export function useObserveCanvas(
           region.h * scale
         )
       }
-
       ctx.setLineDash([])
-
-      // 绘制非 ROI 区域的半透明灰色遮罩
-      // 思路：绘制整个画面的半透明灰色遮罩，然后挖掉 ROI 区域
-      ctx.fillStyle = 'rgba(128, 128, 128, 0.5)'
-
-      // 方式：绘制整个画面，然后在每个 ROI 区域"挖洞"（用 clearRect 或绘制原图）
-      // 为了简化，我们用 destination-out 合成来挖洞
-
-      // 首先，创建一个临时 canvas 来存储完整图像
-      const tempCanvas = document.createElement('canvas')
-      tempCanvas.width = canvas.width
-      tempCanvas.height = canvas.height
-      const tempCtx = tempCanvas.getContext('2d')
-      if (!tempCtx) return
-
-      // 绘制完整图像到临时 canvas
-      tempCtx.drawImage(offscreen, 0, 0, frame.width, frame.height, offsetX, offsetY, frame.width * scale, frame.height * scale)
-
-      // 在临时 canvas 上绘制 ROI 边框
-      tempCtx.strokeStyle = '#00ff00'
-      tempCtx.lineWidth = 2 / scale
-      tempCtx.setLineDash([5 / scale, 5 / scale])
-      for (const region of regions) {
-        tempCtx.strokeRect(
-          offsetX + region.x * scale,
-          offsetY + region.y * scale,
-          region.w * scale,
-          region.h * scale
-        )
-      }
-      tempCtx.setLineDash([])
-
-      // 在临时 canvas 上绘制半透明灰色遮罩
-      tempCtx.fillStyle = 'rgba(128, 128, 128, 0.5)'
-      tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height)
-
-      // 用 destination-out 挖掉 ROI 区域
-      tempCtx.globalCompositeOperation = 'destination-out'
-      tempCtx.fillStyle = 'rgba(0, 0, 0, 1)'
-      for (const region of regions) {
-        tempCtx.fillRect(
-          offsetX + region.x * scale,
-          offsetY + region.y * scale,
-          region.w * scale,
-          region.h * scale
-        )
-      }
-      tempCtx.globalCompositeOperation = 'source-over'
-
-      // 将处理后的临时 canvas 绘制到主 canvas
-      ctx.drawImage(tempCanvas, 0, 0)
 
     } catch (e) {
       addLog(`完整帧渲染异常: ${e}`, 'error', 'observe')

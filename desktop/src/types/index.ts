@@ -163,8 +163,10 @@ export interface FrameMessage {
 
 // 完整帧消息（用于前端预览）
 export interface FullFrameMessage {
-  width: number;
-  height: number;
+  width: number;              // 缩放后的宽度
+  height: number;             // 缩放后的高度
+  original_width: number;    // 原始窗口宽度
+  original_height: number;   // 原始窗口高度
   timestamp: number;
   frame_id: number;
   image: string; // Base64 编码的完整 RGBA 图像

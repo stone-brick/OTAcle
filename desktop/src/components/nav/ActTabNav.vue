@@ -3,21 +3,21 @@ import { mdiCog, mdiWindowMaximize, mdiAccessPoint, mdiTarget } from '@mdi/js'
 import BaseIcon from '../ui/BaseIcon.vue'
 
 defineProps<{
-  activeTab: 'monitor' | 'config' | 'windows'
+  activeTab: 'comm' | 'config' | 'windows'
 }>()
 
 const emit = defineEmits<{
-  'update:activeTab': [tab: 'monitor' | 'config' | 'windows']
+  'update:activeTab': [tab: 'comm' | 'config' | 'windows']
 }>()
 
 interface TabItem {
-  id: 'monitor' | 'config' | 'windows'
+  id: 'comm' | 'config' | 'windows'
   label: string
   icon: string
 }
 
 const tabs: TabItem[] = [
-  { id: 'monitor', label: '状态监控', icon: mdiAccessPoint },
+  { id: 'comm', label: '通信日志', icon: mdiAccessPoint },
   { id: 'config', label: '动作配置', icon: mdiCog },
   { id: 'windows', label: '窗口选择', icon: mdiWindowMaximize },
 ]

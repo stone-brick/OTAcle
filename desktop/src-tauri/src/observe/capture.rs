@@ -47,7 +47,8 @@ struct WgcHandlerData {
 struct OneShotHandlerData {
     config: ObserveConfig,
     frame_id: Arc<AtomicU64>,
-    result_tx: std::sync::mpsc::Sender<Result<FrameMessage, String>>,
+    /// 发送 (FrameMessage, 原始宽度, 原始高度)
+    result_tx: std::sync::mpsc::Sender<Result<(FrameMessage, u32, u32), String>>,
 }
 
 /// 实现 GraphicsCaptureApiHandler trait 的帧处理器
@@ -75,7 +76,7 @@ impl GraphicsCaptureApiHandler for WgcFrameHandler {
         }
 
         // 2. 处理帧（使用 process_frame 消除重复代码）
-        let (frame_msg, full_frame_base64) =
+        let (frame_msg, full_frame_base64, original_width, original_height) =
             match process_frame(frame, &self.data.config, &self.data.frame_id) {
                 Ok(result) => result,
                 Err(e) => {
@@ -92,6 +93,8 @@ impl GraphicsCaptureApiHandler for WgcFrameHandler {
         let full_frame = FullFrameMessage {
             width: frame_msg.width,
             height: frame_msg.height,
+            original_width,
+            original_height,
             timestamp: frame_msg.timestamp,
             frame_id: frame_msg.frame_id,
             image: full_frame_base64,
@@ -157,25 +160,26 @@ fn remove_padding(
 }
 
 /// 处理帧并构建 FrameMessage，同时返回完整帧 base64（用于前端预览）
+/// 返回 (FrameMessage, 完整帧base64, 原始宽度, 原始高度)
 fn process_frame(
     frame: &mut Frame,
     config: &ObserveConfig,
     frame_id: &AtomicU64,
-) -> Result<(FrameMessage, String), String> {
-    let (width, height) = (frame.width(), frame.height());
+) -> Result<(FrameMessage, String, u32, u32), String> {
+    let (original_width, original_height) = (frame.width(), frame.height());
 
     let mut buffer = frame
         .buffer()
         .map_err(|e| format!("Failed to get frame buffer: {}", e))?;
 
-    let rgba = remove_padding(width, height, &mut buffer);
+    let rgba = remove_padding(original_width, original_height, &mut buffer);
 
-    let scaled = if config.capture.target_width != width || config.capture.target_height != height {
+    let scaled = if config.capture.target_width != original_width || config.capture.target_height != original_height {
         let processor = ImageProcessor {};
         processor.scale(
             &rgba,
-            width,
-            height,
+            original_width,
+            original_height,
             config.capture.target_width,
             config.capture.target_height,
         )
@@ -215,7 +219,7 @@ fn process_frame(
         data: crop_blocks,
     };
 
-    Ok((frame_msg, full_frame_base64))
+    Ok((frame_msg, full_frame_base64, original_width, original_height))
 }
 
 /// 实现 GraphicsCaptureApiHandler trait 的单次截图处理器
@@ -237,7 +241,7 @@ impl GraphicsCaptureApiHandler for OneShotFrameHandler {
         capture_control: InternalCaptureControl,
     ) -> Result<(), Self::Error> {
         let result =
-            process_frame(frame, &self.data.config, &self.data.frame_id).map(|(msg, _)| msg); // 只取 FrameMessage，丢弃完整帧 base64
+            process_frame(frame, &self.data.config, &self.data.frame_id).map(|(msg, _, ow, oh)| (msg, ow, oh)); // 取 FrameMessage 和原始尺寸
         let _ = self.data.result_tx.send(result);
         capture_control.stop();
         Ok(())
@@ -253,8 +257,8 @@ impl GraphicsCaptureApiHandler for OneShotFrameHandler {
 /// * `config` - Observe 配置
 ///
 /// # 返回值
-/// 返回 `FrameMessage` 或错误信息
-pub fn capture_screenshot(hwnd: isize, config: ObserveConfig) -> Result<FrameMessage, String> {
+/// 返回 (FrameMessage, 原始宽度, 原始高度) 或错误信息
+pub fn capture_screenshot(hwnd: isize, config: ObserveConfig) -> Result<(FrameMessage, u32, u32), String> {
     if config.capture.target_width == 0 || config.capture.target_height == 0 {
         return Err("Invalid target dimensions".to_string());
     }
@@ -378,7 +382,7 @@ pub fn capture_full_frame(hwnd: isize, config: ObserveConfig) -> Result<FullFram
     full_config.crop_regions.clear();
 
     // 调用标准截图（会生成完整图像，因为裁切区域为空）
-    let frame = capture_screenshot(hwnd, full_config)?;
+    let (frame, original_width, original_height) = capture_screenshot(hwnd, full_config)?;
 
     // 只有一个 block，包含完整图像
     let full_image = frame
@@ -390,6 +394,8 @@ pub fn capture_full_frame(hwnd: isize, config: ObserveConfig) -> Result<FullFram
     Ok(FullFrameMessage {
         width: frame.width,
         height: frame.height,
+        original_width,
+        original_height,
         timestamp: frame.timestamp,
         frame_id: frame.frame_id,
         image: full_image,

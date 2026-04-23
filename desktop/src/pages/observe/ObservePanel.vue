@@ -12,9 +12,7 @@ const globalCanvasRef = inject<Ref<HTMLCanvasElement | null>>('globalCanvasRef')
 const { actualFps, resetCanvas } = useObserveCanvas(
   globalCanvasRef!,
   fullPreviewFrame,
-  computed(() => config.value.crop_regions),
-  computed(() => config.value.capture.target_width),
-  computed(() => config.value.capture.target_height)
+  computed(() => config.value.crop_regions)
 )
 
 // 向子组件提供 FPS 和重置方法

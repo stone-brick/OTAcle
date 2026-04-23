@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, inject, onMounted } from 'vue'
+import { computed, inject, onMounted, ref, watch } from 'vue'
 import { useObserve } from '../../composables/observe/useObserve'
 import { useWindows } from '../../composables/useWindows'
+import { useProject } from '../../composables/useProject'
 import { useDialog } from '../../composables/useDialog'
+import { mdiContentSave } from '@mdi/js'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import FormControl from '@/components/ui/FormControl.vue'
 import CardBox from '@/components/ui/CardBox.vue'
@@ -12,20 +14,58 @@ import ObservePanel from './ObservePanel.vue'
 const {
   isObserving,
   config,
+  fullPreviewFrame,
   captureFullFrame,
   startObserve,
   stopObserve,
   getFirstSessionStats,
   formatUptime,
+  saveConfig,
 } = useObserve()
 
 const sessionStats = computed(() => getFirstSessionStats())
 
+// 锁定比例状态
+const lockAspectRatio = ref(false)
+const aspectRatio = ref(0)
+
+// 监听原始帧更新，获取原分辨率和比例
+watch(fullPreviewFrame, (frame) => {
+  if (frame && frame.original_width > 0 && frame.original_height > 0) {
+    aspectRatio.value = frame.original_width / frame.original_height
+  }
+})
+
+// 宽度变化时，按比例调整高度
+function onWidthChange(newWidth: number) {
+  config.value.capture.target_width = newWidth
+  if (lockAspectRatio.value && aspectRatio.value > 0) {
+    config.value.capture.target_height = Math.round(newWidth / aspectRatio.value)
+  }
+}
+
+// 高度变化时，按比例调整宽度
+function onHeightChange(newHeight: number) {
+  config.value.capture.target_height = newHeight
+  if (lockAspectRatio.value && aspectRatio.value > 0) {
+    config.value.capture.target_width = Math.round(newHeight * aspectRatio.value)
+  }
+}
+
 const { windows, selectedWindow, refreshWindows, selectWindow } = useWindows()
+
+const { isProjectLoaded, getProjectObserveConfigPath } = useProject()
 
 const resetCanvas = inject<() => void>('resetCanvas', () => {})
 
 const { alert } = useDialog()
+
+async function handleSave() {
+  const path = await getProjectObserveConfigPath()
+  if (path) {
+    await saveConfig(path)
+  }
+}
 
 async function handleStart() {
   if (!selectedWindow.value) {
@@ -69,9 +109,19 @@ onMounted(async () => {
     <CardBox class="flex flex-col flex-1">
       <!-- 标题栏 -->
       <div class="px-3 py-2 border-b border-gray-100 dark:border-slate-800">
-        <h3 class="m-0 text-sm font-semibold text-gray-700 dark:text-slate-200">
-          截图配置
-        </h3>
+        <div class="flex items-center justify-between">
+          <h3 class="m-0 text-sm font-semibold text-gray-700 dark:text-slate-200">
+            截图配置
+          </h3>
+          <div class="flex items-center gap-1">
+            <BaseButton
+              :icon="mdiContentSave"
+              color="whiteDark"
+              :disabled="!isProjectLoaded"
+              @click="handleSave"
+            />
+          </div>
+        </div>
       </div>
 
       <!-- 配置内容 -->
@@ -110,16 +160,41 @@ onMounted(async () => {
           <label class="text-xs font-medium text-gray-500 dark:text-slate-400">目标分辨率</label>
           <div class="flex items-center gap-2">
             <FormControl
-              v-model.number="config.capture.target_width"
+              :model-value="config.capture.target_width"
               type="number"
               placeholder="宽度"
+              @update:model-value="onWidthChange"
             />
             <span class="text-gray-400">×</span>
             <FormControl
-              v-model.number="config.capture.target_height"
+              :model-value="config.capture.target_height"
               type="number"
               placeholder="高度"
+              @update:model-value="onHeightChange"
             />
+          </div>
+        </div>
+
+        <!-- 原分辨率和锁定比例 -->
+        <div class="flex items-center gap-4">
+          <!-- 原分辨率显示 -->
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-medium text-gray-500 dark:text-slate-400">原分辨率</label>
+            <div class="px-2 py-1.5 bg-gray-50 dark:bg-slate-800 rounded text-xs text-gray-600 dark:text-slate-300 min-w-[100px]">
+              {{ fullPreviewFrame ? `${fullPreviewFrame.original_width} × ${fullPreviewFrame.original_height}` : '-- × --' }}
+            </div>
+          </div>
+          <!-- 锁定比例 -->
+          <div class="flex items-center gap-1.5 mt-5">
+            <input
+              type="checkbox"
+              v-model="lockAspectRatio"
+              id="lock-aspect-ratio"
+              class="w-3.5 h-3.5 rounded border-gray-300 dark:border-slate-600"
+            />
+            <label for="lock-aspect-ratio" class="text-xs font-medium text-gray-500 dark:text-slate-400 cursor-pointer">
+              锁定比例
+            </label>
           </div>
         </div>
 

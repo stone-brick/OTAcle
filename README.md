@@ -1,53 +1,85 @@
 # OTAcle
 
-**OTAcle** — Observe-Think-Act cycle，强化学习流程控制桌面应用。
+**OTAcle** — 强化学习流程控制桌面应用。
 
 核心理念：只做**流程控制和可视化**，不提供任何算法、训练代码、图像处理方法。算法部分由用户自己准备，OTAcle 负责把它们串联起来。
 
-## 核心概念
+---
 
-OTAcle 实现了一个无限循环的 **OTA** 流程：
+## 项目概述
 
-OTAcle 实现了一个无限循环的 **OTA** 流程：
+OTAcle 是一个基于 [Tauri 2](https://tauri.app/) 的桌面应用，用于强化学习（RL）实验的流程控制。Python 端运行 RL 算法，OTAcle 负责：
 
-```mermaid
-flowchart LR
-    O[Observe<br>观察] --> T[Think<br>思考] --> A[Act<br>执行]
-    A --> |反馈| O
-```
-
-| 模块 | 职责 | 与 Python 的通信 |
-|------|------|-----------------|
-| **Observe** | 采集目标窗口截图 | ZMQ PUB → `tcp://127.0.0.1:5556` |
-| **Think** | 可视化决策日志 | ZMQ PULL ← `tcp://127.0.0.1:5557` |
-| **Act** | 执行键盘鼠标动作 | ZMQ PULL ← `tcp://127.0.0.1:5555` |
-
-### 窗口定位语法
-
-执行动作时可指定目标窗口，使用以下格式：
-
-| 格式 | 示例 | 说明 |
-|------|------|------|
-| `""` 或 `"A"` | `""`, `"A"` | 当前前台窗口 |
-| `"id:<hwnd>"` | `"id:0x12345"`, `"id:395542"` | 直接 HWND（十六进制或十进制） |
-| `"class:<name>"` | `"class:Notepad"` | 窗口类名 |
-| `"pid:<number>"` | `"pid:1234"` | 进程 ID |
-| `"exe:<name>"` | `"exe:notepad.exe"` | 进程名 |
-| `"<title>"` | `"Untitled - Notepad"` | 窗口标题前缀匹配 |
+| 模块 | 职责 | 通信方向 |
+|------|------|----------|
+| **Act** | 动作执行（键盘、鼠标） | Python → OTAcle |
+| **Observe** | 屏幕截图并传输给 Python | OTAcle → Python |
+| **Think** | 接收决策日志并可视化 | Python → OTAcle |
 
 ---
 
-## 技术栈
+## 系统架构
 
-| 层级 | 技术 | 说明 |
-|------|------|------|
-| **前端框架** | Vue 3 + TypeScript | 组合式 API (`<script setup>`) |
-| **构建工具** | Vite 6 | 开发服务器端口 1420 |
-| **桌面包装** | Tauri 2 | Rust 后端 + WebView2 |
-| **样式** | Tailwind CSS v4 | CSS-first 配置方式 |
-| **图表** | ECharts 6 | Think 模块数据可视化 |
-| **后端** | Rust | 动作执行、窗口截图、ZMQ 通信 |
-| **进程间通信** | ZeroMQ | PUSH-PULL / PUB-SUB 模式 |
+```
+┌─────────────────┐                      ┌─────────────────┐
+│   Python RL     │                      │  OTAcle Desktop  │
+│   Algorithm     │                      │     (Rust)       │
+└────────┬────────┘                      └────────┬────────┘
+         │                                        │
+         │  ZMQ PUSH  ──────────────────────────►  │
+         │  tcp://127.0.0.1:5555                  │
+         │                                        │  Act 模块
+         │                                        │  - 键盘/鼠标动作执行
+         │  ZMQ SUB  ◄──────────────────────────  │
+         │  tcp://127.0.0.1:5556                  │  Observe 模块
+         │                                        │  - Windows Graphics Capture
+         │                                        │  - 截图 → Base64 帧
+         │  ZMQ PUSH  ──────────────────────────►  │
+         │  tcp://127.0.0.1:5557                  │
+         │                                        │  Think 模块
+         │                                        │  - 决策日志 → 可视化
+         └───────────────────────────────────────┘
+```
+
+### 默认端口
+
+| 模块 | 端口 | ZMQ 模式 | 方向 |
+|------|------|----------|------|
+| Act | 5555 | PULL | Python → Rust |
+| Observe | 5556 | PUB | Rust → Python |
+| Think | 5557 | PULL | Python → Rust |
+
+---
+
+## 目录结构
+
+```
+OTAcle/
+├── desktop/                    # Tauri 2 桌面应用
+│   ├── src/                    # Vue 3 + TypeScript 前端
+│   │   ├── components/         # UI 组件
+│   │   ├── composables/        # Vue Composition API 逻辑
+│   │   ├── pages/              # 页面（ActPage, ObservePage, ThinkPage）
+│   │   ├── types/              # TypeScript 类型定义
+│   │   └── router/             # 路由配置
+│   └── src-tauri/              # Rust 后端
+│       └── src/
+│           ├── act/            # Act 模块（动作配置与执行）
+│           ├── observe/        # Observe 模块（屏幕截图）
+│           ├── think/          # Think 模块（决策日志）
+│           ├── communication/   # ZMQ 通信封装
+│           ├── input/          # 输入控制（键盘、鼠标）
+│           └── commands/       # Tauri 命令
+├── py_tool/                    # Python SDK（ZMQ 通信封装）
+│   └── src/otacle/
+│       └── otacle.py           # 核心类
+├── example/                    # Python RL 示例
+│   ├── test_act.py             # Act 模块测试
+│   ├── test_observe.py         # Observe 模块测试
+│   ├── test_think.py           # Think 模块测试
+│   └── .otacle/                # 项目配置目录
+└── README.md
+```
 
 ---
 
@@ -55,413 +87,428 @@ flowchart LR
 
 ### 环境要求
 
-- **Node.js** 18+
-- **Rust** 1.75+
-- **Python** 3.10+（用于集成）
-- **Windows** 10/11（桌面应用）
+- **操作系统**：Windows 10 1903+（需要 Windows Graphics Capture API）
+- **Rust**：1.70+
+- **Node.js**：18+
+- **Python**：3.8+
 
-### 安装步骤
+### 构建桌面应用
 
 ```bash
-# 克隆项目
-git clone https://github.com/your/OTAcle.git
-cd OTAcle
-
-# 安装前端依赖
 cd desktop
 pnpm install
-
-# 启动开发服务器（仅前端）
-pnpm dev
-
-# 或启动完整的 Tauri 应用（开发模式）
-pnpm tauri dev
+pnpm tauri dev    # 开发模式
+# 或
+pnpm tauri build  # 生产构建
 ```
 
-### 构建生产版本
+### 安装 Python SDK
 
 ```bash
-cd desktop
-pnpm tauri build
+# 可编辑模式安装（开发用）
+pip install -e /path/to/OTAcle/py_tool
+
+# 或直接引用（不安装）
+import sys
+sys.path.insert(0, "path/to/OTAcle/py_tool/src")
+from otacle import OTAcleCommand
 ```
 
 ---
 
-## 系统架构
+## Act 模块
 
-### 目录结构
+Act 模块负责接收 Python 端的动作命令并执行键盘、鼠标操作。
 
-```
-OTAcle/
-├── desktop/
-│   ├── src/                      # Vue 3 前端
-│   │   ├── main.ts              # 入口文件
-│   │   ├── App.vue              # 根组件
-│   │   ├── router/              # Vue Router
-│   │   ├── pages/               # 页面组件
-│   │   │   ├── act/             # Act 页面
-│   │   │   ├── observe/         # Observe 页面
-│   │   │   └── think/           # Think 页面
-│   │   ├── components/           # UI 组件
-│   │   ├── composables/          # 组合式函数（状态管理）
-│   │   │   ├── act/             # 动作编辑/执行/历史
-│   │   │   ├── observe/          # 截图控制
-│   │   │   └── think/           # 决策日志
-│   │   ├── types/               # TypeScript 类型定义
-│   │   └── styles/              # CSS 样式
-│   └── src-tauri/               # Rust 后端
-│       ├── src/
-│       │   ├── lib.rs          # Tauri 应用入口
-│       │   ├── commands/       # Tauri IPC 命令
-│       │   ├── act/           # 动作配置与执行
-│       │   ├── observe/       # 窗口截图
-│       │   ├── think/         # 决策日志接收
-│       │   ├── communication/  # ZeroMQ 通信
-│       │   └── input/         # 键盘鼠标输入
-│       └── tauri.conf.json    # Tauri 配置
-└── example/
-    └── python/
-        └── otacle.py          # Python ZMQ 辅助模块
-```
+### 动作配置
 
-### 前后端通信
+动作配置文件为 `.otacle/actions.json`：
 
-前端通过 Tauri IPC 调用 Rust 命令：
-
-```typescript
-import { invoke } from "@tauri-apps/api/core";
-
-// 调用 Rust 命令
-const result = await invoke("act_load_config", { path: "./actions.json" });
-```
-
-Rust 端注册命令：
-
-```rust
-#[tauri::command]
-fn act_load_config(path: &str) -> Result<(), String> {
-    // ...
+```json
+{
+  "default_backend": "win32",
+  "actions": [
+    {
+      "name": "jump",
+      "type": "key",
+      "key": "space",
+      "hold_time_ms": 5
+    },
+    {
+      "name": "move_to_target",
+      "type": "mouse_move",
+      "x": 0,
+      "y": 0,
+      "variables": [
+        { "param_name": "target_x", "field_name": "x" },
+        { "param_name": "target_y", "field_name": "y" }
+      ]
+    },
+    {
+      "name": "attack",
+      "type": "mouse_click",
+      "button": "left",
+      "count": 1,
+      "hold_time_ms": 10
+    }
+  ]
 }
+```
 
-tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![act_load_config])
+### 动作类型
+
+| 类型 | 说明 | 关键字段 |
+|------|------|----------|
+| `key` | 单次按键 | `key`, `hold_time_ms` |
+| `key_sequence` | 按键序列 | `keys[]`, `default_interval_ms` |
+| `mouse_click` | 鼠标点击 | `button`, `count`, `interval_ms`, `hold_time_ms` |
+| `mouse_move` | 鼠标移动 | `x`, `y`, `duration_ms`, `variables` |
+| `mouse_scroll` | 鼠标滚动 | `direction`, `amount` |
+| `delay` | 延迟等待 | `duration_ms` |
+| `text` | 文本输入 | `content` |
+
+#### 字段说明
+
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `name` | string | null | 动作名称（可选） |
+| `backend` | string | null | 覆盖默认后端（`win32` 或 `enigo`） |
+| `key` | string | - | 按键名称，如 `"space"`, `"ctrl+c"` |
+| `hold_time_ms` | u64 | 5 | 按住时长（毫秒），0=瞬时点击 |
+| `button` | string | - | 鼠标按钮：`left`, `right`, `middle` |
+| `count` | u32 | 1 | 点击次数 |
+| `direction` | string | - | 滚动方向：`up`, `down`, `left`, `right` |
+| `amount` | u32 | 1 | 滚动量（Windows 滚轮增量=120） |
+| `duration_ms` | u64 | null | 移动持续时间（毫秒），0=瞬移 |
+| `content` | string | - | 要输入的文本内容 |
+
+### 动态参数替换
+
+动作配置中的 `variables` 字段定义可动态替换的参数：
+
+```json
+{
+  "type": "mouse_move",
+  "x": 0,
+  "y": 0,
+  "variables": [
+    { "param_name": "target_x", "field_name": "x" },
+    { "param_name": "target_y", "field_name": "y" }
+  ]
+}
+```
+
+Python 端发送的 `params` 中的键名对应 `param_name`，执行时替换对应 `field_name` 的值。
+
+### 输入后端
+
+| 后端 | 说明 | 特点 |
+|------|------|------|
+| `win32` | Windows API | 可定向发送到后台窗口，使用 `PostMessageW` |
+| `enigo` | 跨平台库 | 依赖前台窗口，模拟 USB HID 输入 |
+
+**优先级**：`action.backend` > `default_backend` > `win32`
+
+### Python SDK
+
+```python
+from otacle import OTAcleCommand
+
+with OTAcleCommand() as cmd:
+    cmd.execute([0, 2])           # 执行 index 0 和 2 的动作
+    cmd.set_params({"target_x": 100, "target_y": 200})
+    cmd.send()
+```
+
+OTAcleCommand 发送的 JSON 消息：
+
+```json
+{
+  "execute": [true, false, true, false, false, false, false, false, false, false],
+  "params": {"target_x": 100, "target_y": 200}
+}
+```
+
+### ZMQ 消息格式
+
+```json
+{
+  "execute": [true, false, true],
+  "params": {"target_x": 100, "target_y": 200}
+}
 ```
 
 ---
 
 ## Observe 模块
 
-**核心理念**：作为 OTAcle 的"眼睛"，采集目标窗口截图并向 Python 端提供视觉输入。
+Observe 模块负责捕获窗口截图并传输给 Python 端。
 
-### 数据流
+### 截图配置
 
-```mermaid
-flowchart TD
-    W[目标窗口] --> G[Windows Graphics Capture API]
-    G --> P[缩放/裁切]
-    P --> Z[ZMQ PUB]
-    Z --> PY[Python]
-    P --> E[Tauri 事件]
-    E --> F[前端预览]
-```
-
-### 核心类型
-
-**FrameMessage** — 发送给 Python 的图像帧：
+配置文件为 `.otacle/observe.json`：
 
 ```json
 {
-  "width": 640,
-  "height": 480,
+  "capture": {
+    "frame_rate": 3,
+    "target_width": 640,
+    "target_height": 480
+  },
+  "crop_regions": [
+    { "x": 200, "y": 300, "w": 100, "h": 100 },
+    { "x": 0, "y": 0, "w": 100, "h": 100 }
+  ]
+}
+```
+
+| 字段 | 说明 |
+|------|------|
+| `frame_rate` | 帧率（1-120），默认 3 |
+| `target_width` | 输出宽度（1-7680），默认 640 |
+| `target_height` | 输出高度（1-4320），默认 480 |
+| `crop_regions` | 裁切区域数组 |
+| `x`, `y` | 裁切区域左上角坐标 |
+| `w`, `h` | 裁切区域宽高 |
+
+### ZMQ PUB 帧消息格式
+
+Rust 端通过 ZMQ PUB 发送 Base64 编码的图像帧：
+
+```json
+{
+  "width": 1920,
+  "height": 1080,
   "timestamp": 1713000000000,
   "frame_id": 12345,
   "data": [
     {
-      "x": 0,
-      "y": 0,
-      "w": 320,
-      "h": 240,
-      "image": "base64encoded..."
+      "x": 200,
+      "y": 300,
+      "w": 100,
+      "h": 100,
+      "image": "base64-encoded-image..."
     }
   ]
 }
 ```
 
-### 配置项
+### Python SDK
 
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| `frame_rate` | 3 | 捕获帧率（FPS） |
-| `target_width` | 640 | 目标图像宽度 |
-| `target_height` | 480 | 目标图像高度 |
-| `crop_regions` | [] | 裁切区域列表 |
+```python
+from otacle import OTAcleObserver
+
+with OTAcleObserver() as obs:
+    for frame in obs:
+        print(f"帧 {frame.frame_id}: {frame.width}x{frame.height}")
+        for block in frame.data:
+            print(f"  裁切块 {block.x},{block.y} {block.w}x{block.h}")
+```
 
 ---
 
 ## Think 模块
 
-**核心理念**：作为 OTAcle 的"大脑"，接收并可视化来自 Python 端的决策日志。
+Think 模块负责接收 Python 端的决策日志并可视化显示。
 
-### 数据流
+### 可视化配置
 
-```mermaid
-flowchart LR
-    PY[Python] -->|ZMQ PUSH| P[PULL tcp://127.0.0.1:5557]
-    P --> T[Tauri 事件]
-    T --> V[前端可视化]
-```
-
-### 核心类型
-
-**DecisionLog** — Python 发送的决策日志：
+配置文件为 `.otacle/think.json`：
 
 ```json
 {
-  "step": 12345,
-  "custom": {
-    "q_values": {"left": 0.5, "right": 0.8},
-    "reward": 1.2,
-    "epsilon": 0.1
-  }
-}
-```
-
-### 配置项
-
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| `max_data_points` | 1000 | 环形缓冲区最大数据点数 |
-| `display_fields` | [] | 可视化字段配置 |
-
-**DisplayField** — 单个字段的可视化配置：
-
-```json
-{
-  "name": "reward",
-  "title": "奖励值",
-  "chart_type": "line"
-}
-```
-
-`chart_type` 支持：`line` | `bar` | `area` | `gauge`
-
----
-
-## Act 模块
-
-**核心理念**：作为 OTAcle 的"手"，执行键盘鼠标动作。
-
-### 数据流
-
-```mermaid
-flowchart LR
-    PY[Python] -->|ZMQ PUSH| P[PULL tcp://127.0.0.1:5555]
-    P --> A[执行动作]
-```
-
-### 命令格式
-
-```json
-{
-  "execute": [true, false, true],
-  "params": {
-    "target_x": 100,
-    "target_y": 200
-  }
-}
-```
-
-### 动作配置示例
-
-```json
-{
-  "default_backend": "win32",
-  "actions": [
-    {"index": 0, "name": "jump", "type": "key", "key": "space"},
-    {"index": 1, "name": "move", "type": "mouse_move", "x": 0, "y": 0,
-     "variables": [
-       {"param_name": "target_x", "field_name": "x"},
-       {"param_name": "target_y", "field_name": "y"}
-     ]
-    },
-    {"index": 2, "name": "scroll", "type": "mouse_scroll", "direction": "up", "amount": 1}
+  "max_data_points": 500,
+  "display_fields": [
+    { "name": "step", "title": "训练步数", "chart_type": "line" },
+    { "name": "reward", "title": "Reward", "chart_type": "line" },
+    { "name": "epsilon", "title": "Epsilon", "chart_type": "gauge" }
   ]
 }
 ```
 
-### 支持的动作类型
-
-| 类型 | 必需字段 | 可选字段 |
-|------|----------|----------|
-| `key` | `key` | `hold_time_ms`, `backend` |
-| `key_sequence` | `keys[]` | `default_interval_ms`, `backend` |
-| `mouse_click` | `button` | `count`, `interval_ms`, `hold_time_ms`, `backend`, `variables` |
-| `mouse_move` | `x`, `y` | `duration_ms`, `backend`, `variables` |
-| `mouse_scroll` | `direction`, `amount` | `backend` |
-| `delay` | `duration_ms` | — |
-| `text` | `content` | `backend` |
-
-### 输入后端
-
-| 后端 | 说明 |
+| 字段 | 说明 |
 |------|------|
-| `win32` | Windows API（`PostMessageW`），可定向发送到后台窗口 |
-| `enigo` | 跨平台库，依赖前台窗口 |
+| `max_data_points` | 环形缓冲区大小，默认 1000 |
+| `display_fields` | 显示字段配置 |
+| `name` | 字段名（对应 DecisionLog.custom 中的键） |
+| `title` | 显示标题 |
+| `chart_type` | 图表类型：`line`, `bar`, `area`, `gauge` |
 
-### 撤销/重做
+### 决策日志格式
 
-- 最多保存 50 条历史记录
-- `act_undo` — 撤销上一步操作
-- `act_redo` — 重做已撤销的操作
+Python 端发送的决策日志：
 
----
+```json
+{
+  "step": 100,
+  "custom": {
+    "reward": 1.0,
+    "epsilon": 0.1,
+    "q_values": {"a": 0.5, "b": 0.3}
+  }
+}
+```
 
-## Python 集成
-
-### 安装辅助模块
-
-将 `example/python/otacle.py` 复制到你的项目，或直接引用：
+### Python SDK
 
 ```python
-import sys
-sys.path.insert(0, "path/to/OTAcle/example/python")
-from otacle import OTAcleCommand
-```
+from otacle import OTAcleThinkSender
 
-### 基本用法
-
-```python
-from otacle import OTAcleCommand
-
-# 方式 1: 上下文管理器（推荐）
-with OTAcleCommand() as cmd:
-    cmd.execute([0, 2])  # 执行 index 0 和 2 的动作
-    cmd.set_params({"target_x": 100, "target_y": 200})
-    cmd.send()
-
-# 方式 2: 便捷函数
-from otacle import send_command
-send_command([0, 2], {"target_x": 100})
-```
-
-### 完整强化学习循环示例
-
-```python
-from otacle import OTAcleCommand
-
-# 初始化命令构建器
-cmd = OTAcleCommand(action_count=5)
-
-# 连接到不同的地址（可选）
-# cmd = OTAcleCommand(address="tcp://127.0.0.1:5555")
-
-# 1. 接收 Observe 模块发送的图像帧（需自行实现 ZMQ SUB）
-# import zmq
-# ctx = zmq.Context()
-# sock = ctx.socket(zmq.SUB)
-# sock.connect("tcp://127.0.0.1:5556")
-# frame = sock.recv_json()
-
-# 2. Think 决策（由你的 RL 算法完成）
-# q_values = your_model.decide(state)
-
-# 3. 发送动作命令到 Act 模块
-with cmd:
-    cmd.clear_execute()
-    cmd.execute([0, 3])  # 执行动作 0 和 3
-    cmd.set_params({
-        "target_x": 500,
-        "target_y": 300
-    })
-    cmd.send()
-
-# 4. 发送决策日志到 Think 模块（可选）
-# log = {"step": 1, "custom": {"reward": 1.0}}
-# send_think_log(log, address="tcp://127.0.0.1:5557")
-```
-
-### OTAcleCommand API
-
-| 方法 | 说明 |
-|------|------|
-| `execute(indices)` | 按索引指定要执行的动作（追加式） |
-| `execute_all()` | 执行所有动作 |
-| `clear_execute()` | 清除所有执行标记 |
-| `set_action(index, enabled)` | 设置单个动作是否执行 |
-| `set_params(params)` | 设置动态参数字典 |
-| `add_param(key, value)` | 添加或更新单个参数 |
-| `remove_param(key)` | 删除指定参数 |
-| `send()` | 发送命令到 ZMQ 地址 |
-| `close()` | 关闭 ZMQ 连接 |
-
----
-
-## 开发指南
-
-### 开发命令
-
-| 命令 | 说明 |
-|------|------|
-| `pnpm dev` | 启动 Vite 开发服务器（端口 1420） |
-| `pnpm build` | TypeScript 类型检查 + Vite 构建 |
-| `pnpm preview` | 预览生产构建 |
-| `pnpm tauri dev` | 以开发模式启动完整的 Tauri 应用 |
-| `pnpm tauri build` | 构建生产版本 Tauri 应用 |
-| `pnpm lint` | ESLint 代码检查 |
-| `pnpm knip` | 检测未使用的文件/依赖 |
-
-### 代码检查
-
-```bash
-cd desktop/src-tauri
-
-# Rust linter
-cargo clippy
-
-# 代码格式检查
-cargo fmt --check
-
-# 安全漏洞检查（需安装）
-cargo install cargo-audit
-cargo audit
-```
-
-### 前端类型检查
-
-```bash
-cd desktop
-pnpm build  # 同时运行 TypeScript 检查和 Vite 构建
+with OTAcleThinkSender() as sender:
+    sender.send_step(1, reward=1.0, epsilon=0.9)
+    sender.send_step(2, reward=0.8, epsilon=0.8)
 ```
 
 ---
 
-## 附录
+## 通信配置
 
-### ZMQ 端口配置
+配置文件为 `.otacle/comm.json`：
 
-| 模块 | 类型 | 默认地址 |
-|------|------|----------|
-| Act | PULL（接收命令） | `tcp://127.0.0.1:5555` |
-| Observe | PUB（发送图像） | `tcp://127.0.0.1:5556` |
-| Think | PULL（接收日志） | `tcp://127.0.0.1:5557` |
+```json
+{
+  "act_pull_address": "tcp://127.0.0.1:5555",
+  "observe_pub_address": "tcp://127.0.0.1:5556",
+  "think_pull_address": "tcp://127.0.0.1:5557"
+}
+```
+
+地址必须以 `tcp://`、`ipc://` 或 `inproc://` 开头。
+
+---
+
+## 窗口定位语法
+
+执行动作时可指定目标窗口，使用以下格式：
+
+| 格式 | 说明 | 示例 |
+|------|------|------|
+| `"A"` 或空 | 当前前台窗口 | `"A"` |
+| `"id:395542"` | 窗口句柄（十进制） | `"id:395542"` |
+| `"id:0x9999"` | 窗口句柄（十六进制） | `"id:0x60916"` |
+| `"class:Notepad"` | 窗口类名 | `"class:Notepad"` |
+| `"exe:notepad.exe"` | 进程名 | `"exe:notepad"` |
+| `"pid:1234"` | 进程 ID | `"pid:1234"` |
+| `"Notepad"` | 窗口标题前缀匹配 | `"Untitled - Notepad"` |
+
+---
+
+## Python SDK 参考
+
+### 核心类
+
+| 类 | 说明 |
+|---|------|
+| `OTAcleCommand` | 发送动作命令到 Act 模块 |
+| `OTAcleObserver` | 接收来自 Observe 模块的图像帧 |
+| `OTAcleThinkSender` | 发送决策日志到 Think 模块 |
+
+### 数据类
+
+| 类 | 字段 | 说明 |
+|---|------|------|
+| `CropBlock` | `x, y, w, h, image` | 裁切块，image 为 Base64 |
+| `FrameMessage` | `width, height, timestamp, frame_id, data[]` | 图像帧 |
+| `DecisionLog` | `step, custom` | 决策日志 |
+
+### 便捷函数
+
+```python
+from otacle import send_command, send_decision_log, observe_frames
+
+# 发送动作命令
+send_command([0, 1], {"target_x": 100})
+
+# 发送决策日志
+send_decision_log(100, {"reward": 1.0, "epsilon": 0.1})
+
+# 接收图像帧（生成器）
+for frame in observe_frames():
+    print(frame.frame_id)
+```
+
+### 常量
+
+```python
+from otacle import ZMQ_ACT_ADDR, ZMQ_OBSERVE_ADDR, ZMQ_THINK_ADDR
+# tcp://127.0.0.1:5555, tcp://127.0.0.1:5556, tcp://127.0.0.1:5557
+```
+
+---
+
+## 项目配置
+
+创建项目后，目录结构如下：
+
+```
+my_rl_project/
+├── .otacle/                # OTAcle 配置目录（自动创建）
+│   ├── actions.json         # Act 模块动作配置
+│   ├── observe.json         # Observe 模块截图配置
+│   ├── comm.json            # 通信地址配置
+│   ├── think.json           # Think 模块可视化配置
+│   └── project.json         # 项目元数据
+├── train.py                 # 你的 RL 训练代码
+└── model.py                 # 你的模型代码
+```
+
+---
+
+## 故障排除
 
 ### 常见问题
 
-**Q: 动作没有执行？**
-- 检查 ZMQ 连接地址是否正确
-- 确认 `execute` 数组中对应索引为 `true`
-- 检查 `params` 中的键名是否与 `variables` 中的 `param_name` 匹配
+| 问题 | 可能原因 | 解决方案 |
+|------|----------|----------|
+| 连接失败 | 防火墙阻止端口 | 确认 5555-5557 端口开放 |
+| 截图黑屏 | 目标窗口最小化或不可见 | 确保窗口可见且未最小化 |
+| 动作执行无效 | 动作索引错误 | 检查 `execute` 数组长度是否与配置的动作数量一致 |
+| 配置文件加载失败 | JSON 格式错误 | 检查配置文件语法 |
 
-**Q: Observe 截图黑屏？**
-- 确保目标窗口可见且未被最小化
-- 检查窗口句柄是否正确
+### 日志位置
 
-**Q: Win32 后端无法发送到后台窗口？**
-- 某些窗口可能阻止了 `PostMessage`
-- 尝试切换到 `enigo` 后端（需前台窗口）
+- Tauri 日志：`%APPDATA%/com.otacle.desktop/logs/`
 
 ---
 
-## 许可证
+## 技术栈
 
-MIT License
+| 层级 | 技术 |
+|------|------|
+| 桌面框架 | Tauri 2 |
+| 前端 | Vue 3 + TypeScript + Vite |
+| 后端 | Rust |
+| 样式 | Tailwind CSS v4 |
+| 图表 | ECharts |
+| 跨语言通信 | ZMQ |
+| 截图 | windows-capture 2.0 + Windows Graphics Capture API |
+| 输入控制 | enigo / Win32 API |
+
+---
+
+## 开发命令
+
+### 前端
+
+```bash
+cd desktop
+pnpm dev              # 启动 Vite 开发服务器（端口 1420）
+pnpm build            # TypeScript 类型检查 + Vite 构建
+pnpm tauri dev        # 以开发模式启动完整的 Tauri 应用
+pnpm tauri build      # 构建生产版本 Tauri 应用
+```
+
+### Rust 后端
+
+```bash
+cd desktop/src-tauri
+cargo check           # Rust 类型检查
+cargo build           # Rust 编译
+cargo test           # 运行测试
+```
+
+---
+
+## License
+
+MIT

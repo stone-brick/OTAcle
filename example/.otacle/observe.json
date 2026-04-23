@@ -1,21 +1,21 @@
 {
   "capture": {
     "frame_rate": 3,
-    "target_width": 640,
-    "target_height": 480
+    "target_width": 135,
+    "target_height": 256
   },
   "crop_regions": [
     {
-      "x": 200,
-      "y": 300,
-      "w": 100,
-      "h": 100
+      "x": 10,
+      "y": 40,
+      "w": 115,
+      "h": 18
     },
     {
       "x": 0,
-      "y": 0,
-      "w": 100,
-      "h": 100
+      "y": 100,
+      "w": 135,
+      "h": 110
     }
   ]
 }

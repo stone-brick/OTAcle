@@ -58,6 +58,11 @@ provide('globalCanvasRef', globalCanvasRef)
   min-width: 0;
 }
 
+.canvas-wrapper canvas {
+  max-width: 600px;
+  max-height: 500px;
+}
+
 .observe-content > :deep(*) {
   height: 100%;
   overflow: auto;

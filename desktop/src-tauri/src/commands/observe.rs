@@ -188,7 +188,7 @@ pub fn observe_capture_preview(
     let hwnd =
         input::find_window(&search).ok_or_else(|| format!("Window not found: {}", window))?;
 
-    observe::capture::capture_screenshot(hwnd, config)
+    observe::capture::capture_screenshot(hwnd, config).map(|(msg, _, _)| msg)
 }
 
 #[tauri::command]
