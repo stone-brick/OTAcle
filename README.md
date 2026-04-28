@@ -1,7 +1,5 @@
 # OTAcle
 
-强化学习流程控制桌面应用。核心理念：只做**流程控制和可视化**，不提供任何算法、训练代码、图像处理方法。算法部分由用户自己准备，OTAcle 负责把它们串联起来。
-
 ![Tauri](https://img.shields.io/badge/Tauri-2.0-2c2255?logo=tauri)
 ![Vue](https://img.shields.io/badge/Vue-3.5-4fc08d?logo=vue.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178c6?logo=typescript)
@@ -9,14 +7,14 @@
 
 ## 技术栈
 
-| 层次 | 技术 | 说明 |
-|------|------|------|
-| 前端框架 | Vue 3 + TypeScript | 响应式 UI，使用 `<script setup>` SFCs |
-| 构建工具 | Vite | 快速开发服务器和构建 |
-| 桌面包装 | Tauri 2 | Rust 后端 + WebView2 前端 |
-| 样式 | Tailwind CSS v4 | 原子化 CSS |
-| 进程通信 | ZeroMQ | PUSH-PULL / PUB-SUB 模式 |
-| 截图 API | windows-capture | Windows Graphics Capture API |
+| 层次     | 技术                 | 说明                              |
+| ------ | ------------------ | ------------------------------- |
+| 前端框架   | Vue 3 + TypeScript | 响应式 UI，使用 `<script setup>` SFCs |
+| 构建工具   | Vite               | 快速开发服务器和构建                      |
+| 桌面包装   | Tauri 2            | Rust 后端 + WebView2 前端           |
+| 样式     | Tailwind CSS v4    | 原子化 CSS                         |
+| 进程通信   | ZeroMQ             | PUSH-PULL / PUB-SUB 模式          |
+| 截图 API | windows-capture    | Windows Graphics Capture API    |
 
 ## 模块架构
 
@@ -147,12 +145,14 @@ OTAcle/
 ### 安装步骤
 
 1. 克隆仓库
+   
    ```bash
    git clone https://github.com/yourname/otacle.git
    cd otacle
    ```
 
 2. 安装前端依赖
+   
    ```bash
    cd desktop
    pnpm install
@@ -161,6 +161,7 @@ OTAcle/
 3. 配置 Rust 环境（首次运行时 Tauri 会自动下载 Rust）
 
 4. 运行开发服务器
+   
    ```bash
    pnpm tauri dev
    ```
@@ -217,11 +218,11 @@ cd py_tool && pip install build && python -m build && pip install dist/otacle-*.
 
 ### 核心类
 
-| 类 | ZMQ 模式 | 用途 |
-|----|---------|------|
-| `OTAcleCommand` | PUSH → Act | 发送动作命令 |
-| `OTAcleObserver` | SUB ← Observe | 接收图像帧 |
-| `OTAcleThinkSender` | PUSH → Think | 发送决策日志 |
+| 类                   | ZMQ 模式        | 用途     |
+| ------------------- | ------------- | ------ |
+| `OTAcleCommand`     | PUSH → Act    | 发送动作命令 |
+| `OTAcleObserver`    | SUB ← Observe | 接收图像帧  |
+| `OTAcleThinkSender` | PUSH → Think  | 发送决策日志 |
 
 ### 使用示例
 
@@ -292,15 +293,15 @@ with OTAcleThinkSender() as sender:
 
 ### 动作类型详解
 
-| 类型 | 说明 | 关键字段 |
-|------|------|---------|
-| `key` | 单键按下 | `key`（按键名），`hold_time_ms`（按住时长） |
-| `key_sequence` | 按键序列 | `keys[]`（按键列表），`default_interval_ms`（间隔） |
-| `mouse_click` | 鼠标点击 | `button`（left/right/middle），`count`（次数） |
-| `mouse_move` | 鼠标移动 | `x`, `y`（坐标），`duration_ms`（移动时长） |
+| 类型             | 说明   | 关键字段                                        |
+| -------------- | ---- | ------------------------------------------- |
+| `key`          | 单键按下 | `key`（按键名），`hold_time_ms`（按住时长）             |
+| `key_sequence` | 按键序列 | `keys[]`（按键列表），`default_interval_ms`（间隔）    |
+| `mouse_click`  | 鼠标点击 | `button`（left/right/middle），`count`（次数）     |
+| `mouse_move`   | 鼠标移动 | `x`, `y`（坐标），`duration_ms`（移动时长）            |
 | `mouse_scroll` | 鼠标滚动 | `direction`（up/down/left/right），`amount`（量） |
-| `delay` | 延时等待 | `duration_ms`（毫秒） |
-| `text` | 文本输入 | `content`（文本内容） |
+| `delay`        | 延时等待 | `duration_ms`（毫秒）                           |
+| `text`         | 文本输入 | `content`（文本内容）                             |
 
 ### 动态参数替换
 
@@ -326,10 +327,10 @@ cmd.set_params({"target_x": 100, "target_y": 200})
 
 ### 输入后端
 
-| 后端 | 模式 | 说明 |
-|------|------|------|
+| 后端      | 模式          | 说明                           |
+| ------- | ----------- | ---------------------------- |
 | `win32` | Windows API | 可定向发送到后台窗口，使用 `PostMessageW` |
-| `enigo` | Enigo 库 | 跨平台，依赖前台窗口 |
+| `enigo` | Enigo 库     | 跨平台，依赖前台窗口                   |
 
 优先级：`action.backend` > `default_backend`
 
@@ -337,15 +338,15 @@ cmd.set_params({"target_x": 100, "target_y": 200})
 
 执行动作时可指定目标窗口：
 
-| 格式 | 说明 | 示例 |
-|------|------|------|
-| `"Notepad"` | 窗口标题前缀匹配 | `"Notepad"` |
-| `"id:395542"` | 直接指定 HWND（十进制） | `"id:395542"` |
-| `"id:0x9999"` | 直接指定 HWND（十六进制） | `"id:0x9999"` |
-| `"class:Notepad"` | 窗口类名 | `"class:Notepad"` |
-| `"exe:notepad.exe"` | 进程名 | `"exe:notepad.exe"` |
-| `"pid:1234"` | 进程 ID | `"pid:1234"` |
-| `"A"` 或空 | 当前前台窗口 | `"A"` |
+| 格式                  | 说明              | 示例                  |
+| ------------------- | --------------- | ------------------- |
+| `"Notepad"`         | 窗口标题前缀匹配        | `"Notepad"`         |
+| `"id:395542"`       | 直接指定 HWND（十进制）  | `"id:395542"`       |
+| `"id:0x9999"`       | 直接指定 HWND（十六进制） | `"id:0x9999"`       |
+| `"class:Notepad"`   | 窗口类名            | `"class:Notepad"`   |
+| `"exe:notepad.exe"` | 进程名             | `"exe:notepad.exe"` |
+| `"pid:1234"`        | 进程 ID           | `"pid:1234"`        |
+| `"A"` 或空            | 当前前台窗口          | `"A"`               |
 
 ## 通信配置
 
@@ -412,77 +413,77 @@ my_project/
 
 ### Action 命令
 
-| 命令 | 说明 |
-|------|------|
-| `act_load_config` | 加载动作配置 |
-| `act_get_list` | 获取动作列表 |
-| `act_get_default_backend` | 获取默认输入后端 |
-| `act_set_default_backend` | 设置默认输入后端 |
-| `act_create` | 创建新动作 |
-| `act_update` | 更新动作 |
-| `act_delete` | 删除动作 |
-| `act_save_config` | 保存动作配置 |
-| `act_execute_action` | 执行单个动作 |
-| `act_execute_action_with_params` | 带参数执行动作 |
-| `act_undo` | 撤销 |
-| `act_redo` | 重做 |
-| `act_get_history_status` | 获取撤销/重做状态 |
+| 命令                               | 说明        |
+| -------------------------------- | --------- |
+| `act_load_config`                | 加载动作配置    |
+| `act_get_list`                   | 获取动作列表    |
+| `act_get_default_backend`        | 获取默认输入后端  |
+| `act_set_default_backend`        | 设置默认输入后端  |
+| `act_create`                     | 创建新动作     |
+| `act_update`                     | 更新动作      |
+| `act_delete`                     | 删除动作      |
+| `act_save_config`                | 保存动作配置    |
+| `act_execute_action`             | 执行单个动作    |
+| `act_execute_action_with_params` | 带参数执行动作   |
+| `act_undo`                       | 撤销        |
+| `act_redo`                       | 重做        |
+| `act_get_history_status`         | 获取撤销/重做状态 |
 
 ### Observe 命令
 
-| 命令 | 说明 |
-|------|------|
-| `observe_start` | 启动截图捕获 |
-| `observe_stop` | 停止捕获 |
-| `observe_get_status` | 获取运行状态 |
-| `observe_save_config` | 保存配置 |
-| `observe_load_config` | 加载配置 |
-| `observe_capture_preview` | 捕获单帧预览 |
+| 命令                           | 说明      |
+| ---------------------------- | ------- |
+| `observe_start`              | 启动截图捕获  |
+| `observe_stop`               | 停止捕获    |
+| `observe_get_status`         | 获取运行状态  |
+| `observe_save_config`        | 保存配置    |
+| `observe_load_config`        | 加载配置    |
+| `observe_capture_preview`    | 捕获单帧预览  |
 | `observe_capture_full_frame` | 捕获完整帧预览 |
 
 ### Think 命令
 
-| 命令 | 说明 |
-|------|------|
-| `think_start` | 启动决策日志接收 |
-| `think_stop` | 停止接收 |
-| `think_get_status` | 获取运行状态 |
-| `think_load_config` | 加载配置 |
-| `think_save_config` | 保存配置 |
-| `think_get_logs` | 获取日志列表 |
+| 命令                  | 说明       |
+| ------------------- | -------- |
+| `think_start`       | 启动决策日志接收 |
+| `think_stop`        | 停止接收     |
+| `think_get_status`  | 获取运行状态   |
+| `think_load_config` | 加载配置     |
+| `think_save_config` | 保存配置     |
+| `think_get_logs`    | 获取日志列表   |
 
 ### 窗口命令
 
-| 命令 | 说明 |
-|------|------|
-| `window_set_target` | 设置目标窗口 |
-| `window_get_target` | 获取目标窗口 |
-| `window_list` | 列出所有窗口 |
+| 命令                     | 说明      |
+| ---------------------- | ------- |
+| `window_set_target`    | 设置目标窗口  |
+| `window_get_target`    | 获取目标窗口  |
+| `window_list`          | 列出所有窗口  |
 | `window_find_by_title` | 按标题查找窗口 |
-| `window_get_info` | 获取窗口信息 |
+| `window_get_info`      | 获取窗口信息  |
 
 ## 命名规范
 
 ### Rust 后端
 
-| 类别 | 风格 | 示例 |
-|------|------|------|
-| 文件/模块 | snake_case | `zmq_pull.rs` |
-| 类型 | PascalCase | `ZmqCommand`, `ActionData` |
-| Tauri 命令 | snake_case，前缀模块名下划线 | `act_load_config` |
-| 枚举成员 | PascalCase | `InputBackend::Win32` |
-| 动作类型标签 | snake_case 字符串 | `"key"`, `"mouse_click"` |
-| JSON 字段 | snake_case | `hold_time_ms` |
+| 类别       | 风格                  | 示例                         |
+| -------- | ------------------- | -------------------------- |
+| 文件/模块    | snake_case          | `zmq_pull.rs`              |
+| 类型       | PascalCase          | `ZmqCommand`, `ActionData` |
+| Tauri 命令 | snake_case，前缀模块名下划线 | `act_load_config`          |
+| 枚举成员     | PascalCase          | `InputBackend::Win32`      |
+| 动作类型标签   | snake_case 字符串      | `"key"`, `"mouse_click"`   |
+| JSON 字段  | snake_case          | `hold_time_ms`             |
 
 ### TypeScript/Vue 前端
 
-| 类别 | 风格 | 示例 |
-|------|------|------|
-| Vue SFC 文件 | PascalCase | `ActPage.vue` |
-| 目录/嵌套组件 | kebab-case | `components/nav/` |
-| TypeScript 类型 | PascalCase | `interface ActionItem` |
-| Composable 函数 | camelCase + `use` 前缀 | `useLog()` |
-| 事件处理函数 | camelCase + `handle` 前缀 | `handleSave()` |
+| 类别            | 风格                      | 示例                     |
+| ------------- | ----------------------- | ---------------------- |
+| Vue SFC 文件    | PascalCase              | `ActPage.vue`          |
+| 目录/嵌套组件       | kebab-case              | `components/nav/`      |
+| TypeScript 类型 | PascalCase              | `interface ActionItem` |
+| Composable 函数 | camelCase + `use` 前缀    | `useLog()`             |
+| 事件处理函数        | camelCase + `handle` 前缀 | `handleSave()`         |
 
 ## 许可证
 

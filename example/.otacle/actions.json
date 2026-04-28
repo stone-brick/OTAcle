@@ -3,8 +3,18 @@
   "actions": [
     {
       "name": null,
+      "type": "mouse_click",
+      "button": "left",
+      "count": 1,
+      "interval_ms": null,
+      "hold_time_ms": 5,
+      "backend": null,
+      "variables": []
+    },
+    {
+      "name": "space",
       "type": "key",
-      "key": "space",
+      "key": "a",
       "hold_time_ms": 5,
       "backend": null
     }

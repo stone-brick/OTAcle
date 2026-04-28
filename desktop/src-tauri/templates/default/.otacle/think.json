@@ -1,10 +1,4 @@
 {
   "max_data_points": 500,
-  "display_fields": [
-    {
-      "name": "step",
-      "title": "训练步数",
-      "chart_type": "line"
-    }
-  ]
+  "display_fields": []
 }

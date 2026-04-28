@@ -3,8 +3,13 @@
   "display_fields": [
     {
       "name": "step",
-      "title": "训练步数",
+      "title": "步数",
       "chart_type": "line"
+    },
+    {
+      "name": "epsilon",
+      "title": "学习率",
+      "chart_type": "area"
     }
   ]
 }

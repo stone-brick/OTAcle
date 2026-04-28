@@ -23,6 +23,15 @@ sys.path.insert(0, "../py_tool/src")
 from otacle import OTAcleThinkSender, OTAcleCommand, OTAcleObserver
 
 
+def get_pixel_rgb(image_bytes: bytes, x: int, y: int, width: int) -> tuple[int, int, int]:
+    """从图像字节数据中获取 (x, y) 位置的 RGB 值（BGRA 格式）"""
+    idx = (y * width + x) * 4
+    if idx + 2 >= len(image_bytes):
+        return (0, 0, 0)
+    b, g, r = image_bytes[idx], image_bytes[idx + 1], image_bytes[idx + 2]
+    return (r, g, b)
+
+
 def main():
     """主演示流程"""
     print("=" * 50)
@@ -60,6 +69,23 @@ def main():
             if frame:
                 print(f"[Observe] 帧 {frame.frame_id}: {frame.width}x{frame.height}, blocks={len(frame.data)}")
 
+                # 计算每个块 (1, 1) 位置的 RGB 总和
+                total_rgb_sum = 0
+                for i, block in enumerate(frame.data):
+                    img_bytes = block.decode_image()
+                    r, g, b = get_pixel_rgb(img_bytes, 1, 1, block.w)
+                    print(f"    块 {i}: (1,1) 位置 RGB = ({r}, {g}, {b})")
+                    total_rgb_sum += r + g + b
+
+                print(f"    RGB 总和: {total_rgb_sum}")
+
+                # 如果 RGB 总和能被 4 整除，触发动作 0
+                if total_rgb_sum % 4 == 0:
+                    cmd.clear_execute()
+                    cmd.execute([0])
+                    cmd.send()
+                    print(f"    [Act]   -> 触发动作 [0] (RGB 总和 {total_rgb_sum} 可被 4 整除)")
+
             # Think: 发送决策日志
             # 模拟强化学习环境，随时间衰减 epsilon
             reward = round(1.0 / step, 4)
@@ -73,12 +99,6 @@ def main():
                 loss=round(0.5 / step, 4),
             )
             print(f"[Think] Step {step}: reward={reward}, epsilon={epsilon:.4f}")
-
-            # Act: 发送动作命令（执行 space 键，即 actions.json 中配置的第一个动作）
-            cmd.clear_execute()  # 清除上一轮的执行标记
-            cmd.execute([0])  # 执行 index=0 的动作（space 键）
-            cmd.send()
-            print(f"[Act]   -> 执行动作 [0] (space)")
 
             time.sleep(1)
 
