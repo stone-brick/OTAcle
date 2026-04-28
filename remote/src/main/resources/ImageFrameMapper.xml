@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.otacle.remote.repository.ImageFrameMapper">
+    <resultMap id="BaseResultMap" type="com.otacle.remote.model.ImageFrame">
+        <id column="id" property="id"/>
+        <result column="project_id" property="projectId"/>
+        <result column="frame_id" property="frameId"/>
+        <result column="width" property="width"/>
+        <result column="height" property="height"/>
+        <result column="timestamp" property="timestamp"/>
+        <result column="crop_blocks" property="cropBlocks"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into image_frames(project_id, frame_id, width, height, timestamp, crop_blocks, created_at)
+        values(#{projectId}, #{frameId}, #{width}, #{height}, #{timestamp}, #{cropBlocks}, #{createdAt})
+    </insert>
+
+    <select id="selectByProjectId" resultMap="BaseResultMap">
+        select * from image_frames where project_id = #{projectId}
+    </select>
+
+    <delete id="deleteById">
+        delete from image_frames where id = #{id}
+    </delete>
+</mapper>

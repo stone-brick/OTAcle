@@ -8,6 +8,7 @@ class BackendApplicationTests {
 
     @Test
     void contextLoads() {
+        // Test that Spring Boot application context loads successfully
     }
 
 }

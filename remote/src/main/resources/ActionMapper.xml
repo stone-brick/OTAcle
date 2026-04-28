@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.otacle.remote.repository.ActionMapper">
+    <resultMap id="BaseResultMap" type="com.otacle.remote.model.Action">
+        <id column="id" property="id"/>
+        <result column="action_type" property="actionType"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="config" property="config"/>
+        <result column="variables" property="variables"/>
+        <result column="project_id" property="projectId"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into actions(action_type, name, description, config, variables, project_id, created_at, updated_at)
+        values(#{actionType}, #{name}, #{description}, #{config}, #{variables}, #{projectId}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        select * from actions where id = #{id}
+    </select>
+
+    <select id="selectByProjectId" resultMap="BaseResultMap">
+        select * from actions where project_id = #{projectId}
+    </select>
+
+    <update id="update">
+        update actions set action_type = #{actionType}, name = #{name}, description = #{description}, config = #{config}, variables = #{variables}, updated_at = #{updatedAt} where id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        delete from actions where id = #{id}
+    </delete>
+</mapper>
