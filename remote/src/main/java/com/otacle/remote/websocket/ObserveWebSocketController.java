@@ -18,8 +18,8 @@ public class ObserveWebSocketController {
         this.imageFrameService = imageFrameService;
     }
 
-    @MessageMapping("/observe")
-    @SendTo("/topic/observe")
+    @MessageMapping("/observe/frame")
+    @SendTo("/topic/observe/frames")
     public FrameMessage handle(FrameMessage message) {
         try {
             ImageFrameRequest request = new ImageFrameRequest();

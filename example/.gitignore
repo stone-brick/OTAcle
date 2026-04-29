@@ -1,0 +1,15 @@
+# Python virtualenv
+.venv/
+venv/
+ENV/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Editor
+.idea/
+.vscode/
+*.sw?

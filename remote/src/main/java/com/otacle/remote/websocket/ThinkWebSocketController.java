@@ -25,8 +25,8 @@ public class ThinkWebSocketController {
     /**
      * 接收前端思考消息 -> 保存日志 -> 推送给所有订阅者
      */
-    @MessageMapping("/think")
-    @SendTo("/topic/think")
+    @MessageMapping("/think/log")
+    @SendTo("/topic/think/logs")
     public DecisionMessage handle(DecisionMessage message) {
         try {
             // 1. 把 WebSocket 消息转换成 DTO
