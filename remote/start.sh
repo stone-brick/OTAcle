@@ -26,4 +26,4 @@ echo "[INFO] H2 Console: http://localhost:8080/h2-console"
 echo ""
 
 cd "$(dirname "$0")"
-mvn spring-boot:run
+./mvnw spring-boot:run

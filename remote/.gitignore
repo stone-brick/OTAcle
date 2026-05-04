@@ -32,4 +32,17 @@ build/
 ### VS Code ###
 .vscode/
 
-### Addtional Tools ###
+# Maven wrapper
+mvnw
+mvnw.cmd
+
+# Logs
+logs/
+*.log
+
+# Compiled class files
+*.class
+
+# Package files
+*.jar
+*.war

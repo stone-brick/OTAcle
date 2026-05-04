@@ -1,4 +1,9 @@
 @echo off
+echo Starting OTAcle Remote Server...
+cd /d %~dp0
+call mvnw.cmd spring-boot:run
+pause
+
 REM OTAcle SpringBoot Backend - Quick Start Script for Windows
 
 echo ========================================
