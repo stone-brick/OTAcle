@@ -46,3 +46,8 @@ logs/
 # Package files
 *.jar
 *.war
+
+# 配置文件（包含敏感信息）
+application.yml
+application-*.yml
+!application.example.yml

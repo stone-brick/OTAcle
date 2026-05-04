@@ -4,6 +4,7 @@ mod communication;
 mod input;
 mod observe;
 mod project;
+pub mod remote;
 mod think;
 
 use tauri_plugin_log::{Builder as LogBuilder, Target, TargetKind};
@@ -142,6 +143,26 @@ pub fn run() {
             commands::think::think_save_config,
             commands::think::think_get_config,
             commands::think::think_get_logs,
+            // Remote commands
+            commands::remote::remote_init,
+            commands::remote::remote_is_initialized,
+            commands::remote::remote_auth_register,
+            commands::remote::remote_auth_login,
+            commands::remote::remote_auth_get_me,
+            commands::remote::remote_auth_set_token,
+            commands::remote::remote_auth_logout,
+            commands::remote::remote_group_list,
+            commands::remote::remote_group_create,
+            commands::remote::remote_group_detail,
+            commands::remote::remote_group_update,
+            commands::remote::remote_group_delete,
+            commands::remote::remote_group_members,
+            commands::remote::remote_group_join,
+            commands::remote::remote_group_leave,
+            commands::remote::remote_config_upload,
+            commands::remote::remote_config_download_url,
+            commands::remote::remote_config_latest,
+            commands::remote::remote_config_versions,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

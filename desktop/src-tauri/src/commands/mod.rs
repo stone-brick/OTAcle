@@ -3,6 +3,7 @@ pub mod communication;
 pub mod communication_pull;
 pub mod observe;
 pub mod project;
+pub mod remote;
 pub mod target_window;
 pub mod think;
 pub mod window_input;

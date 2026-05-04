@@ -2,7 +2,9 @@ package com.otacle.remote.service;
 
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.model.GeneratePresignedUrlRequest;
+import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -16,22 +18,27 @@ import java.util.UUID;
 @Service
 public class OssService {
 
-    private final OSS ossClient;
-    
-    @Value("${aliyun.oss.bucket-name}")
+    @Autowired(required = false)
+    @Nullable
+    private OSS ossClient;
+
+    @Value("${aliyun.oss.bucket-name:}")
     private String bucketName;
-    
-    @Value("${aliyun.oss.endpoint}")
+
+    @Value("${aliyun.oss.endpoint:}")
     private String endpoint;
 
-    public OssService(OSS ossClient) {
-        this.ossClient = ossClient;
-    }
+    @Value("${aliyun.oss.enabled:false}")
+    private boolean enabled;
 
     /**
      * 上传文件到 OSS
      */
     public String uploadFile(MultipartFile file, String objectKey) throws IOException {
+        if (!enabled || ossClient == null) {
+            log.info("OSS disabled, skipping upload for: {}", objectKey);
+            return objectKey;
+        }
         try {
             ossClient.putObject(bucketName, objectKey, file.getInputStream());
             log.info("文件上传成功: {}", objectKey);
@@ -46,10 +53,14 @@ public class OssService {
      * 生成签名 URL（有效期1小时）
      */
     public String generatePresignedUrl(String objectKey) {
+        if (!enabled || ossClient == null) {
+            log.info("OSS disabled, returning mock URL for: {}", objectKey);
+            return "https://mock.oss.example.com/" + objectKey + "?expires=3600";
+        }
         Date expiration = new Date(System.currentTimeMillis() + 3600 * 1000); // 1小时
         GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucketName, objectKey);
         request.setExpiration(expiration);
-        
+
         URL url = ossClient.generatePresignedUrl(request);
         return url.toString();
     }
@@ -60,7 +71,7 @@ public class OssService {
      */
     public String generateObjectKey(Long groupId, String characterId, Integer version) {
         String uuid = UUID.randomUUID().toString().substring(0, 8);
-        return String.format("otacle-config/%s/%s/%s_v%s_%s.zip", 
+        return String.format("otacle-config/%s/%s/%s_v%s_%s.zip",
                 groupId, characterId, groupId, version, uuid);
     }
 }
