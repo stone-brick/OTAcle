@@ -42,8 +42,13 @@ fn default_win32() -> InputBackend {
 /// {
 ///   "default_backend": "win32",
 ///   "actions": [
-///     {"index": 0, "name": "jump", "type": "key", "key": "space"},
-///     {"index": 1, "type": "key", "key": "ctrl+c", "backend": "enigo"}
+///     { "name": "按空格", "type": "key", "key": "space" },
+///     { "type": "key_sequence", "keys": [{"key": "ctrl"}, {"key": "a"}], "default_interval_ms": 5 },
+///     { "type": "mouse_click", "button": "left", "count": 2 },
+///     { "type": "mouse_move", "x": 100, "y": 200 },
+///     { "type": "mouse_scroll", "direction": "up", "amount": 3 },
+///     { "type": "delay", "duration_ms": 1000 },
+///     { "type": "text", "content": "Hello World" }
 ///   ]
 /// }
 /// ```

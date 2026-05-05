@@ -1,4 +1,30 @@
 {
   "default_backend": "win32",
-  "actions": []
+  "actions": [
+    { "name": "按空格", "type": "key", "key": "space" },
+    { "name": "复制", "type": "key", "key": "ctrl+c", "hold_time_ms": 5, "backend": "enigo" },
+    {
+      "type": "key_sequence",
+      "keys": [
+        { "key": "ctrl", "hold_time_ms": 5 },
+        { "key": "a", "hold_time_ms": 5, "interval_ms": 10 }
+      ],
+      "default_interval_ms": 5
+    },
+    { "type": "mouse_click", "button": "left", "count": 2, "interval_ms": 100, "hold_time_ms": 5 },
+    {
+      "type": "mouse_click",
+      "button": "right",
+      "variables": [
+        { "param_name": "target_x", "field_name": "x" },
+        { "param_name": "target_y", "field_name": "y" }
+      ]
+    },
+    { "type": "mouse_move", "x": 100, "y": 200 },
+    { "type": "mouse_move", "x": 300, "y": 400, "duration_ms": 500 },
+    { "type": "mouse_scroll", "direction": "up", "amount": 3 },
+    { "type": "delay", "duration_ms": 1000 },
+    { "type": "text", "content": "Hello World" },
+    { "type": "text", "content": "Hello World", "backend": "enigo" }
+  ]
 }
