@@ -7,7 +7,6 @@ import WindowsTabPanel from './WindowsTabPanel.vue';
 import { useWindows } from '../../composables/useWindows';
 import { useProject } from '../../composables/useProject';
 import { useActionEditor } from '../../composables/act/useActionEditor';
-import { useActionHistory } from '../../composables/act/useActionHistory';
 import { useActionExecutor } from '../../composables/act/useActionExecutor';
 import type { ActionItem, InputBackend, SearchMode } from '../../types';
 
@@ -23,7 +22,6 @@ const {
 } = useWindows();
 
 const actionEditor = useActionEditor();
-const actionHistory = useActionHistory(() => actionEditor.refreshActionList());
 const actionExecutor = useActionExecutor();
 
 async function searchWindows(mode: SearchMode, value: string): Promise<number[]> {
@@ -71,11 +69,11 @@ async function handleDiscardChanges() {
 }
 
 async function handleUndo() {
-  await actionHistory.undo();
+  await actionEditor.undo();
 }
 
 async function handleRedo() {
-  await actionHistory.redo();
+  await actionEditor.redo();
 }
 
 function handleSetDefaultBackend(backend: InputBackend) {
@@ -117,8 +115,8 @@ async function handleExecuteAction(payload: { actionIdx: number; params: Record<
         :is-loaded="actionEditor.isLoaded.value"
         :selected-action="actionEditor.selectedAction.value"
         :has-changes="actionEditor.hasChanges.value"
-        :can-undo="actionHistory.canUndo.value"
-        :can-redo="actionHistory.canRedo.value"
+        :can-undo="actionEditor.canUndo.value"
+        :can-redo="actionEditor.canRedo.value"
         @save="handleSave"
         @select-action="handleSelectAction"
         @update-action="handleUpdateAction"

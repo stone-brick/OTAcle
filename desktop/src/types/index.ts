@@ -38,6 +38,7 @@ export interface KeyActionItem extends ActionItemBase {
   type: 'key';
   key: string;
   hold_time_ms?: number;
+  variables?: Variable[];
 }
 
 // 按键序列项
@@ -52,6 +53,7 @@ export interface KeySequenceActionItem extends ActionItemBase {
   type: 'key_sequence';
   keys: KeySequenceItem[];
   default_interval_ms: number;
+  variables?: Variable[];
 }
 
 // 鼠标点击动作
@@ -78,18 +80,21 @@ export interface MouseScrollActionItem extends ActionItemBase {
   type: 'mouse_scroll';
   direction: ScrollDirection;
   amount: number;
+  variables?: Variable[];
 }
 
 // 延迟动作
 export interface DelayActionItem extends ActionItemBase {
   type: 'delay';
   duration_ms: number;
+  variables?: Variable[];
 }
 
 // 文本动作
 export interface TextActionItem extends ActionItemBase {
   type: 'text';
   content: string;
+  variables?: Variable[];
 }
 
 // 所有动作项的联合类型

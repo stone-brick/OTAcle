@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { TextActionItem } from '../../../../types';
 import BackendSelector from '../BackendSelector.vue';
+import VariableEditor from '../VariableEditor.vue';
 import FormControl from '@/components/ui/FormControl.vue';
 
 const props = defineProps<{
@@ -14,6 +15,8 @@ const emit = defineEmits<{
 function updateField<K extends keyof TextActionItem>(field: K, value: TextActionItem[K]) {
   emit('update:modelValue', { ...props.modelValue, [field]: value });
 }
+
+const availableFields = ['content'];
 </script>
 
 <template>
@@ -26,13 +29,20 @@ function updateField<K extends keyof TextActionItem>(field: K, value: TextAction
         placeholder="输入要发送的文本..."
         @update:model-value="updateField('content', $event)"
       />
-      <span class="text-xs text-gray-500 dark:text-slate-400">支持通过 variables 动态参数覆盖</span>
     </div>
     <div class="flex flex-col gap-1.5">
       <label class="text-xs font-medium text-gray-500 dark:text-slate-400">输入后端</label>
       <BackendSelector
         :model-value="modelValue.backend ?? 'default'"
         @update:model-value="updateField('backend', $event === 'default' ? null : $event)"
+      />
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">动态参数 (variables)</label>
+      <VariableEditor
+        :model-value="modelValue.variables || []"
+        :available-fields="availableFields"
+        @update:model-value="updateField('variables', $event.length > 0 ? $event : undefined)"
       />
     </div>
   </div>

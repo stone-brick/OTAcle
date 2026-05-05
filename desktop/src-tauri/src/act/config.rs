@@ -208,7 +208,7 @@ pub fn create_action(action: ActionData, name: Option<String>) -> Result<u32, St
     let current_backend = get_default_backend()?;
 
     // 修改前保存当前状态到历史记录
-    history::save_to_history(actions, current_backend)?;
+    history::save_to_history(actions.clone(), current_backend)?;
 
     // 首先验证动作
     validate_action(&action)?;

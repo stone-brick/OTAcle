@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { KeySequenceActionItem, KeySequenceItem } from '../../../../types';
 import BackendSelector from '../BackendSelector.vue';
+import VariableEditor from '../VariableEditor.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import FormControl from '@/components/ui/FormControl.vue';
 import { mdiClose } from '@mdi/js';
@@ -34,6 +35,8 @@ function updateKey(index: number, field: keyof KeySequenceItem, value: string | 
   keys[index] = { ...keys[index], [field]: value };
   updateField('keys', keys);
 }
+
+const availableFields = ['keys', 'default_interval_ms'];
 </script>
 
 <template>
@@ -51,6 +54,14 @@ function updateKey(index: number, field: keyof KeySequenceItem, value: string | 
       <BackendSelector
         :model-value="modelValue.backend ?? 'default'"
         @update:model-value="updateField('backend', $event === 'default' ? null : $event)"
+      />
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">动态参数 (variables)</label>
+      <VariableEditor
+        :model-value="modelValue.variables || []"
+        :available-fields="availableFields"
+        @update:model-value="updateField('variables', $event.length > 0 ? $event : undefined)"
       />
     </div>
     <div class="flex flex-col gap-1.5">

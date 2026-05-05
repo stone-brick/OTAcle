@@ -16,7 +16,7 @@ function updateField<K extends keyof MouseClickActionItem>(field: K, value: Mous
   emit('update:modelValue', { ...props.modelValue, [field]: value });
 }
 
-const availableFields = ['count'];
+const availableFields = ['count', 'hold_time_ms'];
 </script>
 
 <template>

@@ -5,7 +5,7 @@
 use super::config;
 use super::types::{
     ActionData, DelayAction, InputBackend, KeyAction, KeySequenceAction, MouseButton,
-    MouseClickAction, MouseMoveAction, MouseScrollAction, ScrollDirection, TextAction,
+    MouseClickAction, MouseMoveAction, MouseScrollAction, ScrollDirection, TextAction, Variable,
 };
 use crate::input;
 use enigo::{Axis, Button, Coordinate, Direction, Enigo, Mouse, Settings};
@@ -294,65 +294,66 @@ fn apply_params(
     action: &ActionData,
     params: &HashMap<String, serde_json::Value>,
 ) -> Result<ActionData, String> {
-    let mut resolved = action.clone();
+    // 将 ActionData 序列化为 JSON
+    let json = serde_json::to_value(action)
+        .map_err(|e| format!("Failed to serialize action: {}", e))?;
 
-    match &mut resolved {
-        ActionData::MouseMove(a) => {
-            for var in &a.variables {
-                if let Some(value) = params.get(&var.param_name) {
-                    match var.field_name.as_str() {
-                        "x" => apply_field(&mut a.x, &var.field_name, value)?,
-                        "y" => apply_field(&mut a.y, &var.field_name, value)?,
-                        _ => {
-                            return Err(format!(
-                                "Unknown field '{}' for mouse_move (expected 'x' or 'y')",
-                                var.field_name
-                            ));
-                        }
-                    }
-                }
-                // 如果未提供参数，使用配置中的默认值（不执行任何操作）
-            }
-        }
-        ActionData::MouseClick(a) => {
-            for var in &a.variables {
-                if let Some(value) = params.get(&var.param_name) {
-                    match var.field_name.as_str() {
-                        "count" => apply_field(&mut a.count, &var.field_name, value)?,
-                        _ => {
-                            return Err(format!(
-                                "Unknown field '{}' for mouse_click (expected 'count')",
-                                var.field_name
-                            ));
-                        }
-                    }
-                }
-            }
-        }
-        _ => {}
-    }
+    // 确保是对象类型
+    let mut map = match json {
+        serde_json::Value::Object(m) => m,
+        _ => return Err("Action serialization produced non-object".to_string()),
+    };
 
-    Ok(resolved)
+    // 根据动作类型应用变量覆盖
+    let new_json = match action {
+        ActionData::Key(a) => apply_variables(&mut map, &a.variables, params)?,
+        ActionData::KeySequence(a) => apply_variables(&mut map, &a.variables, params)?,
+        ActionData::MouseClick(a) => apply_variables(&mut map, &a.variables, params)?,
+        ActionData::MouseMove(a) => apply_variables(&mut map, &a.variables, params)?,
+        ActionData::MouseScroll(a) => apply_variables(&mut map, &a.variables, params)?,
+        ActionData::Delay(a) => apply_variables(&mut map, &a.variables, params)?,
+        ActionData::Text(a) => apply_variables(&mut map, &a.variables, params)?,
+    };
+
+    // 反序列化回 ActionData
+    serde_json::from_value(new_json)
+        .map_err(|e| format!("Failed to deserialize action: {}", e))
 }
 
-/// 将参数值应用到字段
-fn apply_field<T: serde::de::DeserializeOwned + Clone>(
-    field: &mut T,
-    field_name: &str,
-    value: &serde_json::Value,
-) -> Result<(), String> {
-    match serde_json::from_value(value.clone()) {
-        Ok(new_val) => {
-            *field = new_val;
-            Ok(())
+/// 根据 variables 将 params 应用到 JSON map
+fn apply_variables(
+    map: &mut serde_json::Map<String, serde_json::Value>,
+    variables: &[Variable],
+    params: &HashMap<String, serde_json::Value>,
+) -> Result<serde_json::Value, String> {
+    for var in variables {
+        if let Some(value) = params.get(&var.param_name) {
+            if let Some(existing) = map.get(&var.field_name) {
+                // 类型检查
+                if existing.is_number() && !value.is_number() {
+                    return Err(format!(
+                        "Type mismatch for '{}': expected number, got {}",
+                        var.field_name, value
+                    ));
+                }
+                if existing.is_string() && !value.is_string() && !value.is_null() {
+                    return Err(format!(
+                        "Type mismatch for '{}': expected string, got {}",
+                        var.field_name, value
+                    ));
+                }
+                map.insert(var.field_name.clone(), value.clone());
+            } else {
+                return Err(format!(
+                    "Unknown field '{}' for this action type (available fields: {:?})",
+                    var.field_name,
+                    map.keys().collect::<Vec<_>>()
+                ));
+            }
         }
-        Err(_) => Err(format!(
-            "Invalid value type for field '{}': expected {}, got {}",
-            field_name,
-            std::any::type_name::<T>(),
-            value
-        )),
+        // 如果未提供参数，使用配置中的默认值（不执行任何操作）
     }
+    Ok(serde_json::Value::Object(map.clone()))
 }
 
 /// 执行动作实现

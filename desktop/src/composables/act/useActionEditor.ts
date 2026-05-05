@@ -14,8 +14,8 @@ const configPath = ref<string>('');
 const selectedIndex = ref<number | null>(null);
 const isLoaded = ref(false);
 
-// 组合 useActionHistory
-const { refreshHistoryCount } = useActionHistory();
+// 组合 useActionHistory - 暴露 canUndo/canRedo 状态
+const actionHistory = useActionHistory(() => refreshActionList());
 
 // 项目事件监听器清理函数
 let unsubscribeProject: (() => void) | null = null;
@@ -51,7 +51,7 @@ async function loadConfig(path: string): Promise<void> {
 
     // 加载时清除后端历史
     await comm.actClearHistory();
-    await refreshHistoryCount();
+    await actionHistory.refreshHistoryCount();
 
     addLog(`Act 配置已加载: ${path}`, 'success', 'action');
   } catch {
@@ -66,6 +66,7 @@ async function loadConfig(path: string): Promise<void> {
     // 保存默认配置
     await comm.actSaveConfig(path, defaultBackend.value, []);
     addLog(`已创建默认动作配置文件: ${path}`, 'info', 'action');
+    await actionHistory.refreshHistoryCount();
   }
 }
 
@@ -108,7 +109,7 @@ async function createAction(type: string, name?: string): Promise<number> {
 
     // Refresh state from backend
     await refreshActionList();
-    await refreshHistoryCount();
+    await actionHistory.refreshHistoryCount();
 
     addLog(`已创建动作 #${index}: ${name || type}`, 'success', 'action');
     return index;
@@ -128,7 +129,7 @@ async function updateAction(index: number, action: ActionItem, name?: string): P
 
     // 从后端刷新状态
     await refreshActionList();
-    await refreshHistoryCount();
+    await actionHistory.refreshHistoryCount();
 
     addLog(`已更新动作 #${index}`, 'success', 'action');
   } catch (e) {
@@ -147,7 +148,7 @@ async function deleteAction(index: number): Promise<void> {
 
     // 从后端刷新状态（索引由后端重建）
     await refreshActionList();
-    await refreshHistoryCount();
+    await actionHistory.refreshHistoryCount();
 
     // 必要时调整 selectedIndex（可能已超出范围）
     if (selectedIndex.value !== null && selectedIndex.value >= actions.value.length) {
@@ -178,7 +179,7 @@ async function setDefaultBackend(backend: InputBackend): Promise<void> {
     // 调用后端设置默认后端（会保存到历史）
     await comm.actSetDefaultBackend(backend);
     defaultBackend.value = backend;
-    await refreshHistoryCount();
+    await actionHistory.refreshHistoryCount();
   } catch (e) {
     addLog(`设置默认后端失败: ${e}`, 'error', 'action');
   }
@@ -222,7 +223,7 @@ async function discardChanges(): Promise<void> {
   const comm = useComm();
   await comm.actDiscardAll();
   await refreshActionList();
-  await refreshHistoryCount();
+  await actionHistory.refreshHistoryCount();
   syncBaselineActions();
   addLog('已丢弃所有未保存的更改', 'info', 'action')
 }
@@ -320,5 +321,12 @@ export function useActionEditor() {
     getChangedIndices,
     discardChanges,
     syncBaselineActions,
+
+    // History (re-export from useActionHistory)
+    undo: actionHistory.undo,
+    redo: actionHistory.redo,
+    canUndo: actionHistory.canUndo,
+    canRedo: actionHistory.canRedo,
+    refreshHistoryCount: actionHistory.refreshHistoryCount,
   };
 }

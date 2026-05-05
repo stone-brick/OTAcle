@@ -56,6 +56,9 @@ pub struct KeyAction {
     /// 覆盖此动作的默认输入后端
     #[serde(default)]
     pub backend: Option<InputBackend>,
+    /// 用于运行时参数替换的动态变量
+    #[serde(default)]
+    pub variables: Vec<Variable>,
 }
 
 /// 按键序列动作 - 按顺序按下多个按键
@@ -70,6 +73,9 @@ pub struct KeySequenceAction {
     /// 覆盖此动作的默认输入后端
     #[serde(default)]
     pub backend: Option<InputBackend>,
+    /// 用于运行时参数替换的动态变量
+    #[serde(default)]
+    pub variables: Vec<Variable>,
 }
 
 /// 按键序列中的单个按键项
@@ -156,6 +162,9 @@ pub struct MouseScrollAction {
     /// 覆盖此动作的默认输入后端
     #[serde(default)]
     pub backend: Option<InputBackend>,
+    /// 用于运行时参数替换的动态变量
+    #[serde(default)]
+    pub variables: Vec<Variable>,
 }
 
 fn default_scroll_amount() -> u32 {
@@ -168,6 +177,9 @@ fn default_scroll_amount() -> u32 {
 pub struct DelayAction {
     /// 等待时长（毫秒）
     pub duration_ms: u64,
+    /// 用于运行时参数替换的动态变量
+    #[serde(default)]
+    pub variables: Vec<Variable>,
 }
 
 /// 文本输入动作
@@ -179,6 +191,9 @@ pub struct TextAction {
     /// 覆盖此动作的默认输入后端
     #[serde(default)]
     pub backend: Option<InputBackend>,
+    /// 用于运行时参数替换的动态变量
+    #[serde(default)]
+    pub variables: Vec<Variable>,
 }
 
 /// 动作类型枚举 - 所有动作类型的可辨识联合
