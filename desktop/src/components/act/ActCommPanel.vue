@@ -59,7 +59,8 @@ async function handleStop() {
 </script>
 
 <template>
-  <CardBox class="flex flex-col gap-4">
+  <div class="flex flex-col p-3 gap-3 h-full box-border">
+    <CardBox class="flex flex-col gap-4 flex-1">
     <!-- Connection Status -->
     <div class="flex items-center gap-6 flex-wrap">
       <div class="flex flex-col pl-4">
@@ -131,4 +132,5 @@ async function handleStop() {
       </div>
     </div>
   </CardBox>
+  </div>
 </template>

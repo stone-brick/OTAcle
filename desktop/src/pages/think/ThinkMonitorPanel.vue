@@ -13,7 +13,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="monitor-panel p-4 h-full overflow-y-auto">
+  <div class="monitor-panel p-3 h-full overflow-y-auto">
     <CardBox class="flex flex-col flex-1">
       <CardBoxComponentBody class="flex flex-col gap-4">
         <div

@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { mdiEye, mdiMessageTextOutline, mdiTarget } from '@mdi/js'
+import { mdiEye, mdiMessageTextOutline, mdiTarget, mdiCloudOutline, mdiCloudCheckOutline } from '@mdi/js'
 import BaseIcon from '../ui/BaseIcon.vue'
 import ProjectSelector from '../ProjectSelector.vue'
+import { useRemote } from '../../composables/useRemote'
 
 const router = useRouter()
 const route = useRoute()
+const { isLoggedIn } = useRemote()
 
 interface NavItem {
   id: string
@@ -19,6 +21,7 @@ const menuItems: NavItem[] = [
   { id: 'observe', label: '观察', icon: mdiEye, path: '/observe' },
   { id: 'think', label: '思考', icon: mdiMessageTextOutline, path: '/think' },
   { id: 'act', label: '执行', icon: mdiTarget, path: '/act' },
+  { id: 'remote', label: '远程', icon: mdiCloudOutline, path: '/remote' },
 ]
 
 const currentPath = computed(() => route.path)
@@ -47,7 +50,7 @@ function isActive(path: string): boolean {
         @click="navigateTo(item.path)"
       >
         <BaseIcon
-          :path="item.icon"
+          :path="item.id === 'remote' ? (isLoggedIn ? mdiCloudCheckOutline : item.icon) : item.icon"
           :size="20"
         />
         <span>{{ item.label }}</span>

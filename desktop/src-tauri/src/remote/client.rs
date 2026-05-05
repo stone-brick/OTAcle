@@ -61,7 +61,9 @@ pub struct Account {
     pub id: i64,
     pub username: String,
     pub email: Option<String>,
+    #[serde(rename = "createdAt")]
     pub created_at: Option<String>,
+    #[serde(rename = "updatedAt")]
     pub updated_at: Option<String>,
 }
 
@@ -81,6 +83,7 @@ pub struct LoginRequest {
 #[derive(serde::Serialize, serde::Deserialize, Default)]
 pub struct AuthResponse {
     pub token: String,
+    #[serde(rename = "userId")]
     pub user_id: i64,
     pub username: String,
 }
@@ -91,16 +94,23 @@ pub struct Group {
     pub id: i64,
     pub name: String,
     pub description: Option<String>,
+    #[serde(rename = "inviteCode")]
     pub invite_code: String,
+    #[serde(rename = "createdAt")]
     pub created_at: Option<String>,
+    #[serde(rename = "updatedAt")]
+    pub updated_at: Option<String>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Default)]
 pub struct GroupMember {
     pub id: i64,
-    pub user_id: i64,
-    pub username: String,
+    #[serde(rename = "accountId")]
+    pub account_id: i64,
+    #[serde(rename = "groupId")]
+    pub group_id: i64,
     pub role: String,
+    #[serde(rename = "joinedAt")]
     pub joined_at: Option<String>,
 }
 
@@ -108,19 +118,38 @@ pub struct GroupMember {
 #[derive(serde::Serialize, serde::Deserialize, Default)]
 pub struct ConfigVersion {
     pub id: i64,
+    #[serde(rename = "groupId")]
     pub group_id: i64,
+    #[serde(rename = "uploaderId")]
+    pub uploader_id: i64,
+    #[serde(rename = "characterId")]
     pub character_id: String,
     pub version: i32,
+    #[serde(rename = "filePath")]
+    pub file_path: Option<String>,
+    #[serde(rename = "fileName")]
     pub file_name: String,
-    pub checksum: String,
+    #[serde(rename = "fileSize")]
+    pub file_size: Option<i64>,
+    pub checksum: Option<String>,
+    #[serde(rename = "createdAt")]
     pub created_at: Option<String>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Default)]
 pub struct ConfigDownloadResponse {
+    #[serde(rename = "configId")]
+    pub config_id: i64,
+    #[serde(rename = "characterId")]
+    pub character_id: String,
     pub version: i32,
+    #[serde(rename = "fileName")]
     pub file_name: String,
+    #[serde(rename = "fileSize")]
+    pub file_size: i64,
     pub checksum: String,
+    #[serde(rename = "downloadUrl")]
     pub download_url: String,
-    pub expires_at: Option<String>,
+    #[serde(rename = "createdAt")]
+    pub created_at: Option<String>,
 }

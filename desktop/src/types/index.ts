@@ -104,7 +104,7 @@ export type ActionItem =
 
 
 // 日志来源
-export type LogSource = 'system' | 'comm' | 'observe' | 'action' | 'window' | 'think';
+export type LogSource = 'system' | 'comm' | 'observe' | 'action' | 'window' | 'think' | 'remote';
 
 // 日志条目
 export interface LogEntry {
