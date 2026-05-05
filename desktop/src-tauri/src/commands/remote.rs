@@ -1,10 +1,16 @@
 use tauri::command;
+use tauri::AppHandle;
+use tauri_store::ManagerExt;
 
 use crate::remote::client::{init, AuthResponse, Account};
 use crate::remote::auth as auth_mod;
 use crate::remote::group;
 use crate::remote::config;
 use crate::remote::{Group, GroupMember, ConfigVersion, ConfigDownloadResponse};
+
+const STORE_PATH: &str = "settings.json";
+const SERVER_URL_KEY: &str = "remote_server_url";
+const DEFAULT_SERVER_URL: &str = "http://localhost:8080";
 
 // === Client Management ===
 
@@ -157,4 +163,27 @@ pub fn remote_config_versions(
     character_id: String,
 ) -> Result<Vec<ConfigVersion>, String> {
     config::versions(group_id, &character_id)
+}
+
+// === Store ===
+
+#[command]
+pub fn remote_save_server_url(url: String, app: AppHandle) -> Result<(), String> {
+    app.store_collection()
+        .set(STORE_PATH, SERVER_URL_KEY, serde_json::Value::String(url))
+        .map_err(|e| e.to_string())?;
+    app.store_collection().save(STORE_PATH).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[command]
+pub fn remote_load_server_url(app: AppHandle) -> Result<String, String> {
+    let url = match app
+        .store_collection()
+        .get::<String>(STORE_PATH, SERVER_URL_KEY)
+    {
+        Ok(v) => v,
+        Err(_) => DEFAULT_SERVER_URL.to_string(),
+    };
+    Ok(url)
 }

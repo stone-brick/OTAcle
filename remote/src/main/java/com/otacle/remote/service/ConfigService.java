@@ -4,6 +4,7 @@ import com.otacle.remote.dto.config.ConfigDownloadResponse;
 import com.otacle.remote.model.ConfigVersion;
 import com.otacle.remote.repository.ConfigVersionMapper;
 import com.otacle.remote.repository.GroupMemberMapper;
+import com.otacle.remote.service.storage.StorageService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
@@ -23,14 +24,14 @@ public class ConfigService {
 
     private final ConfigVersionMapper configVersionMapper;
     private final GroupMemberMapper groupMemberMapper;
-    private final OssService ossService;
+    private final StorageService storageService;
 
-    public ConfigService(ConfigVersionMapper configVersionMapper, 
+    public ConfigService(ConfigVersionMapper configVersionMapper,
                         GroupMemberMapper groupMemberMapper,
-                        OssService ossService) {
+                        StorageService storageService) {
         this.configVersionMapper = configVersionMapper;
         this.groupMemberMapper = groupMemberMapper;
-        this.ossService = ossService;
+        this.storageService = storageService;
     }
 
     /**
@@ -54,10 +55,10 @@ public class ConfigService {
         Integer nextVersion = getNextVersion(groupId, characterId);
         
         // 5. 生成 OSS 对象键
-        String objectKey = ossService.generateObjectKey(groupId, characterId, nextVersion);
+        String objectKey = storageService.generateObjectKey(groupId, characterId, nextVersion);
         
         // 6. 上传到 OSS
-        ossService.uploadFile(file, objectKey);
+        storageService.uploadFile(file, objectKey);
         
         // 7. 保存版本记录
         ConfigVersion configVersion = new ConfigVersion();
@@ -95,7 +96,7 @@ public class ConfigService {
         }
         
         // 生成签名 URL
-        String downloadUrl = ossService.generatePresignedUrl(latestVersion.getFilePath());
+        String downloadUrl = storageService.generatePresignedUrl(latestVersion.getFilePath());
         
         return convertToDownloadResponse(latestVersion, downloadUrl);
     }
@@ -117,7 +118,7 @@ public class ConfigService {
         }
         
         // 生成签名 URL
-        String downloadUrl = ossService.generatePresignedUrl(configVersion.getFilePath());
+        String downloadUrl = storageService.generatePresignedUrl(configVersion.getFilePath());
         
         return convertToDownloadResponse(configVersion, downloadUrl);
     }

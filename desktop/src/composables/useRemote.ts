@@ -73,12 +73,41 @@ const error = ref<string | null>(null)
 export function useRemote() {
   const { addLog } = useLog()
 
-  // Initialize remote connection
-  async function init(baseUrl: string): Promise<void> {
-    serverUrl.value = baseUrl
+  // Load saved server URL from store
+  async function loadServerUrl(): Promise<string> {
     try {
-      await invoke('remote_init', { baseUrl })
-      addLog(`Remote 已连接到: ${baseUrl}`, 'success', 'remote')
+      const url = await invoke<string>('remote_load_server_url')
+      if (url) {
+        serverUrl.value = url
+      }
+      return serverUrl.value
+    } catch (e) {
+      return serverUrl.value
+    }
+  }
+
+  // Save server URL to store
+  async function saveServerUrl(url: string): Promise<void> {
+    try {
+      await invoke('remote_save_server_url', { url })
+      serverUrl.value = url
+      addLog(`服务器地址已保存: ${url}`, 'success', 'remote')
+    } catch (e) {
+      addLog(`保存服务器地址失败: ${e}`, 'error', 'remote')
+      throw e
+    }
+  }
+
+  // Initialize remote connection
+  async function init(baseUrl?: string): Promise<void> {
+    if (baseUrl) {
+      serverUrl.value = baseUrl
+    } else {
+      await loadServerUrl()
+    }
+    try {
+      await invoke('remote_init', { baseUrl: serverUrl.value })
+      addLog(`Remote 已连接到: ${serverUrl.value}`, 'success', 'remote')
     } catch (e) {
       addLog(`Remote 初始化失败: ${e}`, 'error', 'remote')
       throw e
@@ -339,6 +368,8 @@ export function useRemote() {
     // Auth
     init,
     checkInitialized,
+    loadServerUrl,
+    saveServerUrl,
     register,
     login,
     fetchMe,

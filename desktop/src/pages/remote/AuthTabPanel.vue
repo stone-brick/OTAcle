@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
+import { mdiLogin, mdiAccountPlus, mdiCog } from '@mdi/js'
 import BaseIcon from '../../components/ui/BaseIcon.vue'
-import { mdiLogin, mdiAccountPlus } from '@mdi/js'
+import BaseButton from '../../components/ui/BaseButton.vue'
+import FormControl from '../../components/ui/FormControl.vue'
 import { useRemote } from '../../composables/useRemote'
 
-const { login, register, isLoading, error, serverUrl } = useRemote()
+const { login, register, isLoading, error, serverUrl, saveServerUrl, loadServerUrl } = useRemote()
 
 const mode = ref<'login' | 'register'>('login')
 const form = reactive({
@@ -13,6 +15,33 @@ const form = reactive({
   email: '',
 })
 const localError = ref<string | null>(null)
+
+// Server URL dialog
+const showUrlDialog = ref(false)
+const tempServerUrl = ref('')
+
+onMounted(async () => {
+  await loadServerUrl()
+})
+
+function openUrlDialog() {
+  tempServerUrl.value = serverUrl.value
+  showUrlDialog.value = true
+}
+
+async function saveUrl() {
+  try {
+    await saveServerUrl(tempServerUrl.value)
+    showUrlDialog.value = false
+  } catch (e) {
+    localError.value = String(e)
+  }
+}
+
+function cancelUrlDialog() {
+  showUrlDialog.value = false
+  tempServerUrl.value = ''
+}
 
 async function handleSubmit() {
   localError.value = null
@@ -46,7 +75,16 @@ function toggleShowPassword() {
 <template>
   <div class="flex items-center justify-center h-full p-4">
     <div class="w-full max-w-sm bg-white dark:bg-slate-900 rounded-xl p-6" style="box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);">
-      <div class="text-sm text-gray-400 text-center mb-4">{{ serverUrl }}</div>
+      <div class="flex items-center justify-center gap-2 text-sm text-gray-400 mb-4">
+        <span>{{ serverUrl }}</span>
+        <button
+          type="button"
+          class="text-blue-400 hover:text-blue-500"
+          @click="openUrlDialog"
+        >
+          <BaseIcon :path="mdiCog" :size="16" />
+        </button>
+      </div>
 
       <form @submit.prevent="handleSubmit" class="space-y-4">
       <div>
@@ -121,4 +159,47 @@ function toggleShowPassword() {
     </div>
     </div>
   </div>
+
+  <!-- Server URL Dialog -->
+  <Teleport to="body">
+    <div
+      v-if="showUrlDialog"
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]"
+      @click.self="cancelUrlDialog"
+    >
+      <div
+        class="bg-white dark:bg-slate-900 rounded-lg p-6 max-w-lg w-[90%]"
+        @click.stop
+      >
+        <h4 class="text-lg font-semibold mb-3">服务器地址</h4>
+
+        <div class="mb-5">
+          <label class="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Remote 服务器 URL</label>
+          <FormControl
+            v-model="tempServerUrl"
+            type="text"
+            placeholder="http://localhost:8080"
+            @keydown.enter="saveUrl"
+          />
+        </div>
+
+        <div class="flex justify-end gap-2">
+          <BaseButton
+            label="取消"
+            color="whiteDark"
+            @click="cancelUrlDialog"
+          />
+          <BaseButton
+            label="保存"
+            color="info"
+            @click="saveUrl"
+          />
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
+
+<style scoped>
+/* uses global dialog styles */
+</style>

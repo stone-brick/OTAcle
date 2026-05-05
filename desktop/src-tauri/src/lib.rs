@@ -47,6 +47,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_store::init())
         .plugin(
             LogBuilder::default()
                 .targets([
@@ -163,6 +164,8 @@ pub fn run() {
             commands::remote::remote_config_download_url,
             commands::remote::remote_config_latest,
             commands::remote::remote_config_versions,
+            commands::remote::remote_save_server_url,
+            commands::remote::remote_load_server_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

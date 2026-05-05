@@ -12,7 +12,13 @@ spring:
       max-file-size: 50MB
       max-request-size: 50MB
 
-# 阿里云 OSS 配置
+# 存储配置
+storage:
+  type: aliyun  # 可选: aliyun(默认), local
+  local:
+    base-path: ./local-storage
+
+# 阿里云 OSS 配置（storage.type=aliyun 时需要）
 aliyun:
   oss:
     endpoint: oss-cn-hangzhou.aliyuncs.com
