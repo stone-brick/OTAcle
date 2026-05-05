@@ -64,6 +64,20 @@ const formComponent = computed(() => {
   if (isTextAction(action)) return TextActionForm;
   return null;
 });
+
+function hasDuplicateVariables(vars: { param_name: string; field_name: string }[] | undefined): boolean {
+  if (!vars || vars.length === 0) return false;
+  const paramNames = vars.map(v => v.param_name).filter(Boolean);
+  const fieldNames = vars.map(v => v.field_name).filter(Boolean);
+  return new Set(paramNames).size !== paramNames.length ||
+         new Set(fieldNames).size !== fieldNames.length;
+}
+
+const hasInvalidVariables = computed(() => {
+  if (!editedAction.value) return false;
+  const vars = (editedAction.value as any).variables;
+  return hasDuplicateVariables(vars);
+});
 </script>
 
 <template>
@@ -100,7 +114,7 @@ const formComponent = computed(() => {
         <BaseButton
           label="确认"
           color="info"
-          :disabled="!hasChanges"
+          :disabled="!hasChanges || hasInvalidVariables"
           @click="handleSave"
         />
       </div>

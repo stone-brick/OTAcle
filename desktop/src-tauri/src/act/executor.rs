@@ -10,7 +10,7 @@ use super::types::{
 use crate::input;
 use enigo::{Axis, Button, Coordinate, Direction, Enigo, Mouse, Settings};
 use log::{error, info};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// 按键事件之间的默认间隔（毫秒）
 const DEFAULT_KEY_INTERVAL_MS: u64 = 2;
@@ -326,6 +326,22 @@ fn apply_variables(
     variables: &[Variable],
     params: &HashMap<String, serde_json::Value>,
 ) -> Result<serde_json::Value, String> {
+    // 检查 param_name 和 field_name 唯一性
+    let mut seen_params: HashSet<&str> = HashSet::new();
+    let mut seen_fields: HashSet<&str> = HashSet::new();
+    for var in variables {
+        if !var.param_name.is_empty() {
+            if !seen_params.insert(&var.param_name) {
+                return Err(format!("Duplicate param_name '{}'", var.param_name));
+            }
+        }
+        if !var.field_name.is_empty() {
+            if !seen_fields.insert(&var.field_name) {
+                return Err(format!("Duplicate field_name '{}'", var.field_name));
+            }
+        }
+    }
+
     for var in variables {
         if let Some(value) = params.get(&var.param_name) {
             if let Some(existing) = map.get(&var.field_name) {

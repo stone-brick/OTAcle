@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { Variable } from '../../../types';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import FormControl from '@/components/ui/FormControl.vue';
@@ -11,6 +12,28 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [vars: Variable[]];
 }>();
+
+function hasDuplicateParamName(items: Variable[]): boolean {
+  const names = items.map(v => v.param_name).filter(Boolean);
+  return new Set(names).size !== names.length;
+}
+
+function hasDuplicateFieldName(items: Variable[]): boolean {
+  const names = items.map(v => v.field_name).filter(Boolean);
+  return new Set(names).size !== names.length;
+}
+
+const duplicateParamWarning = computed(() =>
+  hasDuplicateParamName(props.modelValue) ? '参数名不能重复' : ''
+);
+
+const duplicateFieldWarning = computed(() =>
+  hasDuplicateFieldName(props.modelValue) ? '字段名不能重复' : ''
+);
+
+const canSave = computed(() =>
+  !hasDuplicateParamName(props.modelValue) && !hasDuplicateFieldName(props.modelValue)
+);
 
 function addVariable() {
   emit('update:modelValue', [...props.modelValue, { param_name: '', field_name: '' }]);
@@ -30,6 +53,8 @@ function updateField(index: number, field: 'param_name' | 'field_name', value: s
 
 const fieldOptions = () =>
   props.availableFields.map(f => ({ value: f, label: f }));
+
+defineExpose({ canSave });
 </script>
 
 <template>
@@ -68,6 +93,11 @@ const fieldOptions = () =>
         outline
         @click="addVariable"
       />
+    </div>
+    <div v-if="duplicateParamWarning || duplicateFieldWarning" class="text-xs text-red-500 dark:text-red-400">
+      <span v-if="duplicateParamWarning">{{ duplicateParamWarning }}</span>
+      <span v-if="duplicateParamWarning && duplicateFieldWarning">；</span>
+      <span v-if="duplicateFieldWarning">{{ duplicateFieldWarning }}</span>
     </div>
     <span class="text-xs text-gray-500 dark:text-slate-400">定义可动态覆盖的字段和参数名称，运行时通过通信参数传值</span>
   </div>
