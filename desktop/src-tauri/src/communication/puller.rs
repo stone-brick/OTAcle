@@ -46,7 +46,6 @@ impl Puller {
                 // 尝试接收消息
                 match socket.recv_string(zmq::DONTWAIT) {
                     Ok(Ok(data)) => {
-                        debug!("PULL received message: {} bytes", data.len());
                         on_message(data);
                     }
                     Ok(Err(_)) => {

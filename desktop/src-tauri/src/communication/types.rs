@@ -142,6 +142,14 @@ impl PubState {
     }
 }
 
+/// 帧类型
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum FrameType {
+    #[default]
+    Normal,
+    Stop,
+}
+
 /// 图像帧消息（Observe 模块使用）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FrameMessage {
@@ -150,6 +158,8 @@ pub struct FrameMessage {
     pub timestamp: u64,
     pub frame_id: u64,
     pub data: Vec<CropBlock>,
+    #[serde(default)]
+    pub frame_type: FrameType,
 }
 
 /// 单个裁切块

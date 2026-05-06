@@ -21,7 +21,7 @@ use windows_capture::settings::{
 };
 use windows_capture::window::Window;
 
-use crate::communication::types::{CropBlock, FrameMessage};
+use crate::communication::types::{CropBlock, FrameMessage, FrameType};
 use crate::observe::processor::ImageProcessor;
 use crate::observe::state::SessionStats;
 use crate::observe::types::FullFrameMessage;
@@ -38,6 +38,8 @@ struct WgcHandlerData {
     frame_id: Arc<AtomicU64>,
     last_preview_time: Mutex<Instant>,
     running: Arc<AtomicBool>,
+    /// 停止标志，防止停止后继续发送帧
+    stopped: Arc<AtomicBool>,
     stats: Arc<SessionStats>,
     /// 最新完整帧（供前端轮询获取）
     latest_full_frame: Arc<Mutex<Option<FullFrameMessage>>>,
@@ -69,8 +71,12 @@ impl GraphicsCaptureApiHandler for WgcFrameHandler {
         frame: &mut Frame,
         capture_control: InternalCaptureControl,
     ) -> Result<(), Self::Error> {
-        // 检查是否请求停止
+        // 检查是否请求停止（双重检查）
         if !self.data.running.load(Ordering::SeqCst) {
+            capture_control.stop();
+            return Ok(());
+        }
+        if self.data.stopped.load(Ordering::SeqCst) {
             capture_control.stop();
             return Ok(());
         }
@@ -217,6 +223,7 @@ fn process_frame(
             .as_millis() as u64,
         frame_id: frame_id.fetch_add(1, Ordering::SeqCst),
         data: crop_blocks,
+        frame_type: FrameType::Normal,
     };
 
     Ok((frame_msg, full_frame_base64, original_width, original_height))
@@ -314,14 +321,12 @@ pub fn start_capture(
     app: AppHandle,
     frame_tx: std::sync::mpsc::Sender<FrameMessage>,
     running: Arc<AtomicBool>,
+    stopped: Arc<AtomicBool>,
     stats: Arc<SessionStats>,
     latest_full_frame: Arc<Mutex<Option<FullFrameMessage>>>,
 ) -> Result<JoinHandle<()>, String> {
-    if running.load(Ordering::SeqCst) {
-        return Err("Capture already running".to_string());
-    }
-
-    running.store(true, Ordering::SeqCst);
+    // running 已在 observe_start 中设置为 true，此处无需再设置
+    // 也无需检查是否已在运行（observe_start 已检查）
 
     let frame_id = Arc::new(AtomicU64::new(0));
     let config_clone = config.clone();
@@ -338,6 +343,7 @@ pub fn start_capture(
         frame_id: frame_id.clone(),
         last_preview_time: Mutex::new(Instant::now()),
         running,
+        stopped,
         stats,
         latest_full_frame,
     });

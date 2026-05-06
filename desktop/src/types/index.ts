@@ -63,6 +63,8 @@ export interface MouseClickActionItem extends ActionItemBase {
   count: number;
   interval_ms?: number | null;
   hold_time_ms?: number;
+  x?: number | null;
+  y?: number | null;
   variables?: Variable[];
 }
 

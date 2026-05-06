@@ -12,6 +12,8 @@
     "fs:write-all",
     "log:default",
     "store:default",
+    "global-shortcut:allow-register",
+    "global-shortcut:allow-unregister",
     "core:window:allow-close",
     "core:window:allow-minimize",
     "core:window:allow-maximize",

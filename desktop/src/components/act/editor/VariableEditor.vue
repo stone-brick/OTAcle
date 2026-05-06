@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { Variable } from '../../../types';
+import { mdiClose } from '@mdi/js';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import FormControl from '@/components/ui/FormControl.vue';
 
@@ -80,7 +81,7 @@ defineExpose({ canSave });
           @update:model-value="updateField(index, 'param_name', $event)"
         />
         <BaseButton
-          icon="mdiClose"
+          :icon="mdiClose"
           color="whiteDark"
           small
           transparent-bg

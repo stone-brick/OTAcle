@@ -123,9 +123,12 @@ async function updateAction(index: number, action: ActionItem, name?: string): P
   const { addLog } = useLog();
   const comm = useComm();
 
+  // 从 action 对象中提取 name（如果调用者没有单独传）
+  const actionName = name ?? action.name ?? null;
+
   try {
     // 调用后端更新动作（会保存到历史）
-    await comm.actUpdate(index, action, name || null);
+    await comm.actUpdate(index, action, actionName);
 
     // 从后端刷新状态
     await refreshActionList();

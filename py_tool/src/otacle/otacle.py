@@ -151,6 +151,12 @@ class CropBlock:
         return base64.b64decode(self.image)
 
 
+class FrameType:
+    """帧类型"""
+    NORMAL = "Normal"
+    STOP = "Stop"
+
+
 @dataclass
 class FrameMessage:
     """图像帧消息"""
@@ -159,6 +165,7 @@ class FrameMessage:
     timestamp: int
     frame_id: int
     data: list[CropBlock]
+    frame_type: str = "Normal"  # 帧类型：Normal 或 Stop
 
     @classmethod
     def from_dict(cls, data: dict) -> "FrameMessage":
@@ -168,6 +175,7 @@ class FrameMessage:
             timestamp=data.get("timestamp", 0),
             frame_id=data.get("frame_id", 0),
             data=[CropBlock.from_dict(b) for b in data.get("data", [])],
+            frame_type=data.get("frame_type", FrameType.NORMAL),
         )
 
 
@@ -443,6 +451,9 @@ class OTAcleObserver:
         """迭代器下一个元素，阻塞等待"""
         frame = self.recv(timeout=5000)
         if frame is None:
+            raise StopIteration
+        # 检查是否为停止消息
+        if frame.frame_type == FrameType.STOP:
             raise StopIteration
         return frame
 

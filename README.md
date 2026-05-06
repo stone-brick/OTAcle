@@ -297,7 +297,7 @@ with OTAcleThinkSender() as sender:
 | -------------- | ---- | ------------------------------------------- |
 | `key`          | 单键按下 | `key`（按键名），`hold_time_ms`（按住时长）             |
 | `key_sequence` | 按键序列 | `keys[]`（按键列表），`default_interval_ms`（间隔）    |
-| `mouse_click`  | 鼠标点击 | `button`（left/right/middle），`count`（次数）     |
+| `mouse_click`  | 鼠标点击 | `button`（left/right/middle），`count`（次数），`x`, `y`（坐标） |
 | `mouse_move`   | 鼠标移动 | `x`, `y`（坐标），`duration_ms`（移动时长）            |
 | `mouse_scroll` | 鼠标滚动 | `direction`（up/down/left/right），`amount`（量） |
 | `delay`        | 延时等待 | `duration_ms`（毫秒）                           |
@@ -461,6 +461,336 @@ my_project/
 | `window_list`          | 列出所有窗口  |
 | `window_find_by_title` | 按标题查找窗口 |
 | `window_get_info`      | 获取窗口信息  |
+
+## 用户指南
+
+本指南面向 **AI 强化学习研究者** 和 **自动化测试开发者**，帮助你使用 OTAcle 构建自己的 Observe-Think-Act 闭环系统。
+
+---
+
+### 一、快速开始
+
+#### 1. 启动桌面应用
+
+```bash
+cd desktop
+pnpm tauri dev
+```
+
+应用启动后，你会看到三个主要页面：**Observe**（视觉输入）、**Think**（决策可视化）、**Act**（动作执行）。
+
+#### 2. 创建或打开项目
+
+项目是一个普通文件夹，但需要包含 `.otacle/` 配置目录。
+
+桌面应用支持：
+- **新建项目**：创建空白项目结构
+- **打开现有项目**：打开 `example/` 演示项目
+
+#### 3. 运行演示
+
+```bash
+cd example
+python demo.py
+```
+
+演示脚本每秒执行一次循环：接收图像帧 → 分析像素 → 发送决策日志 → 根据条件触发动作。
+
+---
+
+### 二、核心概念
+
+OTAcle 模拟强化学习的 **Observe-Think-Act** 闭环：
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                      OTAcle 桌面应用                      │
+│                                                         │
+│   ┌───────────┐     ┌───────────┐     ┌───────────┐    │
+│   │ Observe   │────▶│  Think    │────▶│   Act     │    │
+│   │ 视觉输入    │     │ 决策可视化  │     │ 动作执行    │    │
+│   └───────────┘     └───────────┘     └───────────┘    │
+│        │                 │                 │           │
+│        │ ZMQ PUB         │ ZMQ PULL        │ ZMQ PULL  │
+│        ▼                 ▼                 ▼           │
+└─────────────────────────────────────────────────────────┘
+        │                                      │
+        └────────────── Python AI ─────────────┘
+                    （你需要编写）
+```
+
+| 模块 | 职责 | ZMQ 端口 |
+|------|------|----------|
+| **Observe** | 捕获目标窗口截图，发送给 Python | 5556 (PUB) |
+| **Think** | 接收 Python 的决策日志并可视化 | 5557 (PULL) |
+| **Act** | 接收 Python 的动作命令并执行 | 5555 (PULL) |
+
+**你只需要编写 Python 端代码**（即"AI Agent"），桌面应用负责与系统交互。
+
+---
+
+### 三、项目结构
+
+```
+my_project/                  # 你的项目目录
+├── .otacle/                 # OTAcle 配置（由桌面应用管理）
+│   ├── actions.json        # 动作配置
+│   ├── observe.json        # 截图区域配置
+│   ├── think.json          # 可视化配置
+│   └── comm.json           # ZMQ 通信地址
+├── game.py                 # 游戏环境/业务逻辑
+├── agent.py                # AI 智能体
+└── train.py                # 训练主循环
+```
+
+桌面应用会在 `.otacle/` 目录下生成配置文件，你可以修改它们来调整行为。
+
+---
+
+### 四、编写你的 AI Agent
+
+#### 4.1 安装 Python SDK
+
+```bash
+pip install -e py_tool/
+```
+
+或在代码中直接引用：
+
+```python
+import sys
+sys.path.insert(0, "../py_tool/src")
+from otacle import OTAcleCommand, OTAcleObserver, OTAcleThinkSender
+```
+
+#### 4.2 完整示例
+
+以下是一个完整的 AI Agent 示例，实现简单的"按条件触发动作"逻辑：
+
+```python
+# -*- coding: utf-8 -*-
+"""
+我的 AI Agent
+"""
+
+import sys
+sys.path.insert(0, "../py_tool/src")
+
+from otacle import OTAcleCommand, OTAcleObserver, OTAcleThinkSender
+
+def get_pixel_rgb(image_bytes: bytes, x: int, y: int, width: int) -> tuple[int, int, int]:
+    """从图像字节数据中获取 (x, y) 位置的 RGB 值（BGRA 格式）"""
+    idx = (y * width + x) * 4
+    b, g, r = image_bytes[idx], image_bytes[idx + 1], image_bytes[idx + 2]
+    return (r, g, b)
+
+def main():
+    print("启动 AI Agent...")
+
+    # 初始化三个模块
+    observer = OTAcleObserver()  # 接收图像帧
+    sender = OTAcleThinkSender() # 发送决策日志
+    cmd = OTAcleCommand()        # 发送动作命令
+
+    observer.start()
+    sender.start()
+
+    step = 0
+
+    try:
+        while True:
+            step += 1
+
+            # --- Observe: 接收图像帧 ---
+            frame = observer.recv(timeout=100)
+            if frame:
+                # 分析第一个裁切块 (1, 1) 位置的像素
+                block = frame.data[0]
+                img_bytes = block.decode_image()
+                r, g, b = get_pixel_rgb(img_bytes, 1, 1, block.w)
+                rgb_sum = r + g + b
+
+                print(f"Step {step}: RGB总和 = {rgb_sum}")
+
+                # 条件触发：如果 RGB 总和大于 200，执行动作
+                if rgb_sum > 200:
+                    cmd.clear_execute()
+                    cmd.execute([0])  # 执行动作 0
+                    cmd.send()
+                    print(f"  -> 触发动作 0")
+
+            # --- Think: 发送决策日志 ---
+            reward = 1.0 / step
+            epsilon = max(0.01, 1.0 / step)
+            sender.send_step(step, reward=reward, epsilon=epsilon)
+
+            # 模拟计算延时
+            import time
+            time.sleep(0.5)
+
+    except KeyboardInterrupt:
+        print("\nAgent 停止")
+    finally:
+        observer.stop()
+        sender.stop()
+        cmd.close()
+
+if __name__ == "__main__":
+    main()
+```
+
+#### 4.3 动作配置说明
+
+在桌面应用的 **Act 页面** 配置动作，保存到 `.otacle/actions.json`：
+
+```json
+{
+  "default_backend": "win32",
+  "actions": [
+    {
+      "index": 0,
+      "name": "jump",
+      "type": "key",
+      "key": "space",
+      "hold_time_ms": 5
+    }
+  ]
+}
+```
+
+**常用动作类型：**
+
+| 类型 | 说明 | 关键字段 |
+|------|------|----------|
+| `key` | 按键按下 | `key`, `hold_time_ms` |
+| `key_sequence` | 按键序列 | `keys[]`, `default_interval_ms` |
+| `mouse_click` | 鼠标点击 | `button`, `count`, `x`, `y` |
+| `mouse_move` | 鼠标移动 | `x`, `y`, `duration_ms` |
+| `mouse_scroll` | 鼠标滚动 | `direction`, `amount` |
+| `delay` | 延时等待 | `duration_ms` |
+| `text` | 文本输入 | `content` |
+
+**支持动态参数的动作配置：**
+
+```json
+{
+  "index": 1,
+  "name": "move_to",
+  "type": "mouse_move",
+  "x": 0,
+  "y": 0,
+  "variables": [
+    {"param_name": "target_x", "field_name": "x"},
+    {"param_name": "target_y", "field_name": "y"}
+  ]
+}
+```
+
+Python 端发送参数：
+
+```python
+cmd.execute([1])                    # 执行动作 1
+cmd.set_params({"target_x": 100, "target_y": 200})
+cmd.send()
+```
+
+---
+
+### 五、ZMQ 通信地址
+
+默认地址在 `py_tool/src/otacle/otacle.py` 中定义：
+
+| 模块 | 默认地址 | 说明 |
+|------|----------|------|
+| Act | `tcp://127.0.0.1:5555` | Python → Act（发送动作命令） |
+| Observe | `tcp://127.0.0.1:5556` | Observe → Python（发送图像帧） |
+| Think | `tcp://127.0.0.1:5557` | Python → Think（发送决策日志） |
+
+可通过构造函数覆盖：
+
+```python
+cmd = OTAcleCommand(address="tcp://127.0.0.1:5555")
+observer = OTAcleObserver(address="tcp://127.0.0.1:5556")
+sender = OTAcleThinkSender(address="tcp://127.0.0.1:5557")
+```
+
+或通过 `.otacle/comm.json` 配置文件统一管理。
+
+---
+
+### 六、常见问题
+
+**Q: 动作在后台窗口无法执行？**
+A: 使用 `win32` 后端（默认），它通过 `PostMessageW` 向后台窗口发送消息。`enigo` 后端需要前台窗口。
+
+**Q: 如何调试动作是否正确配置？**
+A: 在 Act 页面点击"执行"按钮直接测试动作，确认行为后再在 Python 端调用。
+
+**Q: 图像帧接收频率太低？**
+A: 检查 `observe.json` 中的 `frame_rate` 设置，或降低 `target_width`/`target_height` 减少数据传输量。
+
+**Q: 可以同时运行多个项目吗？**
+A: 不可以，每个 ZMQ 地址只能被一个消费者绑定。请确保同一时间只有一个 Python 进程连接。
+
+**Q: 如何添加新的动作类型？**
+A: 目前动作类型在 `desktop/src-tauri/src/act/types.rs` 中定义。如需扩展，需要修改 Rust 后端代码。
+
+---
+
+### 七、进阶主题
+
+#### 7.1 窗口定位语法
+
+Act 模块执行动作时可以指定目标窗口：
+
+| 格式 | 说明 | 示例 |
+|------|------|------|
+| `"Notepad"` | 窗口标题前缀匹配 | `"Notepad"` |
+| `"id:395542"` | HWND 十进制 | `"id:395542"` |
+| `"id:0x9999"` | HWND 十六进制 | `"id:0x9999"` |
+| `"class:Notepad"` | 窗口类名 | `"class:Notepad"` |
+| `"exe:notepad.exe"` | 进程名 | `"exe:notepad.exe"` |
+| `"pid:1234"` | 进程 ID | `"pid:1234"` |
+| `"A"` 或空 | 当前前台窗口 | `"A"` |
+
+#### 7.2 自定义裁切区域
+
+在 `observe.json` 中配置多个裁切区域，只发送你关心的屏幕部分：
+
+```json
+{
+  "capture": {
+    "frame_rate": 10,
+    "target_width": 320,
+    "target_height": 240
+  },
+  "crop_regions": [
+    {"x": 0, "y": 0, "w": 160, "h": 120},
+    {"x": 160, "y": 0, "w": 160, "h": 120}
+  ]
+}
+```
+
+#### 7.3 决策日志可视化
+
+Think 模块支持自定义字段，可在 `think.json` 中配置显示哪些指标：
+
+```json
+{
+  "displays": [
+    {"key": "reward", "type": "line", "name": "奖励"},
+    {"key": "epsilon", "type": "gauge", "name": "探索率"}
+  ]
+}
+```
+
+Python 端发送：
+
+```python
+sender.send_step(step, reward=0.85, epsilon=0.15, loss=0.02)
+```
+
+---
 
 ## 命名规范
 

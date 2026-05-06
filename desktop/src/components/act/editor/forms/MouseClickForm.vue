@@ -16,7 +16,7 @@ function updateField<K extends keyof MouseClickActionItem>(field: K, value: Mous
   emit('update:modelValue', { ...props.modelValue, [field]: value });
 }
 
-const availableFields = ['count', 'hold_time_ms'];
+const availableFields = ['count', 'hold_time_ms', 'x', 'y'];
 </script>
 
 <template>
@@ -55,6 +55,24 @@ const availableFields = ['count', 'hold_time_ms'];
         :model-value="modelValue.hold_time_ms"
         type="number"
         @update:model-value="updateField('hold_time_ms', Number($event))"
+      />
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">X 坐标（可选）</label>
+      <FormControl
+        :model-value="modelValue.x ?? ''"
+        type="number"
+        placeholder="留空则在 (0,0) 点击"
+        @update:model-value="updateField('x', $event !== '' ? Number($event) : null)"
+      />
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-medium text-gray-500 dark:text-slate-400">Y 坐标（可选）</label>
+      <FormControl
+        :model-value="modelValue.y ?? ''"
+        type="number"
+        placeholder="留空则在 (0,0) 点击"
+        @update:model-value="updateField('y', $event !== '' ? Number($event) : null)"
       />
     </div>
     <div class="flex flex-col gap-1.5">

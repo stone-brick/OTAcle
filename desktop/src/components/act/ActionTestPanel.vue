@@ -30,32 +30,51 @@ const selectedAction = computed(() => {
 // Extract variables from the selected action
 const variables = computed((): Variable[] => {
   if (!selectedAction.value) return [];
-
-  const action = selectedAction.value;
-  switch (action.type) {
-    case 'mouse_move':
-    case 'mouse_click':
-      return action.variables || [];
-    default:
-      return [];
-  }
+  return selectedAction.value.variables || [];
 });
+
+// Field metadata by action type
+const fieldMetadata: Record<string, Record<string, { type: 'number' | 'text'; label: string }>> = {
+  key: {
+    key: { type: 'text', label: '按键' },
+    hold_time_ms: { type: 'number', label: '按住时间(ms)' },
+  },
+  key_sequence: {
+    keys: { type: 'text', label: '按键序列' },
+    default_interval_ms: { type: 'number', label: '默认间隔(ms)' },
+  },
+  mouse_click: {
+    count: { type: 'number', label: '点击次数' },
+    hold_time_ms: { type: 'number', label: '按住时间(ms)' },
+    x: { type: 'number', label: 'X 坐标' },
+    y: { type: 'number', label: 'Y 坐标' },
+  },
+  mouse_move: {
+    x: { type: 'number', label: 'X 坐标' },
+    y: { type: 'number', label: 'Y 坐标' },
+  },
+  mouse_scroll: {
+    amount: { type: 'number', label: '滚动量' },
+  },
+  delay: {
+    duration_ms: { type: 'number', label: '延迟时间(ms)' },
+  },
+  text: {
+    content: { type: 'text', label: '文本内容' },
+  },
+};
 
 // Get the action's current value for a given field_name
 function getFieldValue(fieldName: string): number | string | undefined {
-  if (!selectedAction.value) return undefined;
-
   const action = selectedAction.value;
-  switch (action.type) {
-    case 'mouse_move':
-      if (fieldName === 'x') return action.x;
-      if (fieldName === 'y') return action.y;
-      break;
-    case 'mouse_click':
-      if (fieldName === 'count') return action.count;
-      break;
+  if (!action) return undefined;
+
+  // key_sequence 的 keys 是数组，不支持单值编辑
+  if (action.type === 'key_sequence' && fieldName === 'keys') {
+    return undefined;
   }
-  return undefined;
+
+  return (action as unknown as Record<string, unknown>)[fieldName] as number | string | undefined;
 }
 
 // Get field type for input rendering
@@ -63,15 +82,11 @@ function getFieldType(fieldName: string): 'number' | 'text' {
   const action = selectedAction.value;
   if (!action) return 'text';
 
-  switch (action.type) {
-    case 'mouse_move':
-      if (fieldName === 'x' || fieldName === 'y') return 'number';
-      break;
-    case 'mouse_click':
-      if (fieldName === 'count') return 'number';
-      break;
+  if (action.type === 'key_sequence' && fieldName === 'keys') {
+    return 'text';
   }
-  return 'text';
+
+  return fieldMetadata[action.type]?.[fieldName]?.type ?? 'text';
 }
 
 // When action changes, reset runtime params
@@ -109,7 +124,7 @@ function handleExecute() {
     return;
   }
 
-  if (variables.value.length > 0) {
+  if (editableVariables.value.length > 0) {
     const hasFilledParam = Object.values(runtimeParams.value).some(v => v !== '');
     if (!hasFilledParam) {
       return;
@@ -124,13 +139,21 @@ function handleExecute() {
 }
 
 function formatFieldName(fieldName: string): string {
-  const labels: Record<string, string> = {
-    x: 'X 坐标',
-    y: 'Y 坐标',
-    count: '点击次数',
-  };
-  return labels[fieldName] || fieldName;
+  const action = selectedAction.value;
+  if (!action) return fieldName;
+
+  return fieldMetadata[action.type]?.[fieldName]?.label ?? fieldName;
 }
+
+// Filter out invalid variables (e.g., 'keys' from key_sequence)
+const editableVariables = computed(() => {
+  return variables.value.filter(v => {
+    if (selectedAction.value?.type === 'key_sequence' && v.field_name === 'keys') {
+      return false;
+    }
+    return true;
+  });
+});
 
 // Action type color map
 const actionTypeColors: Record<string, string> = {
@@ -214,7 +237,7 @@ const actionTypeColors: Record<string, string> = {
 
       <!-- Variable Params Form -->
       <div
-        v-if="selectedAction && variables.length > 0"
+        v-if="selectedAction && editableVariables.length > 0"
         class="px-4 py-3 border-b border-gray-100 dark:border-slate-800"
       >
         <div class="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-2">
@@ -225,7 +248,7 @@ const actionTypeColors: Record<string, string> = {
         </p>
         <div class="flex flex-col gap-3">
           <div
-            v-for="variable in variables"
+            v-for="variable in editableVariables"
             :key="variable.param_name"
             class="flex flex-col gap-1"
           >
@@ -244,7 +267,7 @@ const actionTypeColors: Record<string, string> = {
 
       <!-- No variables hint -->
       <div
-        v-else-if="selectedAction && variables.length === 0"
+        v-else-if="selectedAction && editableVariables.length === 0"
         class="px-4 py-3 border-b border-gray-100 dark:border-slate-800"
       >
         <p class="text-sm text-gray-400 italic">

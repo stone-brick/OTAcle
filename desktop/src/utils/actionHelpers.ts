@@ -36,7 +36,8 @@ export function formatActionDetail(item: ActionItem | undefined): string {
     case 'key_sequence':
       return `${item.keys.length} 个按键`;
     case 'mouse_click':
-      return `${item.button}键 x${item.count}`;
+      const pos = item.x !== undefined || item.y !== undefined ? ` @(${item.x ?? 0},${item.y ?? 0})` : '';
+      return `${item.button}键 x${item.count}${pos}`;
     case 'mouse_move':
       return `(${item.x}, ${item.y})`;
     case 'mouse_scroll':

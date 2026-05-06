@@ -48,6 +48,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_store::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(
             LogBuilder::default()
                 .targets([
@@ -111,6 +112,9 @@ pub fn run() {
             commands::communication::comm_get_status,
             commands::communication_pull::comm_start_pull,
             commands::communication_pull::comm_stop_pull,
+            commands::communication_toggle::comm_toggle_all,
+            commands::communication_toggle::comm_get_toggle_status,
+            commands::communication_toggle::comm_check_observe_start,
             // Observe commands
             commands::observe::observe_start,
             commands::observe::observe_stop,

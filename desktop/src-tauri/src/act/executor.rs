@@ -535,6 +535,8 @@ fn execute_mouse_click(action: &MouseClickAction, ctx: &ExecContext) -> Result<(
     let button = action.button;
     let interval = action.interval_ms.unwrap_or(0);
     let hold_time = action.hold_time_ms;
+    let x = action.x.unwrap_or(0);
+    let y = action.y.unwrap_or(0);
 
     match ctx.backend {
         InputBackend::Win32 => {
@@ -542,7 +544,7 @@ fn execute_mouse_click(action: &MouseClickAction, ctx: &ExecContext) -> Result<(
                 .target_hwnd
                 .ok_or("Win32 backend requires target window for mouse click")?;
             for i in 0..count {
-                input::win32_input::send_mouse_click(hwnd, 0, 0, button)?;
+                input::win32_input::send_mouse_click(hwnd, x, y, button)?;
                 if hold_time > 0 {
                     std::thread::sleep(std::time::Duration::from_millis(hold_time));
                 }
@@ -561,6 +563,21 @@ fn execute_mouse_click(action: &MouseClickAction, ctx: &ExecContext) -> Result<(
                 MouseButton::Right => Button::Right,
                 MouseButton::Middle => Button::Middle,
             };
+
+            // 坐标转换：窗口相对 -> 屏幕绝对
+            let (screen_x, screen_y) = if action.x.is_some() || action.y.is_some() {
+                let hwnd = ctx
+                    .target_hwnd
+                    .ok_or("Enigo backend requires target window for relative coordinates")?;
+                input::client_to_screen(hwnd, x, y)?
+            } else {
+                input::get_mouse_position()?
+            };
+
+            // 先移动到目标位置
+            enigo
+                .move_mouse(screen_x, screen_y, Coordinate::Abs)
+                .map_err(|e| format!("Failed to move mouse: {:?}", e))?;
 
             for i in 0..count {
                 enigo

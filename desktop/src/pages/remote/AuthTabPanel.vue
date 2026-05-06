@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { mdiLogin, mdiAccountPlus, mdiCog } from '@mdi/js'
+import { mdiLogin, mdiAccountPlus, mdiCog, mdiEye } from '@mdi/js'
 import BaseIcon from '../../components/ui/BaseIcon.vue'
 import BaseButton from '../../components/ui/BaseButton.vue'
 import FormControl from '../../components/ui/FormControl.vue'
@@ -114,7 +114,7 @@ function toggleShowPassword() {
             class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             @click="toggleShowPassword"
           >
-            <BaseIcon path="mdiEye" :size="16" />
+            <BaseIcon :path="mdiEye" :size="16" />
           </button>
         </div>
       </div>

@@ -4,6 +4,7 @@ use crate::input;
 use crate::observe;
 use crate::observe::state::{SessionHandle, GLOBAL_STATS};
 use crate::observe::types::FullFrameMessage;
+use crate::commands::communication_toggle;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -29,10 +30,14 @@ pub fn observe_start(
         }
     }
 
-    // Create shared running flag
-    let running = Arc::new(AtomicBool::new(false));
+    // Create shared running flag - 先设置为 true，再启动线程
+    let running = Arc::new(AtomicBool::new(true));
     let running_for_pub = running.clone();
     let running_for_capture = running.clone();
+
+    // Create publisher stopped flag
+    let publisher_stopped = Arc::new(AtomicBool::new(false));
+    let publisher_stopped_for_pub = publisher_stopped.clone();
 
     // Create PUB state
     let pub_state = Arc::new(Mutex::new(PubState::new()));
@@ -44,6 +49,7 @@ pub fn observe_start(
     let publisher_handle = communication::start_publisher(
         &pub_addr,
         running_for_pub,
+        publisher_stopped_for_pub,
         frame_rx,
         pub_state_clone,
         app.clone(),
@@ -66,6 +72,7 @@ pub fn observe_start(
         app,
         frame_tx,
         running_for_capture,
+        publisher_stopped.clone(),
         stats,
         latest_full_frame_for_capture,
     )?;
@@ -73,8 +80,10 @@ pub fn observe_start(
     // Create session handle with full info
     let session = SessionHandle::new(
         hwnd,
-        config,
+        config.clone(),
         running,
+        None,
+        publisher_stopped,
         Some(capture_handle),
         Some(publisher_handle),
         latest_full_frame,
@@ -90,6 +99,9 @@ pub fn observe_start(
     if let Ok(mut global) = GLOBAL_STATS.lock() {
         global.active_sessions = sessions.len();
     }
+
+    // 保存 Observe 信息供快捷键使用
+    communication_toggle::save_observe_info(window, config);
 
     Ok(())
 }
@@ -108,7 +120,18 @@ pub fn observe_stop() -> Result<(), String> {
             .store(false, std::sync::atomic::Ordering::SeqCst);
     }
 
-    // 2. 使用 drain 取出所有 SessionHandle，以便在锁外 join
+    // 2. 短暂等待，让 capture 线程处理完当前帧并调用 stop()
+    //    (~1 frame time at 60FPS = ~16ms)
+    std::thread::sleep(std::time::Duration::from_millis(20));
+
+    // 3. 设置 stopped = true，防止 publisher 发送任何后续帧
+    for (_hwnd, handle) in sessions.iter() {
+        handle
+            .publisher_stopped
+            .store(true, std::sync::atomic::Ordering::SeqCst);
+    }
+
+    // 4. 使用 drain 取出所有 SessionHandle，以便在锁外 join
     let handles: Vec<(
         Option<std::thread::JoinHandle<()>>,
         Option<std::thread::JoinHandle<()>>,
@@ -131,8 +154,8 @@ pub fn observe_stop() -> Result<(), String> {
 
     // 锁在这里自动释放
 
-    // 3. 等待所有线程结束
-    //    - publisher 线程会在收到 Disconnected 后退出（channel 被 drop）
+    // 5. 等待所有线程结束
+    //    - publisher 线程会检查 stopped 并立即退出
     //    - capture 线程会在下一帧到达时检查 running == false 并退出
     for (capture_handle, publisher_handle) in handles {
         if let Some(h) = capture_handle {

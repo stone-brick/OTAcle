@@ -1,6 +1,6 @@
 {
   "capture": {
-    "frame_rate": 3,
+    "frame_rate": 1,
     "target_width": 135,
     "target_height": 256
   },

@@ -11,7 +11,7 @@ use std::thread::JoinHandle;
 use std::time::Instant;
 
 use super::types::{FullFrameMessage, ObserveConfig};
-use crate::communication::types::PubState;
+use crate::communication::types::{FrameMessage, PubState};
 
 lazy_static! {
     /// 所有活跃的 Observe 会话，key 为 hwnd
@@ -103,6 +103,10 @@ pub struct SessionHandle {
     pub start_time: Instant,
     /// 运行控制标志
     pub running: Arc<std::sync::atomic::AtomicBool>,
+    /// 帧发送器（用于 observe_stop 时发送停止信号）
+    pub frame_tx: Option<std::sync::mpsc::Sender<FrameMessage>>,
+    /// Publisher 停止标志
+    pub publisher_stopped: Arc<std::sync::atomic::AtomicBool>,
     /// 捕获线程句柄
     pub capture_handle: Option<JoinHandle<()>>,
     /// 发布线程句柄
@@ -120,6 +124,8 @@ impl SessionHandle {
         hwnd: isize,
         config: ObserveConfig,
         running: Arc<std::sync::atomic::AtomicBool>,
+        frame_tx: Option<std::sync::mpsc::Sender<FrameMessage>>,
+        publisher_stopped: Arc<std::sync::atomic::AtomicBool>,
         capture_handle: Option<JoinHandle<()>>,
         publisher_handle: Option<JoinHandle<()>>,
         latest_full_frame: Arc<Mutex<Option<FullFrameMessage>>>,
@@ -129,6 +135,8 @@ impl SessionHandle {
             config,
             start_time: Instant::now(),
             running,
+            frame_tx,
+            publisher_stopped,
             capture_handle,
             publisher_handle,
             stats: SessionStats::new(),

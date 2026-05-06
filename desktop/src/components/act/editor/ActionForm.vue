@@ -39,6 +39,11 @@ watch(editedAction, () => {
   hasChanges.value = true;
 }, { deep: true });
 
+// 单独监听 name 字段变化，因为 ref 监听不会捕获嵌套属性变化
+watch(() => editedAction.value.name, () => {
+  hasChanges.value = true;
+});
+
 function handleSave() {
   emit('update', props.actionIndex, editedAction.value);
   hasChanges.value = false;
@@ -50,7 +55,7 @@ function handleCancel() {
 }
 
 function handleFormUpdate(action: ActionItem) {
-  editedAction.value = action;
+  editedAction.value = { ...editedAction.value, ...action };
 }
 
 const formComponent = computed(() => {

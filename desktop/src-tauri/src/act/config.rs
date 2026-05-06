@@ -253,7 +253,7 @@ pub fn update_action(index: u32, action: ActionData, name: Option<String>) -> Re
     if let Some(ref mut items) = *list {
         if let Some(item) = items.get_mut(index as usize) {
             item.data = action;
-            item.name = name;
+            item.name = name.clone();
             Ok(())
         } else {
             Err(format!("Action {} not found", index))

@@ -2,21 +2,21 @@
   "default_backend": "enigo",
   "actions": [
     {
-      "name": null,
+      "name": "jump",
       "type": "mouse_click",
       "button": "left",
       "count": 1,
       "interval_ms": null,
-      "hold_time_ms": 5,
+      "hold_time_ms": 100,
+      "x": 500,
+      "y": 398,
       "backend": null,
-      "variables": []
-    },
-    {
-      "name": "space",
-      "type": "key",
-      "key": "a",
-      "hold_time_ms": 5,
-      "backend": null
+      "variables": [
+        {
+          "param_name": "hold_time",
+          "field_name": "hold_time_ms"
+        }
+      ]
     }
   ]
 }

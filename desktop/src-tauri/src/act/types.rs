@@ -115,6 +115,12 @@ pub struct MouseClickAction {
     /// 按住时间（毫秒，默认 5ms，防止事件丢失）
     #[serde(default = "default_mouse_hold_time")]
     pub hold_time_ms: u64,
+    /// 点击 X 坐标（相对窗口客户区）
+    #[serde(default)]
+    pub x: Option<i32>,
+    /// 点击 Y 坐标（相对窗口客户区）
+    #[serde(default)]
+    pub y: Option<i32>,
     /// 覆盖此动作的默认输入后端
     #[serde(default)]
     pub backend: Option<InputBackend>,

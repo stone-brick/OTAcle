@@ -6,6 +6,7 @@ import { useActionEditor } from './composables/act/useActionEditor'
 import { useObserve } from './composables/observe/useObserve'
 import { useThink } from './composables/think/useThink'
 import { useComm } from './composables/useComm'
+import { useGlobalShortcut } from './composables/useGlobalShortcut'
 import { useDialog } from './composables/useDialog'
 import AppSideMenu from './components/nav/AppSideMenu.vue'
 import TitleBar from './components/TitleBar.vue'
@@ -33,6 +34,10 @@ onMounted(async () => {
   useObserve().initProjectEventListener()
   useThink().initProjectEventListener()
   useComm().initProjectEventListener()
+
+  // 注册全局快捷键
+  const { registerShortcut } = useGlobalShortcut()
+  await registerShortcut()
 
   await checkCurrentProject()
   await refreshRecentProjects()

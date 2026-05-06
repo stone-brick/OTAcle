@@ -7,9 +7,14 @@
       "chart_type": "line"
     },
     {
-      "name": "epsilon",
-      "title": "学习率",
-      "chart_type": "area"
+      "name": "distance",
+      "title": "跳跃距离",
+      "chart_type": "line"
+    },
+    {
+      "name": "hold_time",
+      "title": "按压时长",
+      "chart_type": "line"
     }
   ]
 }

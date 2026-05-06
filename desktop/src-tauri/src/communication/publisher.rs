@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread::{self, JoinHandle};
 
-use crate::communication::types::{FrameMessage, PubState};
+use crate::communication::types::{FrameMessage, FrameType, PubState};
 use log::error;
 use tauri::Emitter;
 
@@ -17,6 +17,7 @@ use tauri::Emitter;
 /// # Arguments
 /// * `addr` - 地址 (如 "tcp://127.0.0.1:5556")
 /// * `running` - 运行标志，用于控制线程停止
+/// * `stopped` - 停止标志，收到时立即停止发送
 /// * `receiver` - 帧消息接收器
 /// * `pub_state` - PUB 状态，用于更新连接状态和发送统计
 /// * `app_handle` - Tauri AppHandle，用于向前端发送状态事件
@@ -26,6 +27,7 @@ use tauri::Emitter;
 pub fn start_publisher(
     addr: &str,
     running: Arc<AtomicBool>,
+    stopped: Arc<AtomicBool>,
     receiver: Receiver<FrameMessage>,
     pub_state: Arc<Mutex<PubState>>,
     app_handle: tauri::AppHandle,
@@ -64,6 +66,14 @@ pub fn start_publisher(
         while running.load(Ordering::SeqCst) {
             match receiver.recv_timeout(std::time::Duration::from_millis(100)) {
                 Ok(frame) => {
+                    // 如果已收到停止信号，不再发送任何数据
+                    if stopped.load(Ordering::SeqCst) {
+                        break;
+                    }
+                    // 如果收到停止帧类型，通知 Python 并退出
+                    if frame.frame_type == FrameType::Stop {
+                        break;
+                    }
                     let json = match serde_json::to_string(&frame) {
                         Ok(j) => j,
                         Err(_) => continue,

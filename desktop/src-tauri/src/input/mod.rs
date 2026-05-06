@@ -5,8 +5,8 @@ pub mod find_window;
 pub mod win32_input;
 pub mod window;
 
-use windows::Win32::Foundation::POINT;
-use windows::Win32::UI::WindowsAndMessaging::GetCursorPos;
+use windows::Win32::Foundation::{HWND, POINT, RECT};
+use windows::Win32::UI::WindowsAndMessaging::{GetCursorPos, GetWindowRect};
 
 pub use enigo::{send_key, send_text};
 pub use find_window::{
@@ -26,6 +26,17 @@ pub fn get_mouse_position() -> Result<(i32, i32), String> {
         let mut point = POINT { x: 0, y: 0 };
         GetCursorPos(&mut point).map_err(|e| format!("Failed to get mouse position: {}", e))?;
         Ok((point.x, point.y))
+    }
+}
+
+/// 将窗口相对坐标转换为屏幕绝对坐标
+pub fn client_to_screen(hwnd: isize, client_x: i32, client_y: i32) -> Result<(i32, i32), String> {
+    unsafe {
+        let hwnd = HWND(hwnd as *mut std::ffi::c_void);
+        let mut rect = RECT::default();
+        GetWindowRect(hwnd, &mut rect).map_err(|e| format!("GetWindowRect failed: {}", e))?;
+        // GetWindowRect 返回的是窗口在屏幕上的矩形，左上角就是客户区的屏幕起始位置
+        Ok((rect.left + client_x, rect.top + client_y))
     }
 }
 
